@@ -19,7 +19,7 @@ data class UpdateState(val message: String = "", val available: UpdateInfo? = nu
 
 object Updates {
     val state = MutableStateFlow(UpdateState())
-    const val DEFAULT_URL = ""      // set in Settings (or baked in by tools/release.sh): the raw address of the repository's dist/ folder
+    const val DEFAULT_URL = "https://raw.githubusercontent.com/AO-Miko/roblox-manager/release/dist/"      // the raw address of the repository's dist/ folder; can be changed in Settings
 
     fun url(sv: Services) = sv.prefs.str("updateUrl", DEFAULT_URL)
 

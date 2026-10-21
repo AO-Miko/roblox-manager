@@ -19,17 +19,20 @@ It bumps the versions, runs the Android unit tests, builds the signed APK, write
 
 ## Hosting
 
-Right now the remote is a local bare repository (`/home/miko/git-server/roblox-manager.git`), which serves the Linux app on this PC.
-A phone cannot reach that, so for the Android app (and a second PC) host the repository somewhere reachable:
+The server is the public GitHub repository `AO-Miko/roblox-manager`, branch `release` (`origin`). The old local bare repository is kept as the
+`local` remote.
 
-1. Create a repository on GitHub / Codeberg / your own server (a private one works for Linux with an SSH key; for the phone use a public one, or any
-   https address that serves `dist/` without a login).
-2. `git remote set-url origin <url>` and `git push origin release`.
-3. Linux: Settings → Updates → *Repository* = the git URL.
-4. Android: Settings → Updates → *Update server address* = the raw address of `dist/`, for GitHub
-   `https://raw.githubusercontent.com/USER/REPO/release/dist/`. The first APK is installed by hand from `dist/roblox-manager.apk`.
+- Linux: Settings → Updates → *Repository* = `https://github.com/AO-Miko/roblox-manager.git`.
+- Android: built in as `https://raw.githubusercontent.com/AO-Miko/roblox-manager/release/dist/` (Settings → Updates). The first APK is installed by hand
+  from `dist/roblox-manager.apk`.
 
-The APK and manifest contain no secrets. Never commit anything from `~/.config/roblox-manager-release/`.
+The repository is public, so it contains only source, the signed APK and public keys, never cookies or secrets. Never commit anything from
+`~/.config/roblox-manager-release/`.
+
+## Where logins are kept
+
+- Linux: in KDE Wallet / Secret Service (encrypted). Only if no wallet is available is a cookie kept in an owner-only file, and the app warns about it.
+- Android: encrypted with an AES-256-GCM key inside the Android Keystore; app backup is switched off.
 
 ## Keys — back these up
 
