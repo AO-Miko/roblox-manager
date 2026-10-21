@@ -126,9 +126,10 @@ jobs:
           if ($p.ExitCode -ne 0) { Get-Content setup.log -Tail 40; throw "setup exit code $($p.ExitCode)" }
           # the live details (also written to the log): folders, files with sizes, totals, shortcuts
           $log = Get-Content setup.log -Raw
-          foreach ($want in "Folder created: ", "   File   ", "app\app.py", "Done: \d+ files in \d+ folders", "Start menu entry created", "Registered in Settings > Apps") {
-            if ($log -notmatch $want) { throw "the live details do not mention: $want" }
+          foreach ($want in "Folder created: ", "   File   ", "app\app.py", "Start menu entry created", "Registered in Settings > Apps") {
+            if (-not $log.Contains($want)) { throw "the live details do not mention: $want" }
           }
+          if ($log -notmatch "Done: \d+ files in \d+ folders") { throw "the live details have no total" }
           $reported = ([regex]::Matches($log, "(?m)^.*   File   ")).Count
           $dir = Join-Path $env:APPDATA "RobloxManager\App"
           $real = (Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -ne "unins000.dat" }).Count
@@ -159,9 +160,10 @@ jobs:
           $p = Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/LOG=$PWD\uninstall.log" -Wait -PassThru
           Start-Sleep -Seconds 3
           $ulog = Get-Content uninstall.log -Raw
-          foreach ($want in "   Deleted   ", "Folder deleted: ", "Done: \d+ files and \d+ folders deleted") {
-            if ($ulog -notmatch $want) { throw "the uninstall details do not mention: $want" }
+          foreach ($want in "   Deleted   ", "Folder deleted: ") {
+            if (-not $ulog.Contains($want)) { throw "the uninstall details do not mention: $want" }
           }
+          if ($ulog -notmatch "Done: \d+ files and \d+ folders deleted") { throw "the uninstall details have no total" }
           if ($ulog -match "Could not delete") { throw "the uninstaller could not delete something" }
           if (Test-Path "$dir\python") { throw "files were left behind" }
           if (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Roblox Manager.lnk")) { throw "the Start menu entry is still there" }
