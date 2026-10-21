@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
@@ -131,7 +132,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
                 TextButton(onClick = { Updates.install(ctx, upd.ready!!) }) { Text("Install") }
             }
             Box(Modifier.weight(1f)) {
-                fun shown(id: String) = if (dest == id) Modifier.fillMaxSize() else Modifier.size(0.dp)
+                fun shown(id: String) = if (dest == id) Modifier.fillMaxSize() else Modifier.size(0.dp).clipToBounds()   // (clipped: a checkbox keeps its 48 dp touch size and would draw outside)
                 if (HOME.id in visited) Box(shown(HOME.id)) { HomeScreen(sv, addAccount) }
                 if (PEOPLE.id in visited) Box(shown(PEOPLE.id)) { PeopleScreen(sv, bulk, counts, jump) }
                 if (GROUPS.id in visited) Box(shown(GROUPS.id)) { GroupsScreen(sv, bulk, counts) }
