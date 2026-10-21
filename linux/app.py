@@ -25,6 +25,7 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QComboBox, QLabel, QMainWindow, QMessageBox, QTabWidget
 
 import accounts
+import bans
 import plat
 import rbx
 import settings
@@ -85,6 +86,14 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Sign in on the Home tab to unlock friends, groups and VIP servers. The API Explorer works without one.")
         if auto_login and self.ctx.client.has_cookie:
             QTimer.singleShot(200, self.account.sign_in)
+        if auto_login:                                   # the ban list: now, and every ten minutes while the app is open
+            self._ban_timer = QTimer(self)
+            self._ban_timer.timeout.connect(self._check_bans)
+            self._ban_timer.start(bans.REFRESH_SECONDS * 1000)
+            QTimer.singleShot(1500, self._check_bans)
+
+    def _check_bans(self):
+        self.ctx.async_.run(bans.refresh, lambda _: self.account.enforce_bans())
 
     def _cleared(self, category):
         if category == "logs":

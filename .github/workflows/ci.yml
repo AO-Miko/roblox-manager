@@ -44,6 +44,8 @@ jobs:
         run: python tests/test_updater_release.py
       - name: Windows/Linux specifics
         run: python tests/test_windows_native.py
+      - name: Ban list
+        run: python tests/test_bans.py
       - name: Info tab
         run: python tests/test_info_tab.py
       - name: Updates box

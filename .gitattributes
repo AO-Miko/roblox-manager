@@ -2,3 +2,4 @@
 tests/fixtures/** -text
 *.apk binary
 *.ico binary
+dist/bans.json* -text

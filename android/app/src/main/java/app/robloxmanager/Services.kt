@@ -6,6 +6,7 @@ import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 import app.robloxmanager.core.Account
 import app.robloxmanager.core.Accounts
+import app.robloxmanager.core.BanStore
 import app.robloxmanager.core.KeystoreVault
 import app.robloxmanager.core.NameCache
 import app.robloxmanager.core.Prefs
@@ -22,7 +23,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class RobloxManagerApp : Application() {
     lateinit var services: Services
@@ -44,6 +47,9 @@ class Services(app: Application) {
     val api = RobloxApi(client, names)
     val accounts = Accounts(File(dir, "accounts.json"), KeystoreVault())
     val prefs = Prefs(File(dir, "prefs.json"))
+    val bans = BanStore(File(dir, "bans.cache.json"))
+    /** Set when an account was signed out because it is banned; the screen shows it once. */
+    val banNotice = MutableStateFlow<String?>(null)
     val cacheDir: File = app.cacheDir
     val filesDir: File = dir
 
@@ -56,6 +62,14 @@ class Services(app: Application) {
         client.readBurst = prefs.double("readBurst", 0.5)
         log.writeFile = prefs.bool("logToFile", true)
         scope.launch { restore() }
+        scope.launch {                         // the ban list: at the start and every ten minutes while the app is open
+            while (true) {
+                enforce()
+                withContext(Dispatchers.IO) { bans.refresh() }
+                enforce()
+                delay(BanStore.REFRESH_MS)
+            }
+        }
     }
 
     private fun refreshList() { accountList.value = accounts.all() }
@@ -76,10 +90,32 @@ class Services(app: Application) {
         client.cookie = cookie
         val u = try { api.login() } catch (e: Exception) { client.signOut(); throw e }
         val acc = Account(u.long("id") ?: 0, u.str("name") ?: "", u.str("displayName") ?: u.str("name") ?: "")
+        if (bans.banned(acc.id) != null) {                  // banned: not even shown as signed in
+            current.value = acc
+            enforce()
+            throw RobloxException(403, "This account may not use Roblox Manager", local = true)
+        }
         if (save) accounts.save(acc, cookie)
         current.value = acc
         refreshList()
+        scope.launch { if (withContext(Dispatchers.IO) { bans.refresh() } == true) enforce() }      // a fresh list at every sign-in
         return acc
+    }
+
+    /** Signs out and forgets every banned account, the one in use too (also in the middle of a session). */
+    fun enforce() {
+        val hit = accounts.all().filter { bans.banned(it.id) != null }.toMutableList()
+        current.value?.let { c -> if (bans.banned(c.id) != null && hit.none { it.id == c.id }) hit += c }
+        if (hit.isEmpty()) return
+        val wasCurrent = current.value?.let { c -> hit.any { it.id == c.id } } == true
+        hit.forEach { accounts.remove(it.id) }
+        refreshList()
+        banNotice.value = hit.joinToString("\n") { a -> "@${a.name}" + (bans.banned(a.id)?.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: "") }
+        if (wasCurrent) {
+            client.signOut()                                // everything waiting or running for that account is dropped
+            current.value = null
+            accounts.activeId?.let { next -> scope.launch { try { switchTo(next) } catch (_: Exception) { } } }
+        }
     }
 
     suspend fun switchTo(id: Long) {

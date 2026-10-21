@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 import accounts
+import bans
 import plat
 import rbx
 import settings
@@ -431,7 +432,42 @@ class AccountTab(QWidget):
         else:
             self.ctx.error(e)
 
+    def enforce_bans(self, extra=None):
+        """Sign out and forget every banned account (see bans.py): the one in use as well, even in the middle of a session.
+        `extra` is a user that has just signed in and is not saved yet."""
+        hit = {a["id"]: a for a in accounts.list_accounts() if bans.banned(a["id"]) is not None}
+        me = extra or self.ctx.client.user
+        if me and me.get("id") not in hit and bans.banned(me["id"]) is not None:
+            hit[me["id"]] = {"id": me["id"], "name": me.get("name", ""), "displayName": me.get("displayName", "")}
+        if not hit:
+            return False
+        active = accounts.active_id()
+        was_in_use = (me and me.get("id") in hit) or active in hit
+        for uid in hit:
+            accounts.remove(uid)
+            self.balances.pop(uid, None)
+        self.ctx.accounts_changed.emit()
+        if was_in_use:
+            self._previous = None
+            self._reset_for_switch()                    # everything waiting or running for that account is dropped
+            self.refresh_buttons()
+            nxt = accounts.active_id()
+            if nxt is not None and nxt not in hit:
+                self.ctx.client._cookie = accounts.cookie_of(nxt)
+                self.sign_in()
+        lines = []
+        for a in hit.values():
+            why = bans.banned(a["id"])
+            lines.append(f"@{a.get('name') or a['id']}" + (f": {why}" if why else ""))
+        QMessageBox.warning(self, "Account not allowed", "This account may not use Roblox Manager and was signed out and removed from this PC:\n\n"
+                            + "\n".join(lines))
+        return True
+
     def _signed_in(self, user):
+        if bans.banned(user["id"]) is not None:          # banned: not even shown as signed in
+            self.enforce_bans(extra=user)
+            return
+        self.ctx.async_.run(bans.refresh, lambda changed: changed and self.enforce_bans())      # a fresh list at every sign-in
         self._previous = None
         try:
             accounts.remember(user, self.ctx.client._cookie)        # every account that signs in is kept, ready to switch to

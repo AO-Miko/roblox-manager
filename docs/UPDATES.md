@@ -33,6 +33,20 @@ machine needed), pushes, and publishes the GitHub Release with the APK, the Linu
 The release starts as a draft and is published after all files are uploaded; publishing starts the `Windows` workflow, which tests the Windows package on a
 real Windows machine.
 
+## The ban list
+
+`dist/bans.json` (+ `dist/bans.json.sig`, signed for the namespace `roblox-manager-bans`) lists Roblox user ids that may not use the apps, each with an optional reason shown to
+the person. The apps verify it with the release key built into them (`linux/bans.py`, `core/Bans.kt`), only accept a higher `serial` than the one they have, keep the last good
+list on the device, and sign a banned account out and delete it at once (at start, at every sign-in, every ten minutes). If the list cannot be fetched nobody is locked out.
+
+```
+tools/ban.sh ban 12345678 "reason shown to the person" --push
+tools/ban.sh unban 12345678 --push
+tools/ban.sh list
+```
+
+No new version is needed. GitHub's cache can delay a change by a few minutes. The ids and reasons are public, so keep reasons short and factual.
+
 ## The Windows package
 
 `roblox-manager-windows-X.Y.Z.zip` holds a folder with the official embeddable Python, PySide6 and requests (Windows builds from PyPI, with the Qt parts the

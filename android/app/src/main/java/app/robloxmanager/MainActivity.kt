@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -59,6 +60,14 @@ private fun Root(sv: Services) {
     val ready by sv.ready.collectAsState()
     val me by sv.current.collectAsState()
     var adding by remember { mutableStateOf(false) }
+    val notice by sv.banNotice.collectAsState()
+    notice?.let { n ->
+        AlertDialog(
+            onDismissRequest = { sv.banNotice.value = null }, title = { Text("Account not allowed") },
+            text = { Text("This account may not use Roblox Manager and was signed out and removed from this phone:\n\n$n") },
+            confirmButton = { TextButton(onClick = { sv.banNotice.value = null }) { Text("OK") } },
+        )
+    }
     Box(Modifier.fillMaxSize().background(C.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
         when {
             !ready -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }

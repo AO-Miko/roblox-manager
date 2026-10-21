@@ -37,6 +37,9 @@ jobs:
       - name: Release updater
         if: ${{ !cancelled() }}
         run: python tests/test_updater_release.py
+      - name: Ban list
+        if: ${{ !cancelled() }}
+        run: python tests/test_bans.py
       - name: Info tab
         if: ${{ !cancelled() }}
         run: python tests/test_info_tab.py

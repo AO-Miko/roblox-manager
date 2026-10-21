@@ -1,0 +1,7 @@
+{
+  "serial": 5,
+  "bans": [
+    {"id": 111, "reason": "spamming"},
+    {"id": 222, "reason": ""}
+  ]
+}

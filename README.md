@@ -122,6 +122,12 @@ with me, no analytics, no telemetry and no ads.
   It sends no account data; GitHub can of course see your IP address like for any download.
 - Nothing else. There is no crash reporting and no third-party service.
 
+**Ban list**: the maintainer can ban a Roblox user id from using the apps (for example for abusing them). The list is a small public file in this repository
+(`dist/bans.json`, with the user id and a short reason), signed with the release key so nobody else can add to it. The apps download it at start, at every sign-in and
+every ten minutes; a banned account is signed out and forgotten at once, even in the middle of a session, and is told why. Nothing about you is sent (it is a plain
+download), the last good list is kept on your device, and if it cannot be downloaded nobody is locked out. It is a check in open-source code, so it stops casual misuse,
+not someone who modifies the program.
+
 **Spending**: the apps never buy anything by themselves. The Android app has no purchase feature, and the Linux app always shows the price and asks first
 before anything that costs Robux.
 
