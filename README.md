@@ -68,6 +68,8 @@ Windows 10 or 11 (64-bit). Nothing else needs to be installed: it brings its own
    - a **desktop icon** (off by default),
    - starting the app when the setup finishes.
    It needs no administrator rights and installs for your Windows user only (the app updates itself, so it can't live in Program Files).
+   While it installs, the setup shows live details: every folder it creates and every file it puts in place with its size, the shortcuts, and the
+   entry in the Apps list (nothing is downloaded: everything is inside the setup). The uninstaller shows every file and folder it deletes the same way.
 4. It appears in **Settings → Apps → Installed apps**, where you can uninstall it. The uninstaller asks whether to delete your settings and saved accounts too.
    Silent install for scripts: `Roblox-Manager-Setup-X.Y.Z.exe /VERYSILENT /DIR="D:\Apps\RobloxManager" /TASKS="startmenu,desktopicon"`
    (leave `/TASKS=` empty for no shortcuts); silent uninstall: `unins000.exe /VERYSILENT /REMOVEDATA=yes` (omit `/REMOVEDATA` to keep your data).

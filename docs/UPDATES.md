@@ -51,7 +51,8 @@ No new version is needed. GitHub's cache can delay a change by a few minutes. Th
 
 `Roblox-Manager-Setup-X.Y.Z.exe` is a normal Windows setup program made with Inno Setup (`tools/windows/installer.iss`, built by `tools/build_installer.sh`, which runs
 Inno Setup under Wine so a release can be made on Linux; Wine's menu-builder is switched off so the build adds nothing to the build computer). It contains the same
-folder as the zip. Per-user install (no administrator rights) into a folder the person chooses (default `%APPDATA%\RobloxManager\App`), optional Start menu entry and
+folder as the zip. The wizard and the uninstaller show live details (every folder created or deleted, every file with its size, totals), also written to the
+setup log (`/LOG=file`); the setup finds new files by looking at the install folder at every progress step, because Inno Setup has no per-file event. Per-user install (no administrator rights) into a folder the person chooses (default `%APPDATA%\RobloxManager\App`), optional Start menu entry and
 desktop icon, an entry in Windows' Apps list, and an uninstaller that can also remove the person's data. The `installer` job of the Windows workflow installs and uninstalls
 the released file on a real Windows machine (defaults, custom folder, optional items, data removal). It is not signed with a paid code-signing certificate; the release's
 `SHA256SUMS.txt` lets people check it.

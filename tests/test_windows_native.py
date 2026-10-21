@@ -78,7 +78,8 @@ try:
     r = updater.release_latest({"repo": "https://github.com/AO-Miko/roblox-manager.git"})
     check("GitHub answers over https (the newest release is found)", bool(r["version"]), r["version"])
 except updater.UpdateError as e:
-    check("GitHub answers over https (a release without a package is fine at this point)", "could not reach" not in str(e), e)
+    # any answer from GitHub (even an HTTP error such as a rate limit on a shared test machine) proves that TLS and the certificates work
+    check("GitHub answers over https (a release without a package, or an HTTP error, is fine here)", "could not reach" not in str(e) or "HTTPError" in str(e), e)
 
 print(f"\n{sum(res)}/{len(res)} passed")
 sys.exit(0 if all(res) else 1)

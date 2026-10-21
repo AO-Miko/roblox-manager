@@ -124,7 +124,16 @@ jobs:
           $exe = (Get-ChildItem Roblox-Manager-Setup-*.exe | Select-Object -First 1).FullName
           $p = Start-Process $exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/LOG=$PWD\setup.log" -Wait -PassThru
           if ($p.ExitCode -ne 0) { Get-Content setup.log -Tail 40; throw "setup exit code $($p.ExitCode)" }
+          # the live details (also written to the log): folders, files with sizes, totals, shortcuts
+          $log = Get-Content setup.log -Raw
+          foreach ($want in "Folder created: ", "   File   ", "app\app.py", "Done: \d+ files in \d+ folders", "Start menu entry created", "Registered in Settings > Apps") {
+            if ($log -notmatch $want) { throw "the live details do not mention: $want" }
+          }
+          $reported = ([regex]::Matches($log, "(?m)^.*   File   ")).Count
           $dir = Join-Path $env:APPDATA "RobloxManager\App"
+          $real = (Get-ChildItem $dir -Recurse -File | Where-Object { $_.Name -ne "unins000.dat" }).Count
+          Write-Host "files reported: $reported, files on disk (without unins000.dat): $real"
+          if ($reported -ne $real) { throw "the live details list $reported files but $real were installed" }
           foreach ($f in "python\pythonw.exe","app\launcher.py","app\app.py","site-packages\PySide6\QtCore.pyd","trust\allowed_signers","unins000.exe") {
             if (-not (Test-Path (Join-Path $dir $f))) { throw "missing after install: $f" }
           }
@@ -147,8 +156,13 @@ jobs:
         shell: pwsh
         run: |
           $dir = Join-Path $env:APPDATA "RobloxManager\App"
-          $p = Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          $p = Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/LOG=$PWD\uninstall.log" -Wait -PassThru
           Start-Sleep -Seconds 3
+          $ulog = Get-Content uninstall.log -Raw
+          foreach ($want in "   Deleted   ", "Folder deleted: ", "Done: \d+ files and \d+ folders deleted") {
+            if ($ulog -notmatch $want) { throw "the uninstall details do not mention: $want" }
+          }
+          if ($ulog -match "Could not delete") { throw "the uninstaller could not delete something" }
           if (Test-Path "$dir\python") { throw "files were left behind" }
           if (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Roblox Manager.lnk")) { throw "the Start menu entry is still there" }
           if (-not (Test-Path (Join-Path $env:APPDATA "RobloxManager"))) { throw "the person's data folder was removed although it should be kept" }
