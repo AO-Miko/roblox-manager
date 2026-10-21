@@ -1,0 +1,11 @@
+{
+  "serial": 7,
+  "roles": {
+    "1001": "owner",
+    "1002": "Co Owner",
+    "1003": "senior_admin",
+    "2002": "admin",
+    "4004": "trusted-friend",
+    "9999": "king"
+  }
+}

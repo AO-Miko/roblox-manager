@@ -11,6 +11,7 @@ import app.robloxmanager.core.KeystoreVault
 import app.robloxmanager.core.NameCache
 import app.robloxmanager.core.Prefs
 import app.robloxmanager.core.RequestLog
+import app.robloxmanager.core.RoleStore
 import app.robloxmanager.core.RobloxApi
 import app.robloxmanager.core.RobloxClient
 import app.robloxmanager.core.RobloxException
@@ -48,6 +49,9 @@ class Services(app: Application) {
     val accounts = Accounts(File(dir, "accounts.json"), KeystoreVault())
     val prefs = Prefs(File(dir, "prefs.json"))
     val bans = BanStore(File(dir, "bans.cache.json"))
+    val roles = RoleStore(File(dir, "roles.cache.json"))
+    /** Counts up when the role list changed, so the screens look at it again. */
+    val rolesVersion = MutableStateFlow(0)
     /** Set when an account was signed out because it is banned; the screen shows it once. */
     val banNotice = MutableStateFlow<String?>(null)
     val cacheDir: File = app.cacheDir
@@ -68,6 +72,7 @@ class Services(app: Application) {
                     enforce()
                     withContext(Dispatchers.IO) { bans.refresh() }
                     enforce()
+                    if (withContext(Dispatchers.IO) { roles.refresh() } == true) rolesVersion.value++
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (_: Throwable) {

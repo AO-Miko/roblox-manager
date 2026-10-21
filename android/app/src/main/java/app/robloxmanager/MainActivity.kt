@@ -37,7 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import app.robloxmanager.ui.AppTheme
+import app.robloxmanager.ui.ADMIN
 import app.robloxmanager.ui.ALL
+import app.robloxmanager.ui.AdminScreen
+import app.robloxmanager.ui.STAFF
+import app.robloxmanager.ui.StaffScreen
 import app.robloxmanager.ui.BottomBar
 import app.robloxmanager.ui.BulkBar
 import app.robloxmanager.ui.GROUPS
@@ -111,12 +115,16 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val me by sv.current.collectAsState()
     val accounts by sv.accountList.collectAsState()
+    val rolesVersion by sv.rolesVersion.collectAsState()
+    val rank = remember(me, rolesVersion) { me?.let { sv.roles.rankOf(it.id) } ?: 0 }
+    val isAdmin = rank >= app.robloxmanager.core.Roles.MODERATOR
     fun open(id: String, sub: Int = 0) {
         if (id !in visited) visited.add(id)
         dest = id
         if (id == PEOPLE.id || id == INFO.id) jump = Jump(id, sub, (jump?.nonce ?: 0) + 1)
     }
     if (dest !in visited) visited.add(dest)
+    if (dest == ADMIN.id && !isAdmin) dest = MORE.id                  // an account without the role (or one that lost it) cannot be on the Admin page
     val inMore = IN_MORE.any { it.id == dest }
     BackHandler(enabled = inMore) { open(MORE.id) }
     BackHandler(enabled = !inMore && dest != HOME.id) { open(HOME.id) }
@@ -139,12 +147,14 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
                 if (VIP.id in visited) Box(shown(VIP.id)) { VipScreen(sv, bulk, counts) }
                 if (MONEY.id in visited) Box(shown(MONEY.id)) { MoneyScreen(sv) }
                 if (LOG.id in visited) Box(shown(LOG.id)) { LogScreen(sv) }
+                if (STAFF.id in visited) Box(shown(STAFF.id)) { StaffScreen(sv) }
+                if (ADMIN.id in visited && isAdmin) Box(shown(ADMIN.id)) { AdminScreen(sv) }
                 if (INFO.id in visited) Box(shown(INFO.id)) { InfoScreen(sv, jump) }
-                if (dest == MORE.id) MoreScreen { open(it.id) }
+                if (dest == MORE.id) MoreScreen(isAdmin) { open(it.id) }
             }
             BulkBar(bulk)
             BottomBar(current = dest, counts = counts) { open(it.id) }
         }
     }
-    if (searching) SearchDialog(onClose = { searching = false }) { j -> searching = false; open(j.dest, j.sub) }
+    if (searching) SearchDialog(admin = isAdmin, onClose = { searching = false }) { j -> searching = false; open(j.dest, j.sub) }
 }

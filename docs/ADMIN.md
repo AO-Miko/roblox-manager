@@ -37,14 +37,16 @@ tools/roles.sh list
 The apps download it at every start and every ten minutes, like the ban list. It is only believed with a valid signature, a newer `serial` replaces an
 older one, and the last good list is kept for offline use.
 
-## Staff List page (everybody)
+## Staff List page (everybody, PC and phone)
 
-Every user sees the **Staff List** page: the staff in hierarchy order with their public Roblox profile (display name, username, joined date,
+Every user sees the **Staff List** page (on the phone it is under **More**): the staff in hierarchy order with their public Roblox profile (display name, username, joined date,
 followers, following, friends, description) and a **Go to profile** button. It needs no sign-in and no role.
 
 ## Admin page (admin and up)
 
-It appears only when the signed-in account's user id has a role of admin or higher; for everybody else it is hidden and Ctrl+number skips it.
+On the phone (under **More**) it shows what is in force: who is banned, by whom and with which role, and the staff. Bans and unbans themselves are published from a PC (below).
+
+On the PC it appears only when the signed-in account's user id has a role of admin or higher; for everybody else it is hidden and Ctrl+number skips it.
 It bans and unbans by user id or username, with a reason, and shows who is banned, by whom and with which role.
 The rules above are checked in the page, and again in `tools/ban.sh` (so they hold however a ban is started).
 

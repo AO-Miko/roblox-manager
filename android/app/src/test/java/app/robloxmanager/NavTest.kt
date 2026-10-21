@@ -12,6 +12,7 @@ import org.junit.Test
 
 class NavTest {
     private val hits = searchHits()
+    private val adminHits = searchHits(admin = true)
 
     @Test fun everyPageIsReachableFromTheBottomBarOrMore() {
         val reachable = BOTTOM.map { it.id } + IN_MORE.map { it.id }
@@ -34,6 +35,12 @@ class NavTest {
 
     @Test fun titleThatStartsWithTheQueryComesFirst() {
         assertEquals("Groups", matchHits(hits, "gro").first().title)
+    }
+
+    @Test fun staffListIsForEverybodyAndAdminOnlyForAdmins() {
+        assertEquals("Staff List", matchHits(hits, "staff").first().title)
+        assertTrue(matchHits(hits, "ban").none { it.title == "Admin" })
+        assertEquals("Admin", matchHits(adminHits, "unban").first().title)
     }
 
     @Test fun emptyQueryShowsEverythingAndNonsenseShowsNothing() {

@@ -22,6 +22,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.outlined.AdminPanelSettings
+import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Groups
@@ -71,12 +73,14 @@ val GROUPS = Dest("groups", "Groups", Icons.Outlined.Groups, "Your groups: membe
 val VIP = Dest("vip", "VIP servers", Icons.Outlined.Dns, "Every private server you have: switch on or off, renew, bulk actions.", "vip private servers renew expire duplicates link")
 val MONEY = Dest("money", "Money", Icons.Outlined.Paid, "Robux balance, pending, totals and the transaction history.", "robux balance pending transactions history revenue")
 val LOG = Dest("log", "Request log", Icons.AutoMirrored.Outlined.ListAlt, "Every request the app sends to Roblox and the answer.", "log requests http rate limit errors")
+val STAFF = Dest("staff", "Staff List", Icons.Outlined.Badge, "Who is on the staff, from the owner down, with their Roblox profiles.", "staff team owner co-owner senior admin trusted friends roles hierarchy members profile")
+val ADMIN = Dest("admin", "Admin", Icons.Outlined.AdminPanelSettings, "Who is banned and by whom (admin role or higher).", "ban unban banned reason roles moderator")
 val INFO = Dest("info", "Info", Icons.Outlined.Info, "Settings, updates and what changed in each version.", "settings updates update log version changes about preferences")
 val MORE = Dest("more", "More", Icons.Outlined.MoreHoriz, "Money, request log, settings and updates.", "")
 
 val BOTTOM = listOf(HOME, PEOPLE, GROUPS, VIP, MORE)
-val IN_MORE = listOf(MONEY, LOG, INFO)
-val ALL = listOf(HOME, PEOPLE, GROUPS, VIP, MONEY, LOG, INFO)
+val IN_MORE = listOf(MONEY, LOG, STAFF, ADMIN, INFO)           // (the Admin page is only offered to the admin role and higher)
+val ALL = listOf(HOME, PEOPLE, GROUPS, VIP, MONEY, LOG, STAFF, ADMIN, INFO)
 
 /** A request to open a page, and optionally one of its sub pages (People: 0..5, Info: 0 settings / 1 updates). [nonce] makes the same request work twice. */
 class Jump(val dest: String, val sub: Int = 0, val nonce: Int = 0)
@@ -86,8 +90,8 @@ class Hit(val title: String, val where: String, val words: String, val icon: Ima
 
 private val PEOPLE_SUBS = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find a user")
 
-fun searchHits(): List<Hit> = buildList {
-    ALL.forEach { add(Hit(it.title, "page", it.words, it.icon, Jump(it.id))) }
+fun searchHits(admin: Boolean = false): List<Hit> = buildList {
+    ALL.filter { admin || it != ADMIN }.forEach { add(Hit(it.title, "page", it.words, it.icon, Jump(it.id))) }
     PEOPLE_SUBS.forEachIndexed { i, s -> add(Hit(s, "People", "", PEOPLE.icon, Jump("people", i))) }
     add(Hit("Settings", "Info", "preferences options rate limit log cache confirm", INFO.icon, Jump("info", 0)))
     add(Hit("Updates", "Info", "update version changes log install", INFO.icon, Jump("info", 1)))
@@ -146,9 +150,9 @@ fun BottomBar(current: String, counts: Map<String, Int>, onPick: (Dest) -> Unit)
 }
 
 @Composable
-fun MoreScreen(onOpen: (Dest) -> Unit) {
+fun MoreScreen(admin: Boolean, onOpen: (Dest) -> Unit) {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        IN_MORE.forEach { d ->
+        IN_MORE.filter { admin || it != ADMIN }.forEach { d ->
             Card(onClick = { onOpen(d) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3), Alignment.Center) { Icon(d.icon, null, tint = C.accent) }
@@ -164,9 +168,9 @@ fun MoreScreen(onOpen: (Dest) -> Unit) {
 }
 
 @Composable
-fun SearchDialog(onClose: () -> Unit, onPick: (Jump) -> Unit) {
+fun SearchDialog(admin: Boolean, onClose: () -> Unit, onPick: (Jump) -> Unit) {
     var q by remember { mutableStateOf("") }
-    val hits = remember(q) { matchHits(searchHits(), q) }
+    val hits = remember(q, admin) { matchHits(searchHits(admin), q) }
     val focus = remember { FocusRequester() }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(C.bg).statusBarsPadding().padding(12.dp)) {

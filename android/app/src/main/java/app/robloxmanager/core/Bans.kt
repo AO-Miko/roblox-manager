@@ -128,7 +128,9 @@ object SshSig {
 }
 
 /** Roblox user ids that may not use the app, as published (signed) by the maintainer. */
-class BanList(val serial: Long, val bans: Map<Long, String>)
+class BanEntry(val id: Long, val reason: String, val since: String, val by: Long?, val rank: Int)
+
+class BanList(val serial: Long, val bans: Map<Long, String>, val entries: List<BanEntry> = emptyList())
 
 /**
  * The ban list: dist/bans.json + dist/bans.json.sig of the update repository, signed with the release key (built in below).
@@ -153,8 +155,15 @@ class BanStore(
             val d = try { AppJson.parseToJsonElement(String(data, Charsets.UTF_8)).obj } catch (_: Exception) { null } ?: return null
             val serial = d.long("serial") ?: return null
             val map = HashMap<Long, String>()
-            (d["bans"] as? JsonArray)?.forEach { e -> val o = e.obj ?: return@forEach; val id = o.long("id") ?: return@forEach; map[id] = (o.str("reason") ?: "").take(200) }
-            return BanList(serial, map)
+            val entries = ArrayList<BanEntry>()
+            (d["bans"] as? JsonArray)?.forEach { e ->
+                val o = e.obj ?: return@forEach
+                val id = o.long("id") ?: return@forEach
+                val reason = (o.str("reason") ?: "").take(200)
+                map[id] = reason
+                entries.add(BanEntry(id, reason, o.str("since") ?: "", o.long("by"), (o.long("rank") ?: 5L).toInt()))
+            }
+            return BanList(serial, map, entries)
         }
     }
 
@@ -169,6 +178,9 @@ class BanStore(
         } catch (_: Throwable) { null }
         return (list ?: BanList(0, emptyMap())).also { cached = it }
     }
+
+    /** Every ban with who placed it and with which rank (for the Admin page). */
+    fun entries(): List<BanEntry> = try { load().entries } catch (_: Throwable) { emptyList() }
 
     /** The reason (possibly empty) if this user id is banned, otherwise null. */
     fun banned(userId: Long): String? = try { load().bans[userId] } catch (_: Throwable) { null }

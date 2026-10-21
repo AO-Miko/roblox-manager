@@ -217,6 +217,9 @@ class RobloxApi(val client: RobloxClient, val names: NameCache = NameCache()) {
         return out
     }
 
+    /** A user's public profile: name, displayName, description, created. */
+    suspend fun profile(id: Long): JsonObject? = client.get("https://users.roblox.com/v1/users/$id").json.obj
+
     suspend fun counts(id: Long): Map<String, Int?> = listOf("friends" to "friends", "followers" to "followers", "following" to "followings").associate { (k, part) ->
         k to try { client.get("https://friends.roblox.com/v1/users/$id/$part/count", auth = false).json.obj?.int("count") } catch (_: RobloxException) { null }
     }
