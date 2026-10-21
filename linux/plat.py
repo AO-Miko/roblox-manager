@@ -59,7 +59,12 @@ def hard_exit(code=0):
     if IS_WIN:
         try:
             import ctypes
-            ctypes.windll.kernel32.TerminateProcess(ctypes.windll.kernel32.GetCurrentProcess(), int(code))
+            from ctypes import wintypes
+            k32 = ctypes.WinDLL("kernel32")
+            k32.GetCurrentProcess.restype = wintypes.HANDLE                    # (without the types, the pseudo handle is cut to 32 bits and refused)
+            k32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+            k32.TerminateProcess.restype = wintypes.BOOL
+            k32.TerminateProcess(k32.GetCurrentProcess(), int(code) & 0xFFFFFFFF)
         except Exception:                              # noqa: BLE001
             pass
     os._exit(int(code))
