@@ -1,0 +1,4 @@
+# signed test files must stay byte for byte as they were signed (no line-ending conversion on Windows)
+tests/fixtures/** -text
+*.apk binary
+*.ico binary

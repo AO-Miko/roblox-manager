@@ -1,6 +1,6 @@
 # Roblox Manager
 
-Manage your Roblox accounts from a Linux desktop app or an Android phone app: friends and requests, followers, blocked users, groups,
+Manage your Roblox accounts from a desktop app (Linux and Windows) or an Android phone app: friends and requests, followers, blocked users, groups,
 VIP servers, Robux and transactions, a request log, and several accounts side by side. Both apps follow Roblox's own rate limits and
 update themselves from this repository.
 
@@ -12,7 +12,8 @@ This is a **just-for-fun project**. I built it to test how far AI has progressed
 mine whose quality was really, really bad. Most of the code here was written with an AI assistant (Claude), and I check how it behaves by using it.
 
 - I may keep updating it, but I'm not sure yet. Don't expect a support schedule.
-- A **Windows version** is planned and should come soon.
+- There is a **Windows version** too. It is newer than the Linux one: it is built on Linux and checked on a real Windows machine by an automatic test run
+  on every release, but I don't use Windows myself, so please report problems.
 - It is an unofficial tool and is **not affiliated with or endorsed by Roblox**. It talks to Roblox's web endpoints the same way the website does, which can
   change at any time and break things. Use it at your own risk, and only with accounts you own.
 - Bug reports and ideas are welcome as GitHub issues.
@@ -55,6 +56,22 @@ commit is signed by the release key. *Settings → Updates* shows the version, l
 Uninstall: delete `~/.local/share/roblox-manager`, `~/.local/bin/roblox-manager` and `~/.local/share/applications/roblox-manager.desktop`
 (your settings stay in `~/.config/roblox-manager` until you delete them).
 
+## Install on Windows
+
+Windows 10 or 11 (64-bit). Nothing else needs to be installed: the package brings its own Python and libraries.
+
+1. Download `roblox-manager-windows-X.Y.Z.zip` from the [latest release](https://github.com/AO-Miko/roblox-manager/releases/latest) (about 200 MB).
+2. Right-click the zip → **Extract All…**, then open the extracted `RobloxManager` folder.
+3. Double-click **`Install.cmd`**. It installs for your user only (no administrator rights), adds a Start menu entry (and a desktop shortcut if you want
+   one) and can start the app. Or double-click **`Roblox Manager.cmd`** to run it from that folder without installing.
+4. Windows SmartScreen may say "Windows protected your PC", because the program is not signed with a paid certificate. Choose **More info → Run anyway**.
+   You can check the download against `SHA256SUMS.txt` from the release (`Get-FileHash roblox-manager-windows-*.zip` in PowerShell).
+
+**Updates:** every time you start it, the app asks GitHub for the newest release (a few seconds at most, never blocking). If there is one, it
+downloads the signed update package, checks that it is signed with the release key and is newer, and installs it; the next start uses it.
+*Info → Updates* shows the version, checks now, and goes back to the previous version.
+Uninstall: run `Uninstall.cmd` from the install folder (`%LOCALAPPDATA%\Programs\RobloxManager`); it asks whether to delete your settings too.
+
 ## Install on Android
 
 Android 8.0 or newer.
@@ -81,6 +98,8 @@ with me, no analytics, no telemetry and no ads.
 - What is kept afterwards is Roblox's **sign-in cookie** (`.ROBLOSECURITY`), which works like a key to the account. It is stored **encrypted**:
   - Linux: in the system wallet (KDE Wallet / GNOME Keyring through `secret-tool`). If no wallet is available, the app warns you and falls back to a file
     only your user can read.
+  - Windows: encrypted with Windows data protection (DPAPI), which only your own Windows user account can decrypt (not another account, not another PC).
+    The encrypted files are in `%APPDATA%\RobloxManager\vault`.
   - Android: encrypted with an AES-256-GCM key that lives inside the Android Keystore (it cannot be copied out of the phone). Android app backup is turned off.
 - The cookie is sent only to `roblox.com` addresses, never anywhere else. Anyone who gets your cookie is signed in as you, so don't share it, and use
   "sign out" on roblox.com to invalidate it if you ever lose a device.
@@ -92,21 +111,23 @@ with me, no analytics, no telemetry and no ads.
 - A **request log** of what the app asked Roblox (address, answer code and timing). It never contains cookies, passwords, codes or request bodies, and
   secret-looking parts of an address are masked. It can be switched off and cleared in Settings.
 - On Linux, small records of bulk actions you ran (for example which friends you removed), so you can look back at what happened.
-- Where: Linux keeps this in `~/.config/roblox-manager` and `~/.local/state/roblox-manager`. Android keeps it in the app's private storage.
-  Removing an account deletes its saved sign-in; uninstalling the Android app, or deleting those Linux folders, removes everything.
+- Where: Linux keeps this in `~/.config/roblox-manager` and `~/.local/state/roblox-manager`. Windows keeps it in `%APPDATA%\RobloxManager` and
+  `%LOCALAPPDATA%\RobloxManager`. Android keeps it in the app's private storage.
+  Removing an account deletes its saved sign-in; uninstalling the Android app, or deleting those folders, removes everything.
 
 **What goes over the network**
 - To Roblox: the requests for the features you use (friends, groups, VIP servers, Robux ...), with your cookie. Pictures are downloaded from Roblox's
   image servers without any cookie.
-- To GitHub: the update check (`github.com` for Linux, `raw.githubusercontent.com` for Android). It sends no account data; GitHub can of course see your
-  IP address like for any download.
+- To GitHub: the update check (`github.com` for Linux, `api.github.com` and the release download for Windows, `raw.githubusercontent.com` for Android).
+  It sends no account data; GitHub can of course see your IP address like for any download.
 - Nothing else. There is no crash reporting and no third-party service.
 
 **Spending**: the apps never buy anything by themselves. The Android app has no purchase feature, and the Linux app always shows the price and asks first
 before anything that costs Robux.
 
-**Updates are verified**: Linux only installs commits signed with the release key (and never an older version), Android only installs an APK whose
-checksum matches and that is signed with the same key as the installed app. See [docs/UPDATES.md](docs/UPDATES.md).
+**Updates are verified**: Linux only installs commits signed with the release key (and never an older version), Windows only installs an update package
+signed with that key (and never an older version), Android only installs an APK whose checksum matches and that is signed with the same key as the
+installed app. See [docs/UPDATES.md](docs/UPDATES.md).
 
 ## For maintainers
 
