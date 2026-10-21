@@ -1,0 +1,24 @@
+name: Idea or feature request
+description: Something you would like the apps to do
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: This is a hobby project, so there is no promise, but ideas are welcome. Features that would harm other players or abuse Roblox won't be added.
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options: [All of them, Linux, Windows, Android]
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you tried or considered instead?

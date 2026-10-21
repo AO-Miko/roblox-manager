@@ -12,6 +12,15 @@ One GitHub repository is the update server for all three apps. Everything is pub
 The Linux and Windows apps are the same code (`linux/` folder). The differences are isolated in `linux/plat.py` (folders), `linux/vault.py` (DPAPI instead of
 a Secret Service wallet) and `linux/updater.py` (release backend instead of git).
 
+## Branches
+
+- **`main`** is where development happens and where pull requests go. It is protected: changes need a pull request, the checks (Linux, Windows, Android)
+  and the maintainer's review; no force-pushes, no deletion, linear history.
+- **`release`** is what the Linux app updates from (it follows the head of this branch). It only gets **signed** release commits made by `tools/release.sh`,
+  never a web-merged pull request: a commit merged on github.com is signed by GitHub, not by the release key, and the Linux app would refuse it.
+  To release: `git checkout release && git merge --ff-only main` (or merge `main` and sign the merge), then run `tools/release.sh`.
+- Tags `v*` are protected: nobody but the maintainer can create, move or delete them.
+
 ## Publishing a release
 
 ```

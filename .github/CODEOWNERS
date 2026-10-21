@@ -1,0 +1,10 @@
+# Every change needs the maintainer's review. The security-sensitive parts are listed on their own so they stay protected if this file ever grows.
+*                      @AO-Miko
+/.github/              @AO-Miko
+/tools/                @AO-Miko
+/linux/updater.py      @AO-Miko
+/linux/sshsig.py       @AO-Miko
+/linux/vault.py        @AO-Miko
+/linux/launcher.py     @AO-Miko
+/android/app/src/main/java/app/robloxmanager/core/AppUpdate.kt @AO-Miko
+/SECURITY.md           @AO-Miko

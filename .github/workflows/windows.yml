@@ -3,11 +3,18 @@ name: Windows
 # Runs the tests on a real Windows machine, and checks the Windows package of every release.
 on:
   push:
-    branches: [release]
+    branches: [main, release]
   pull_request:
   workflow_dispatch:
   release:
     types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -17,8 +24,8 @@ jobs:
       QT_QPA_PLATFORM: offscreen
       PYTHONIOENCODING: utf-8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - run: pip install -r tools/windows/requirements.txt
@@ -36,6 +43,9 @@ jobs:
       - name: Updates box
         if: ${{ !cancelled() }}
         run: python tests/test_settings_updates.py
+      - name: No cut-off text on any tab (Windows fonts)
+        if: ${{ !cancelled() }}
+        run: python tests/test_text_fit.py
       - name: The whole app against a fake Roblox
         if: ${{ !cancelled() }}
         run: python tests/test_gui_full.py

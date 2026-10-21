@@ -1,0 +1,69 @@
+name: CI
+
+# Tests for every push and pull request: the desktop app on Linux and the Android app's unit tests (Windows has its own workflow).
+on:
+  push:
+    branches: [main, release]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Tests on Linux
+    runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: System libraries Qt needs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libdbus-1-3 libfontconfig1 libnss3 libxcomposite1 \
+            libxdamage1 libxrandr2 libxtst6 libxcursor1 libxi6 libxss1 libasound2t64 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 \
+            libxcb-shape0 libxcb-xinerama0 libxcb-image0 libxcb-render-util0
+      - run: pip install -r tools/windows/requirements.txt
+      - name: Git identity for the updater tests
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.invalid"
+      - name: Signature check
+        run: python tests/test_sshsig.py
+      - name: Git updater
+        run: python tests/test_updater.py
+      - name: Release updater
+        run: python tests/test_updater_release.py
+      - name: Windows/Linux specifics
+        run: python tests/test_windows_native.py
+      - name: Info tab
+        run: python tests/test_info_tab.py
+      - name: Updates box
+        run: python tests/test_settings_updates.py
+      - name: No cut-off text on any tab
+        run: python tests/test_text_fit.py
+      - name: The whole app against a fake Roblox
+        run: python tests/test_gui_full.py
+      - name: The app starts
+        run: python linux/launcher.py --selftest
+
+  android:
+    name: Android unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Unit tests
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest

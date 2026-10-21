@@ -129,6 +129,12 @@ before anything that costs Robux.
 signed with that key (and never an older version), Android only installs an APK whose checksum matches and that is signed with the same key as the
 installed app. See [docs/UPDATES.md](docs/UPDATES.md).
 
+## Contributing and security
+
+Pull requests from forks are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). They go to the `main` branch and only the maintainer can merge them.
+The `release` branch is what the apps update from; it only receives signed release commits. To report a security problem privately, see
+[SECURITY.md](SECURITY.md). Everyone is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## For maintainers
 
 `tools/release.sh 1.2.0 "one change|another change" --push` (the `|` splits the bullets of the update log shown in both apps under **Info → Updates**) builds and signs everything, updates `dist/update.json`, pushes the `release` branch and publishes a

@@ -1,0 +1,44 @@
+name: Bug report
+description: Something does not work, or text is cut off
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! **Never paste your cookie, password or 2-step codes.** The request log in the app never contains them, but check before you paste anything.
+        Security problems go to the [private form](https://github.com/AO-Miko/roblox-manager/security/advisories/new), not here.
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options: [Linux, Windows, Android]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown under Info → Updates in the app.
+      placeholder: "1.3.0"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: For example Windows 11, Fedora 43 KDE, or the phone model and Android version.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: log
+    attributes:
+      label: Anything from the request log or screenshots
+      description: Remove names or ids you don't want to share. Screenshots of cut-off text are very helpful.

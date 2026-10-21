@@ -574,6 +574,12 @@ import csv as _csv, tempfile
 from PySide6.QtWidgets import QFileDialog
 import re as _re
 base = lambda t: _re.sub(r" \(.*\)$", "", t)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import textfit
+_cut = {}
+textfit.check_window(w, [1180, 900], _cut)
+check("no text is cut off on any tab or sub-tab (window full of data, 1180 and 900 px wide)", not _cut, "\n".join(textfit.lines(_cut)[:12]))
+w.resize(1180, 760)
 check("the tabs are Home, People, Groups, VIP servers, Money, Request log, API Explorer, Info", [base(w.tabs.tabText(i)) for i in range(w.tabs.count())] == ["Home", "People", "Groups", "VIP servers", "Money", "Request log", "API Explorer", "Info"], [w.tabs.tabText(i) for i in range(w.tabs.count())])
 check("People has Friends, Requests, Followers, Following, Blocked, Find a user", [base(w.people.tabs.tabText(i)) for i in range(w.people.tabs.count())] == ["Friends", "Requests", "Followers", "Following", "Blocked", "Find a user"])
 ask_yes(True)
