@@ -25,16 +25,22 @@ jobs:
       - name: Windows specifics (folders, DPAPI, signatures, TLS)
         run: python tests/test_windows_native.py
       - name: Signature check (against OpenSSH)
+        if: ${{ !cancelled() }}
         run: python tests/test_sshsig.py
       - name: Release updater
+        if: ${{ !cancelled() }}
         run: python tests/test_updater_release.py
       - name: Info tab
+        if: ${{ !cancelled() }}
         run: python tests/test_info_tab.py
       - name: Updates box
+        if: ${{ !cancelled() }}
         run: python tests/test_settings_updates.py
       - name: The whole app against a fake Roblox
+        if: ${{ !cancelled() }}
         run: python tests/test_gui_full.py
       - name: The app starts
+        if: ${{ !cancelled() }}
         run: python linux/launcher.py --selftest
 
   package:

@@ -77,8 +77,11 @@ for page, nm in ((tab.settings_tab, "Settings"), (tab.updates, "Updates")):
     tab.setCurrentWidget(page)
     app.processEvents()
     sa = page.findChild(QScrollArea)
+    from PySide6.QtWidgets import QWidget
+    wide = sorted(((w.minimumSizeHint().width(), type(w).__name__, (w.title() if hasattr(w, "title") else (w.text()[:30] if hasattr(w, "text") else "")))
+                   for w in sa.widget().findChildren(QWidget)), reverse=True)[:6]
     check(f"{nm} page fits a 560 px wide window without a sideways scroll (nothing cut off)", sa.widget().minimumSizeHint().width() <= sa.viewport().width(),
-          (sa.widget().minimumSizeHint().width(), sa.viewport().width()))
+          (sa.widget().minimumSizeHint().width(), sa.viewport().width(), wide))
 wc = tab.settings_tab.upd_sig
 check("a long check box needs more height when it is narrow (it wraps instead of being cut)", wc.heightForWidth(200) > wc.heightForWidth(900) and wc.text().startswith("Only install"),
       (wc.heightForWidth(200), wc.heightForWidth(900)))
