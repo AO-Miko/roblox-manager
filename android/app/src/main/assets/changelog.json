@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.3.0",
+    "date": "2026-10-21",
+    "changes": [
+      "New: Windows version (Windows 10 and 11, own Python included, installer script, signed automatic updates)",
+      "Windows logins are encrypted with Windows data protection (DPAPI)",
+      "Settings and Updates pages adapt to narrow windows and wider fonts",
+      "Linux, Windows and Android now share one signed release process"
+    ]
+  },
+  {
     "version": "1.2.1",
     "date": "2026-10-21",
     "changes": [
