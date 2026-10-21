@@ -1,7 +1,7 @@
 {
-  "versionName": "1.5.0",
-  "versionCode": 10,
+  "versionName": "1.5.1",
+  "versionCode": 11,
   "apk": "roblox-manager.apk",
-  "sha256": "b45a3ef1ccb67ab77d1781102651913d061390da7064f7fc8e7ab84428180313",
-  "notes": "New: a real Windows installer (Roblox-Manager-Setup.exe): choose where to install, optional Start menu entry (findable with the Windows key) and desktop icon, listed in Apps with an uninstaller|Default install location is inside %APPDATA%|The portable zip is still available"
+  "sha256": "1f394f2271f56365ac4906f82cc901d17de04e0ea94bcffbc70d88ff604165f8",
+  "notes": "Windows installer and uninstaller now show live details: every folder created or deleted and every file with its size, plus totals|Windows installer: choose the folder, optional Start menu entry and desktop icon, default location in %APPDATA%"
 }

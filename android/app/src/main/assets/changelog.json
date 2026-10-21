@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.5.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Windows installer and uninstaller now show live details: every folder created or deleted and every file with its size, plus totals",
+      "Windows installer: choose the folder, optional Start menu entry and desktop icon, default location in %APPDATA%"
+    ]
+  },
+  {
     "version": "1.5.0",
     "date": "2026-10-22",
     "changes": [
