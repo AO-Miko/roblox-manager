@@ -79,7 +79,7 @@ class GroupsTab(QWidget):
         self.b_leave.setProperty("danger", True)
         row.addWidget(self.b_leave)
         ll.addLayout(row)
-        row = QHBoxLayout()
+        row = FlowLayout()
         row.addWidget(button("Refresh", self.load_groups))
         row.addWidget(button("Open another group...", self.open_other, "Look at any group by id or link"))
         ll.addLayout(row)
