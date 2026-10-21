@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.5.2",
+    "date": "2026-10-22",
+    "changes": [
+      "Fixed the Android app crashing at start on phones with Android 12 or older (a signature check used a function only Android 13 has); it was introduced with the ban list in 1.4.0",
+      "The ban check can no longer crash the app, whatever goes wrong",
+      "Android lint now runs in the automatic checks"
+    ]
+  },
+  {
     "version": "1.5.1",
     "date": "2026-10-22",
     "changes": [

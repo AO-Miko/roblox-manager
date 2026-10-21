@@ -1,7 +1,7 @@
 {
-  "versionName": "1.5.1",
-  "versionCode": 11,
+  "versionName": "1.5.2",
+  "versionCode": 12,
   "apk": "roblox-manager.apk",
-  "sha256": "1f394f2271f56365ac4906f82cc901d17de04e0ea94bcffbc70d88ff604165f8",
-  "notes": "Windows installer and uninstaller now show live details: every folder created or deleted and every file with its size, plus totals|Windows installer: choose the folder, optional Start menu entry and desktop icon, default location in %APPDATA%"
+  "sha256": "3c5b407aa25d9147e43b09ca1486d06edefc6a314dc9afe9d28807f537722eb1",
+  "notes": "Fixed the Android app crashing at start on phones with Android 12 or older (a signature check used a function only Android 13 has); it was introduced with the ban list in 1.4.0|The ban check can no longer crash the app, whatever goes wrong|Android lint now runs in the automatic checks"
 }
