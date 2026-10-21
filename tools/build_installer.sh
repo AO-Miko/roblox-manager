@@ -31,7 +31,7 @@ if [[ -z "$ISCC" ]]; then
   ISCC="$(find "$WINEPREFIX/drive_c" -iname ISCC.exe | head -1)"
 fi
 
-wine "$ISCC" /Qp "/DAppVersion=$VERSION" "/DPackageDir=$(winepath -w "$PKG")" "/DOutDir=$(winepath -w "$OUT")" "$(winepath -w "$ROOT/tools/windows/installer.iss")" 2>&1 \
+wine "$ISCC" /Qp "/DAppVersion=$VERSION" "/DFileVersion=$(python3 -I "$ROOT/tools/version.py" file "$VERSION")" "/DPackageDir=$(winepath -w "$PKG")" "/DOutDir=$(winepath -w "$OUT")" "$(winepath -w "$ROOT/tools/windows/installer.iss")" 2>&1 \
   | grep -v "MESA\|pci id" || true
 SETUP="$OUT/Roblox-Manager-Setup-$VERSION.exe"
 [[ -s "$SETUP" ]] || { echo "The installer was not built"; exit 1; }

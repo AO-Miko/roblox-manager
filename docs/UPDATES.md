@@ -88,3 +88,21 @@ The repository is public, so it contains only source, the signed APK and public 
 - `signing_key` (+ `.pub`): signs Linux commits and the Windows app packages. If lost, make a new key, update `tools/trust/allowed_signers` and reinstall the
   Linux and Windows apps once (they only trust the key they were installed with).
 - `android-release.jks`, `android.pass`, `android-signing.properties`: sign the APK. **If lost, installed phones can never be updated** (Android rejects a different signing key); you would uninstall and reinstall.
+
+## Version numbers
+
+The version has five numbers, **R.B.S.F.D**:
+
+| Number | Means | Example |
+|---|---|---|
+| R | complete rework | 1 -> 2 |
+| B | big feature change | 1.7 -> 1.8 |
+| S | small feature change | 1.8.0 -> 1.8.1 |
+| F | bug fix | 1.8.1.0 -> 1.8.1.1 |
+| D | design rework | 1.8.1.1.0 -> 1.8.1.1.1 |
+
+Every update raises exactly **one** of them by 1. The numbers never go down; the only exception is a complete rework (R), which sets the other
+four back to 0 (1.8.1.1.1 -> 2.0.0.0.0). Versions before this rule had three numbers: 1.7.0 counts as 1.7.0.0.0.
+
+Publishing says which number to raise: `tools/release.sh big "notes" --push` (kinds: `rework`, `big`, `small`, `fix`, `design`); `tools/version.py` works out and checks the
+number. The apps compare versions number by number.

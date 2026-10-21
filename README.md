@@ -155,3 +155,7 @@ The `release` branch is what the apps update from; it only receives signed relea
 
 `tools/release.sh 1.2.0 "one change|another change" --push` (the `|` splits the bullets of the update log shown in both apps under **Info → Updates**) builds and signs everything, updates `dist/update.json`, pushes the `release` branch and publishes a
 GitHub Release with the APK and the Linux package. See [docs/UPDATES.md](docs/UPDATES.md) for how updates and keys work.
+
+## Versions
+
+The version has five numbers, `R.B.S.F.D`: complete rework . big feature change . small feature change . bug fix . design rework. An update raises exactly one of them by 1; they never go down (only a complete rework sets the others back to 0). Details in [docs/UPDATES.md](docs/UPDATES.md).

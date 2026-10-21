@@ -4,7 +4,10 @@
 ; in %APPDATA%\RobloxManager). The person may choose any folder they can write to: the app updates itself by replacing its own app folder.
 ; Everything else is optional: the Start menu entry (what Windows search finds), the desktop icon, and starting the app at the end.
 #ifndef AppVersion
-  #error Give the version: ISCC /DAppVersion=1.2.3
+  #error Give the version: ISCC /DAppVersion=1.2.3.0.0 /DFileVersion=1.2.3.0
+#endif
+#ifndef FileVersion
+  #define FileVersion AppVersion
 #endif
 #ifndef PackageDir
   #error Give the package folder: ISCC /DPackageDir=...
@@ -22,7 +25,7 @@ AppPublisher=AO-Miko
 AppPublisherURL=https://github.com/AO-Miko/roblox-manager
 AppSupportURL=https://github.com/AO-Miko/roblox-manager/issues
 AppUpdatesURL=https://github.com/AO-Miko/roblox-manager/releases
-VersionInfoVersion={#AppVersion}
+VersionInfoVersion={#FileVersion}
 VersionInfoDescription=Roblox Manager setup
 DefaultDirName={userappdata}\RobloxManager\App
 DisableProgramGroupPage=yes

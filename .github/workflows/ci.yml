@@ -52,6 +52,8 @@ jobs:
         run: python tests/test_nav.py
       - name: Roles, staff list and admin page
         run: python tests/test_admin.py
+      - name: Version numbers
+        run: python tests/test_versions.py
       - name: Updates box
         run: python tests/test_settings_updates.py
       - name: No cut-off text on any tab

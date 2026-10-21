@@ -46,6 +46,9 @@ jobs:
       - name: Navigation and search
         if: ${{ !cancelled() }}
         run: python tests/test_nav.py
+      - name: Version numbers
+        if: ${{ !cancelled() }}
+        run: python tests/test_versions.py
       - name: Updates box
         if: ${{ !cancelled() }}
         run: python tests/test_settings_updates.py

@@ -246,7 +246,9 @@ def _http_get(url, limit=MAX_BYTES, timeout=25):
 
 
 def version_key(v):
-    return tuple(int(x) for x in re.findall(r"\d+", str(v))) or (0,)
+    """Versions compare as numbers, number by number. R.B.S.F.D has five (see tools/version.py); an older 1.7.0 counts as 1.7.0.0.0."""
+    nums = [int(n) for n in re.findall(r"\d+", str(v))] or [0]
+    return tuple(nums + [0] * (5 - len(nums)))
 
 
 def release_latest(cfg):

@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Publish a new version of Roblox Manager (Linux, Android and Windows) to the update server.
 #
-#   tools/release.sh 1.2.0 "one change|another change"   build, sign and commit (stays local); "|" separates the update-log bullets
-#   tools/release.sh 1.2.0 "what changed" --push  ... and push to the `origin` remote
+#   tools/release.sh KIND "one change|another change"   build, sign and commit (stays local); "|" separates the update-log bullets
+#   tools/release.sh KIND "what changed" --push  ... and push to the `origin` remote
+#
+# The version has five numbers, R.B.S.F.D = complete rework . big feature change . small feature change . bug fix . design rework (see tools/version.py).
+# KIND says which one this update raises by 1: rework | big | small | fix | design. The numbers never go down; only a rework sets the other four back to 0.
+# (A full version like 1.8.0.1.0 is accepted too, if it is exactly one step from the current one.)
 #
 # What it does: bumps linux/VERSION and android/version.properties, runs the Android unit tests, builds the signed release APK,
 # writes dist/update.json (version, APK name, SHA-256, notes), makes a SSH-signed commit and tag on the `release` branch, and
@@ -13,14 +17,20 @@
 # installed phones can never be updated again).
 set -euo pipefail
 
-VERSION="${1:?usage: tools/release.sh VERSION \"notes\" [--push]}"
+KIND="${1:?usage: tools/release.sh rework|big|small|fix|design \"notes\" [--push]}"
 NOTES="${2:-}"
 PUSH="${3:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 . tools/android-env.sh
 
-[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Version must look like 1.2.3"; exit 1; }
+if [[ "$KIND" =~ ^(rework|big|small|fix|design)$ ]]; then
+  VERSION="$(python3 -I tools/version.py next "$KIND")"
+else
+  VERSION="$KIND"
+  python3 -I tools/version.py check "$VERSION" || { echo "Not a valid next version (rework, big, small, fix or design, or the full five numbers)"; exit 1; }
+fi
+echo "Version: $(cat linux/VERSION) -> $VERSION"
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "release" ]] || { echo "Run this on the 'release' branch"; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit or stash your changes first"; exit 1; }
 [[ -f "$HOME/.config/roblox-manager-release/android-signing.properties" ]] || { echo "Missing the Android signing properties"; exit 1; }
