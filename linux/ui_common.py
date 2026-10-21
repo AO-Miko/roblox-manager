@@ -6,10 +6,10 @@ import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from PySide6.QtCore import QObject, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QRect, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPainter, QShortcut
 from PySide6.QtWidgets import (
-    QCheckBox, QFileDialog, QStyle, QHBoxLayout, QHeaderView, QLabel, QMenu, QMessageBox, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QCheckBox, QFileDialog, QLayout, QStyle, QHBoxLayout, QHeaderView, QLabel, QMenu, QMessageBox, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 import rbx
@@ -321,6 +321,68 @@ def hint(text):
     l.setWordWrap(True)
     l.setProperty("role", "hint")
     return l
+
+
+class FlowLayout(QLayout):
+    """Widgets side by side that move to the next line when the window is too narrow (buttons in a row, for example), so that nothing is
+    cut off whatever the font or the window size. addStretch() is accepted and ignored, so it can replace a QHBoxLayout."""
+
+    def __init__(self, hspacing=8, vspacing=6):
+        super().__init__()
+        self._items, self._h, self._v = [], hspacing, vspacing
+        self.setContentsMargins(0, 0, 0, 0)
+
+    def addItem(self, item):
+        self._items.append(item)
+
+    def addStretch(self, *a):
+        pass
+
+    def count(self):
+        return len(self._items)
+
+    def itemAt(self, i):
+        return self._items[i] if 0 <= i < len(self._items) else None
+
+    def takeAt(self, i):
+        return self._items.pop(i) if 0 <= i < len(self._items) else None
+
+    def expandingDirections(self):
+        return Qt.Orientation(0)
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, w):
+        return self._layout(QRect(0, 0, w, 0), True)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        self._layout(rect, False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for it in self._items:
+            size = size.expandedTo(it.minimumSize())
+        m = self.contentsMargins()
+        return size + QSize(m.left() + m.right(), m.top() + m.bottom())
+
+    def _layout(self, rect, test):
+        m = self.contentsMargins()
+        area = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
+        x, y, line_h = area.x(), area.y(), 0
+        for it in self._items:
+            hint = it.sizeHint()
+            if x + hint.width() > area.right() + 1 and line_h > 0:
+                x, y, line_h = area.x(), y + line_h + self._v, 0
+            if not test:
+                it.setGeometry(QRect(x, y, min(hint.width(), area.width()), hint.height()))
+            x += hint.width() + self._h
+            line_h = max(line_h, hint.height())
+        return y + line_h - rect.y() + m.top() + m.bottom()
 
 
 class WrapCheck(QCheckBox):

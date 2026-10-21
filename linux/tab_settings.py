@@ -11,7 +11,7 @@ import cleanup
 import plat
 import rbx
 import settings
-from ui_common import WrapCheck, button, hint, make_table
+from ui_common import FlowLayout, WrapCheck, button, hint, make_table
 
 
 class SettingsTab(QWidget):
@@ -71,7 +71,7 @@ class SettingsTab(QWidget):
             self.table.setCellWidget(r, 3, b)
             self.clear_buttons[key] = b
         lay.addWidget(self.table)
-        row = QHBoxLayout()
+        row = FlowLayout()
         self.b_all_logs = button("Clear all logs...", lambda: self.clear("logs"), "manager.log, requests.log and their older copies", danger=True)
         row.addWidget(self.b_all_logs)
         row.addWidget(button("Clear everything listed...", self.clear_all, "Logs, activity records, and saved pictures and names", danger=True))
@@ -204,7 +204,7 @@ class SettingsTab(QWidget):
         form = self._form(box)
         form.addRow(self._check("ui.remember_window", "Remember the window size and the tab you were on"))
         form.addRow("Ask me to type the number when I change", self._spin("confirm.typed_from", " people or groups or more at once"))
-        row = QHBoxLayout()
+        row = FlowLayout()
         row.addWidget(button("Reset all settings", self.reset))
         row.addStretch()
         form.addRow(row)
@@ -242,7 +242,7 @@ class SettingsTab(QWidget):
             w.editingFinished.connect(self.save_update_settings)
         for w in (self.upd_auto, self.upd_sig):
             w.toggled.connect(lambda _=False: self.save_update_settings())
-        row = QHBoxLayout()
+        row = FlowLayout()
         self.b_upd_check = button("Check now", self.check_updates)
         self.b_upd_apply = button("Update now", self.apply_update, "Download and install the newest version", primary=True)
         self.b_upd_back = button("Go back to the previous version", self.roll_back, "Puts back the version that was installed before the last update")
@@ -347,7 +347,7 @@ class SettingsTab(QWidget):
         self.about.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.about.setWordWrap(True)
         lay.addWidget(self.about)
-        row = QHBoxLayout()
+        row = FlowLayout()
         row.addWidget(button("Open the settings folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(rbx.CONFIG_DIR)))))
         row.addStretch()
         lay.addLayout(row)
