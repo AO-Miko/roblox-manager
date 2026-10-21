@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.7.0",
+    "date": "2026-10-22",
+    "changes": [
+      "New Staff List page for everybody: the staff in hierarchy order (owner, co-owner, senior admin, admin, trusted friend) with their Roblox profiles and a Go to profile button",
+      "New Admin page for admins and up: ban and unban by user id or username with a reason, under a role hierarchy (nobody acts on themselves or on the same or a higher role)",
+      "Roles are a signed list (dist/roles.json) that the apps download like the ban list"
+    ]
+  },
+  {
     "version": "1.6.2",
     "date": "2026-10-22",
     "changes": [
