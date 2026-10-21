@@ -20,13 +20,12 @@ for a in "$@"; do [[ "$a" == "--push" ]] && PUSH=1; done
 KEY="${ROBLOX_MANAGER_SIGNING_KEY:-$HOME/.config/roblox-manager-release/signing_key}"
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "release" ]] || { echo "Run this on the 'release' branch"; exit 1; }
 mkdir -p dist
-[[ -f dist/roles.json ]] || printf '{\n  "serial": 0,\n  "roles": {}\n}\n' > dist/roles.json
 
 case "$ACTION" in
   list)
     python3 -I - <<'PY'
 import json
-d = json.load(open("dist/roles.json"))
+d = json.load(open("dist/roles.json")) if __import__("os").path.exists("dist/roles.json") else {"serial": 0, "roles": {}}
 print(f"serial {d['serial']}, {len(d['roles'])} role(s)")
 for k, v in sorted(d["roles"].items(), key=lambda kv: (-{"owner": 2, "admin": 1}.get(kv[1], 0), int(kv[0]))):
     print(f"  {k}  {v}")
@@ -41,7 +40,7 @@ esac
 python3 -I - "$ACTION" "$ID" "$ROLE" <<'PY'
 import json, sys
 action, uid, role = sys.argv[1:4]
-d = json.load(open("dist/roles.json"))
+d = json.load(open("dist/roles.json")) if __import__("os").path.exists("dist/roles.json") else {"serial": 0, "roles": {}}
 if action == "set":
     d["roles"][uid] = role
 else:
