@@ -1,10 +1,12 @@
-"""Who may administer the app: a signed list of Roblox user ids with a role, published next to the ban list (dist/roles.json + dist/roles.json.sig).
+"""Who is on the staff of the app: a signed list of Roblox user ids with a role, published next to the ban list (dist/roles.json + dist/roles.json.sig).
 
-    {"serial": 3, "roles": {"239345228": "owner", "123456": "admin"}}
+    {"serial": 3, "roles": {"239345228": "owner", "123456": "senior-admin", "789": "trusted-friend"}}
 
-Two roles, one above the other: owner (2) > admin (1); everybody else has no role (0). The Admin tab only appears for an account that has a role.
-The hierarchy: nobody can ban or unban themselves, and nobody can ban someone of the same or a higher role (an owner can ban an admin; an admin
-cannot ban an admin or the owner). An unban needs at least the role of whoever placed the ban.
+Five roles, one above the other:  owner (5) > co-owner (4) > senior-admin (3) > admin (2) > trusted-friend (1);  everybody else has no role (0).
+  * Everyone in the list is shown on the Staff List page, in this order.
+  * From admin up (rank 2) an account also gets the Admin page. A trusted friend is only listed: they have no powers.
+  * The hierarchy: a higher role may act on lower roles and on people without a role; nobody acts on themselves, and nobody on someone of the
+    same or a higher role. An unban needs at least the role of whoever placed the ban.
 
 Like the ban list, the file is only believed with a valid signature of the release key, a newer serial replaces an older one, the last good list
 is kept on disk, and an unreachable list changes nothing.
@@ -17,8 +19,21 @@ import plat
 import sshsig
 
 NAMESPACE = "roblox-manager-roles"
-RANKS = {"admin": 1, "owner": 2}
-NAMES = {v: k for k, v in RANKS.items()}
+ORDER = (("owner", 5, "Owner"), ("co-owner", 4, "Co-owner"), ("senior-admin", 3, "Senior admin"), ("admin", 2, "Admin"), ("trusted-friend", 1, "Trusted friend"))
+RANKS = {name: rank for name, rank, _ in ORDER}
+NAMES = {rank: name for name, rank, _ in ORDER}
+LABELS = {name: label for name, _, label in ORDER}
+MODERATOR = 2                      # the lowest rank with the Admin page and the power to ban
+
+
+def normalize(role):
+    """'Senior Admin', 'senior_admin' and 'senior-admin' are the same role."""
+    return str(role).strip().lower().replace(" ", "-").replace("_", "-")
+
+
+def label(rank_or_name):
+    name = NAMES.get(rank_or_name, rank_or_name)
+    return LABELS.get(name, "")
 
 
 def _cache_file():
@@ -31,7 +46,7 @@ def parse(data, sig_text, trusted=None):
         return None
     try:
         d = json.loads(data.decode("utf-8"))
-        roles = {int(k): str(v).lower() for k, v in d.get("roles", {}).items()}
+        roles = {int(k): normalize(v) for k, v in d.get("roles", {}).items()}
         return int(d["serial"]), {k: v for k, v in roles.items() if v in RANKS}
     except (ValueError, KeyError, TypeError, AttributeError):
         return None
@@ -88,19 +103,24 @@ def refresh(get=None, base=None):
 # ---- the hierarchy (the same rules are in tools/ban.sh, which does the publishing)
 def may_ban(actor_rank, actor_id, target_id, target_rank):
     """(True, '') or (False, why)."""
-    if actor_rank < 1:
-        return False, "You are not an admin."
+    if actor_rank < MODERATOR:
+        return False, "Your role has no moderation powers."
     if int(actor_id) == int(target_id):
         return False, "You cannot ban yourself."
     if target_rank >= actor_rank:
-        return False, f"You cannot ban {'the owner' if target_rank >= 2 else 'an admin'}: they have the same role as you or a higher one."
+        return False, f"You cannot ban a {label(target_rank).lower()}: they have the same role as you or a higher one."
     return True, ""
 
 
 def may_unban(actor_rank, ban_rank):
-    """A ban placed by an owner can only be lifted by an owner; one placed by an admin by an admin or an owner."""
-    if actor_rank < 1:
-        return False, "You are not an admin."
+    """A ban can be lifted by someone with at least the role of whoever placed it."""
+    if actor_rank < MODERATOR:
+        return False, "Your role has no moderation powers."
     if actor_rank < ban_rank:
         return False, "This ban was placed by someone with a higher role than yours."
     return True, ""
+
+
+def staff():
+    """[(user id, role name, rank)] from the highest role down, then by id."""
+    return sorted(((uid, r, RANKS[r]) for uid, r in load()[1].items()), key=lambda x: (-x[2], x[0]))

@@ -7,7 +7,8 @@
 #   tools/ban.sh list [--json]
 #   --by ID     the Roblox user id of whoever does this (the Admin tab passes it); the roles in dist/roles.json decide what is allowed:
 #               nobody bans themselves, nobody bans someone with the same or a higher role, an unban needs at least the role of the ban's author.
-#               Without --by the action is the owner's own (the key holder): it can ban admins but not another owner.
+#               Roles, high to low: owner, co-owner, senior-admin, admin, trusted-friend. From admin up they may ban (trusted friends may not).
+#               Without --by the action is the owner's own (the key holder): it can ban everybody with a lower role but not another owner.
 #   --push      publish (signed commit on `release`, and `main`); without it the change stays local
 #
 # No new app version is needed: the apps read the list from GitHub. (GitHub's cache can delay it by a few minutes.)
@@ -60,17 +61,18 @@ esac
 python3 -I - "$ACTION" "$ID" "$REASON" "$BY" <<'PY'
 import datetime, json, sys
 action, uid, reason, by = sys.argv[1], int(sys.argv[2]), sys.argv[3][:200], sys.argv[4]
-RANKS = {"admin": 1, "owner": 2}
+RANKS = {"trusted-friend": 1, "admin": 2, "senior-admin": 3, "co-owner": 4, "owner": 5}
+NAMES = {v: k.replace("-", " ") for k, v in RANKS.items()}
 try:
-    roles = {int(k): RANKS.get(str(v).lower(), 0) for k, v in json.load(open("dist/roles.json")).get("roles", {}).items()}
+    roles = {int(k): RANKS.get(str(v).strip().lower().replace(" ", "-").replace("_", "-"), 0) for k, v in json.load(open("dist/roles.json")).get("roles", {}).items()}
 except (OSError, ValueError):
     roles = {}
 if by:
     actor_rank = roles.get(int(by), 0)
-    if actor_rank < 1:
-        sys.exit("Refused: you are not an admin.")
+    if actor_rank < 2:
+        sys.exit("Refused: your role has no moderation powers." if actor_rank else "Refused: you are not on the staff.")
 else:
-    actor_rank = 2                                   # the key holder acting without an account
+    actor_rank = 5                                   # the key holder acting without an account
 target_rank = roles.get(uid, 0)
 d = json.load(open("dist/bans.json"))
 old = next((b for b in d["bans"] if b["id"] == uid), None)
@@ -78,13 +80,13 @@ if action == "ban":
     if by and int(by) == uid:
         sys.exit("Refused: you cannot ban yourself.")
     if target_rank >= actor_rank:
-        sys.exit(f"Refused: {uid} is {'the owner' if target_rank >= 2 else 'an admin'}, with the same role as you or a higher one.")
+        sys.exit(f"Refused: {uid} is a {NAMES[target_rank]}, with the same role as you or a higher one.")
 else:
     if by and int(by) == uid:
         sys.exit("Refused: you cannot unban yourself.")
     if old is None:
         sys.exit(f"{uid} is not banned.")
-    if actor_rank < int(old.get("rank", 2)):
+    if actor_rank < int(old.get("rank", 5)):
         sys.exit("Refused: this ban was placed by someone with a higher role than yours.")
 d["bans"] = [b for b in d["bans"] if b["id"] != uid]
 if action == "ban":

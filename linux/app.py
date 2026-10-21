@@ -34,6 +34,7 @@ import settings
 import theme
 from tab_account import AccountTab
 from tab_admin import AdminTab
+from tab_staff import StaffTab
 from tab_explorer import ExplorerTab
 from tab_groups import GroupsTab
 from tab_money import MoneyTab
@@ -64,13 +65,14 @@ class MainWindow(QMainWindow):
         self.money = MoneyTab(self.ctx, show_pending=self.account.pending_details)
         self.requests = RequestsTab(self.ctx)
         self.explorer = ExplorerTab(self.ctx)
+        self.staff = StaffTab(self.ctx)
         self.admin = AdminTab(self.ctx)
         self.info_tab = InfoTab(self.ctx, on_cleared=self._cleared)
         self.holders = {}
         self.settings_tab = self.info_tab.settings_tab
         for w, name in ((self.account, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
                         (self.money, "Money"), (self.requests, "Request log"), (self.explorer, "API Explorer"),
-                        (self.admin, "Admin"), (self.info_tab, "Info")):
+                        (self.staff, "Staff List"), (self.admin, "Admin"), (self.info_tab, "Info")):
             holder = nav.PageHolder(w)
             self.holders[w] = holder
             self.tabs.addTab(holder, name)
@@ -162,6 +164,10 @@ class MainWindow(QMainWindow):
                 for j in range(page.count()):
                     sub = page.tabText(j)
                     out.append((sub, "Info", "update version changes" if sub == "Updates" else "preferences options", lambda page=page, j=j: (self._go(page), page.setCurrentIndex(j))))
+        for uid, role, _rank in roles.staff():
+            i = self.staff.info.get(uid, {})
+            label = f"{i.get('displayName') or i['name']} (@{i['name']})" if i.get("name") else f"User {uid}"
+            out.append((label, roles.LABELS[role], "staff team", lambda uid=uid: self._go_staff(uid)))
         for a in accounts.list_accounts():
             if a["id"] != accounts.active_id():
                 out.append((f"Switch to {a['displayName'] or a['name']}", "account", f"@{a['name']} account", lambda a=a: self.account.switch_to(a["id"])))
@@ -173,6 +179,13 @@ class MainWindow(QMainWindow):
                 if label:
                     out.append((label, kind, "", lambda page=page, sub=sub, r=r, table=table: self._go(page, sub, r, table)))
         return out
+
+    def _go_staff(self, uid):
+        self._go(self.staff)
+        self.staff.ensure_loaded()
+        for i in range(self.staff.list.count()):
+            if self.staff.list.item(i).data(Qt.ItemDataRole.UserRole) == uid:
+                self.staff.list.setCurrentRow(i)
 
     def reload_page(self):
         page = self.current_page()
@@ -188,11 +201,13 @@ class MainWindow(QMainWindow):
         self.ctx.async_.run(lambda: (bans.refresh(), roles.refresh()), lambda _: (self.account.enforce_bans(), self.update_admin()))
 
     def update_admin(self):
-        """The Admin page exists only for an account that has a role (see roles.py); for everybody else it is hidden and cannot be opened."""
-        allowed = bool(self.ctx.me) and roles.rank_of(self.ctx.me["id"]) >= 1
+        """The Admin page exists only for an account with the admin role or higher (see roles.py); for everybody else it is hidden and cannot be opened."""
+        allowed = bool(self.ctx.me) and roles.rank_of(self.ctx.me["id"]) >= roles.MODERATOR
         i = self.tabs.indexOf(self.holders[self.admin])
         self.tabs.setTabVisible(i, allowed)
         self.sidebar.set_page_visible("Admin", allowed)
+        if self.staff.loaded:
+            self.staff.reload()                          # the list may have changed
         if allowed:
             self.admin.refresh()
         elif self.tabs.currentIndex() == i:

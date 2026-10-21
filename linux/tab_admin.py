@@ -1,5 +1,7 @@
-"""Admin tab: only for accounts that have a role in the signed role list (see roles.py). Ban and unban Roblox user ids, with a reason,
-under the hierarchy owner > admin: nobody bans themselves or someone of the same or a higher role."""
+"""Admin tab: only for accounts whose role in the signed role list (see roles.py) is admin or higher. Ban and unban Roblox user ids, with a reason,
+under the hierarchy owner > co-owner > senior admin > admin: a higher role acts on lower roles and on people without a role; nobody acts on
+themselves or on the same or a higher role."""
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
 import adminops
@@ -55,7 +57,7 @@ class AdminTab(QWidget):
         lay.addLayout(row)
         lay.addWidget(QLabel("<b>Roles</b>"))
         self.roles_table = make_table(["User id", "Role"], [160, 120], empty="No roles.")
-        self.roles_table.setMaximumHeight(130)
+        self.roles_table.setMaximumHeight(150)
         lay.addWidget(self.roles_table)
         lay.addWidget(hint("Roles are in dist/roles.json (signed). Change them with tools/roles.sh on the PC that has the release key."))
         self.refresh()
@@ -68,24 +70,22 @@ class AdminTab(QWidget):
         return roles.rank_of(self.my_id()) if self.my_id() else 0
 
     def allowed(self):
-        return self.my_rank() >= 1
+        return self.my_rank() >= roles.MODERATOR
 
     def refresh(self):
         rank = self.my_rank()
-        role = roles.NAMES.get(rank)
         me = self.ctx.me or {}
-        self.who.setText(f"{role.capitalize()}: {me.get('displayName') or me.get('name')} ({me.get('id')})" if role else "Admin")
+        self.who.setText(f"{roles.label(rank)}: {me.get('displayName') or me.get('name')} ({me.get('id')})" if rank else "Admin")
         probs = adminops.problems()
         self.setup.setVisible(bool(probs))
         self.setup.setText("Publishing is not ready on this PC:\n- " + "\n- ".join(probs) if probs else "")
         for b in (self.b_ban, self.b_unban):
-            b.setEnabled(not probs and rank >= 1)
+            b.setEnabled(not probs and rank >= roles.MODERATOR)
         entries = adminops.read_bans() if not probs else self._cached_entries()
-        names = {1: "admin", 2: "owner"}
-        fill_table(self.table, [[e["id"], e.get("reason", ""), e.get("since", ""), e.get("by") or "owner", names.get(int(e.get("rank", 2)), "")] for e in entries],
+        fill_table(self.table, [[e["id"], e.get("reason", ""), e.get("since", ""), e.get("by") or "owner", roles.label(int(e.get("rank", 5)))] for e in entries],
                    keys=[e["id"] for e in entries])
-        rows = sorted(roles.load()[1].items(), key=lambda kv: (-roles.RANKS[kv[1]], kv[0]))
-        fill_table(self.roles_table, [[k, v] for k, v in rows])
+        self.roles_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)          # keep the hierarchy order, not the id order
+        fill_table(self.roles_table, [[uid, roles.LABELS[r]] for uid, r, _ in roles.staff()])
 
     def _cached_entries(self):
         return bans.entries()
@@ -145,7 +145,7 @@ class AdminTab(QWidget):
             return
         uid = row_key(self.table, rows[0])
         entry = next((e for e in adminops.read_bans() if e["id"] == uid), {})
-        ok, note = roles.may_unban(self.my_rank(), int(entry.get("rank", 2)))
+        ok, note = roles.may_unban(self.my_rank(), int(entry.get("rank", 5)))
         if int(uid) == int(self.my_id()):
             ok, note = False, "You cannot unban yourself."
         if not ok:

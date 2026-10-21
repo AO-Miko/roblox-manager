@@ -17,7 +17,8 @@ PAGES = {
     "Money": ("Roblox", "Robux balance, pending, totals per period and the transaction history."),
     "Request log": ("Tools", "Every request the app sends to Roblox and how Roblox answered."),
     "API Explorer": ("Tools", "Send any Roblox web API request and read the answer."),
-    "Admin": ("Admin", "Ban and unban Roblox user ids. Only accounts with a role (owner, admin) see this page."),
+    "Staff List": ("Staff", "Who is on the staff, from the owner down, with their Roblox profiles."),
+    "Admin": ("Staff", "Ban and unban Roblox user ids. Only accounts with the admin role or higher see this page."),
     "Info": ("", "Settings, updates and what changed in each version."),
 }
 KEYWORDS = {                      # extra words the search also understands, so "robux" finds Money and "private server" finds VIP servers
@@ -29,7 +30,8 @@ KEYWORDS = {                      # extra words the search also understands, so 
     "Request log": "log requests http rate limit errors",
     "API Explorer": "api endpoint http get post developer",
     "Info": "settings updates update log version changes about preferences theme confirm cache",
-    "Admin": "ban unban banned reason roles owner moderator",
+    "Admin": "ban unban banned reason roles moderator",
+    "Staff List": "staff team owner co-owner senior admin trusted friends roles hierarchy members profile",
 }
 
 
@@ -64,6 +66,9 @@ def icon_path(name):
             p.moveTo(8, y); p.lineTo(16, y)
     elif name == "API Explorer":
         p.moveTo(9, 7); p.lineTo(4, 12); p.lineTo(9, 17); p.moveTo(15, 7); p.lineTo(20, 12); p.lineTo(15, 17); p.moveTo(13.4, 5.5); p.lineTo(10.6, 18.5)
+    elif name == "Staff List":
+        p.moveTo(3.5, 17.5); p.lineTo(3.5, 8); p.lineTo(8, 12); p.lineTo(12, 5.5); p.lineTo(16, 12); p.lineTo(20.5, 8); p.lineTo(20.5, 17.5); p.closeSubpath()
+        p.moveTo(3.5, 20.5); p.lineTo(20.5, 20.5)
     elif name == "Admin":
         p.moveTo(12, 3.5); p.lineTo(19.5, 6.5); p.lineTo(19.5, 12); p.cubicTo(19.5, 16.5, 16, 19.5, 12, 20.8); p.cubicTo(8, 19.5, 4.5, 16.5, 4.5, 12)
         p.lineTo(4.5, 6.5); p.closeSubpath(); p.moveTo(9, 12); p.lineTo(11.2, 14.2); p.lineTo(15.2, 9.8)
