@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.6.2",
+    "date": "2026-10-22",
+    "changes": [
+      "Fixed text that was cut off in a narrow window on Windows (shorter hints, buttons that wrap)"
+    ]
+  },
+  {
     "version": "1.6.1",
     "date": "2026-10-22",
     "changes": [
