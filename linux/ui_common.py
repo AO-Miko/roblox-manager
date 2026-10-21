@@ -191,7 +191,7 @@ class Table(QTableWidget):
         h = self.horizontalHeader()
         fm = h.fontMetrics()
         for c in range(self.columnCount()):
-            if h.isSectionHidden(c) or (c == self.columnCount() - 1 and h.stretchLastSection()):
+            if h.isSectionHidden(c):
                 continue
             if h.sectionResizeMode(c) not in (QHeaderView.ResizeMode.Interactive, QHeaderView.ResizeMode.Fixed):
                 continue

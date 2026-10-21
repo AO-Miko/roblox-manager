@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 import rbx
-from ui_common import button, copy_text, hint
+from ui_common import Table, button, copy_text, hint
 
 CATALOG = Path(__file__).resolve().parent / "catalog"
 UPDATABLE = ["groups", "friends", "presence", "users", "inventory", "accountsettings", "privatemessages", "catalog", "badges",
@@ -116,7 +116,7 @@ class ExplorerTab(QWidget):
         self.summary.setStyleSheet("font-weight: bold;")
         rl.addWidget(self.summary)
         rl.addWidget(QLabel("Parameters  (path ones fill the {placeholders}; empty query ones are left out):"))
-        self.params = QTableWidget(0, 4)
+        self.params = Table(0, 4)
         self.params.setHorizontalHeaderLabels(["Name", "Where", "Value", "Notes"])
         self.params.horizontalHeader().setStretchLastSection(True)
         self.params.setColumnWidth(0, 130)
