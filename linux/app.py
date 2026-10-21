@@ -25,6 +25,7 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QComboBox, QLabel, QMainWindow, QMessageBox, QTabWidget
 
 import accounts
+import plat
 import rbx
 import settings
 import theme
@@ -216,7 +217,7 @@ def main():
     if lock is not None:
         lock.unlock()
     logging.shutdown()
-    os._exit(code)
+    plat.hard_exit(code)
 
 
 if __name__ == "__main__":

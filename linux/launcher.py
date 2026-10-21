@@ -84,6 +84,7 @@ def selftest():
     import browser_login  # noqa: F401  (the web engine must be imported before the application exists)
     from PySide6.QtWidgets import QApplication
     import app as appmod
+    import plat
     import updater
     qapp = QApplication([])
     w = appmod.MainWindow(auto_login=False)
@@ -92,7 +93,7 @@ def selftest():
     tabs = [w.tabs.tabText(i) for i in range(w.tabs.count())]
     print("selftest ok", updater.version(), tabs)
     sys.stdout.flush()
-    os._exit(0)
+    plat.hard_exit(0)
 
 
 def main():

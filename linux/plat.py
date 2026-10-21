@@ -45,6 +45,26 @@ WALLET = "Windows data protection (DPAPI)" if IS_WIN else "KDE Wallet"
 CONFIG_TEXT = r"%APPDATA%\RobloxManager" if IS_WIN else "~/.config/roblox-manager"
 
 
+def hard_exit(code=0):
+    """End the process at once, without running the clean-up of Python and the libraries. On Windows that clean-up (a library being
+    unloaded while Qt's web engine still runs) can crash on the way out and make Windows show an 'app stopped working' box, so the
+    process is ended directly instead."""
+    import logging
+    try:
+        logging.shutdown()
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:                                  # noqa: BLE001
+        pass
+    if IS_WIN:
+        try:
+            import ctypes
+            ctypes.windll.kernel32.TerminateProcess(ctypes.windll.kernel32.GetCurrentProcess(), int(code))
+        except Exception:                              # noqa: BLE001
+            pass
+    os._exit(int(code))
+
+
 def update_backend():
     """'release': signed release packages from GitHub (Windows has no git). 'git': the signed commits of the repository."""
     return os.environ.get("ROBLOX_MANAGER_UPDATE_BACKEND") or ("release" if IS_WIN else "git")
