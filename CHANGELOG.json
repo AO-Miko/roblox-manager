@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.8.0.0.0",
+    "date": "2026-10-22",
+    "changes": [
+      "Versions now have five numbers: R.B.S.F.D = complete rework . big feature change . small feature change . bug fix . design rework; every update raises exactly one by 1 and they never go down (only a rework resets the others)",
+      "Phone: the Staff List (everybody) and an Admin overview (admin role and higher) are under More, using the same signed role list as the PC",
+      "The updates are compared number by number (1.7.0 counts as 1.7.0.0.0)"
+    ]
+  },
+  {
     "version": "1.7.0",
     "date": "2026-10-22",
     "changes": [

@@ -1,7 +1,7 @@
 {
-  "versionName": "1.7.0",
-  "versionCode": 16,
+  "versionName": "1.8.0.0.0",
+  "versionCode": 17,
   "apk": "roblox-manager.apk",
-  "sha256": "882a0120cd5e5973c23b4c1f6b43cdffc4b863e2f9db0a5bb480c3a0542571f1",
-  "notes": "New Staff List page for everybody: the staff in hierarchy order (owner, co-owner, senior admin, admin, trusted friend) with their Roblox profiles and a Go to profile button|New Admin page for admins and up: ban and unban by user id or username with a reason, under a role hierarchy (nobody acts on themselves or on the same or a higher role)|Roles are a signed list (dist/roles.json) that the apps download like the ban list"
+  "sha256": "2ae2678a440b0c6a90267ae2904ff86416e285d8b17c7069ef9c0a2563a6a447",
+  "notes": "Versions now have five numbers: R.B.S.F.D = complete rework . big feature change . small feature change . bug fix . design rework; every update raises exactly one by 1 and they never go down (only a rework resets the others)|Phone: the Staff List (everybody) and an Admin overview (admin role and higher) are under More, using the same signed role list as the PC|The updates are compared number by number (1.7.0 counts as 1.7.0.0.0)"
 }
