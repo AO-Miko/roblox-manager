@@ -58,19 +58,25 @@ Uninstall: delete `~/.local/share/roblox-manager`, `~/.local/bin/roblox-manager`
 
 ## Install on Windows
 
-Windows 10 or 11 (64-bit). Nothing else needs to be installed: the package brings its own Python and libraries.
+Windows 10 or 11 (64-bit). Nothing else needs to be installed: it brings its own Python and libraries.
 
-1. Download `roblox-manager-windows-X.Y.Z.zip` from the [latest release](https://github.com/AO-Miko/roblox-manager/releases/latest) (about 200 MB).
-2. Right-click the zip → **Extract All…**, then open the extracted `RobloxManager` folder.
-3. Double-click **`Install.cmd`**. It installs for your user only (no administrator rights), adds a Start menu entry (and a desktop shortcut if you want
-   one) and can start the app. Or double-click **`Roblox Manager.cmd`** to run it from that folder without installing.
-4. Windows SmartScreen may say "Windows protected your PC", because the program is not signed with a paid certificate. Choose **More info → Run anyway**.
-   You can check the download against `SHA256SUMS.txt` from the release (`Get-FileHash roblox-manager-windows-*.zip` in PowerShell).
+1. Download **`Roblox-Manager-Setup-X.Y.Z.exe`** from the [latest release](https://github.com/AO-Miko/roblox-manager/releases/latest) (about 140 MB) and run it.
+2. Windows SmartScreen may say "Windows protected your PC", because the program is not signed with a paid certificate. Choose **More info → Run anyway**.
+   You can check the download against `SHA256SUMS.txt` from the release (`Get-FileHash Roblox-Manager-Setup-*.exe` in PowerShell).
+3. The setup asks where to install (**any folder you can write to**; the default is `%APPDATA%\RobloxManager\App`) and offers, all optional:
+   - a **Start menu entry**, so you can press the Windows key, type "Roblox Manager" and open it (on by default),
+   - a **desktop icon** (off by default),
+   - starting the app when the setup finishes.
+   It needs no administrator rights and installs for your Windows user only (the app updates itself, so it can't live in Program Files).
+4. It appears in **Settings → Apps → Installed apps**, where you can uninstall it. The uninstaller asks whether to delete your settings and saved accounts too.
+   Silent install for scripts: `Roblox-Manager-Setup-X.Y.Z.exe /VERYSILENT /DIR="D:\Apps\RobloxManager" /TASKS="startmenu,desktopicon"`
+   (leave `/TASKS=` empty for no shortcuts); silent uninstall: `unins000.exe /VERYSILENT /REMOVEDATA=yes` (omit `/REMOVEDATA` to keep your data).
+
+**No installer?** `roblox-manager-windows-X.Y.Z.zip` is a portable copy: extract it and run `Roblox Manager.cmd` (or `Install.cmd` for a simple install).
 
 **Updates:** every time you start it, the app asks GitHub for the newest release (a few seconds at most, never blocking). If there is one, it
 downloads the signed update package, checks that it is signed with the release key and is newer, and installs it; the next start uses it.
-*Info → Updates* shows the version, checks now, and goes back to the previous version.
-Uninstall: run `Uninstall.cmd` from the install folder (`%LOCALAPPDATA%\Programs\RobloxManager`); it asks whether to delete your settings too.
+*Info → Updates* shows the version, checks now, and goes back to the previous version. Re-running a newer setup also works.
 
 ## Install on Android
 

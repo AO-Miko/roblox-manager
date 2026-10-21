@@ -1,7 +1,7 @@
 @echo off
 setlocal
 title Uninstall Roblox Manager
-set "DEST=%LOCALAPPDATA%\Programs\RobloxManager"
+set "DEST=%APPDATA%\RobloxManager\App"
 echo.
 echo This removes Roblox Manager from %DEST% and its shortcuts.
 choice /c YN /m "Continue"

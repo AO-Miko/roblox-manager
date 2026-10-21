@@ -2,7 +2,7 @@
 setlocal
 title Install Roblox Manager
 set "SRC=%~dp0"
-set "DEST=%LOCALAPPDATA%\Programs\RobloxManager"
+set "DEST=%APPDATA%\RobloxManager\App"
 echo.
 echo Roblox Manager will be installed for your user in:
 echo   %DEST%

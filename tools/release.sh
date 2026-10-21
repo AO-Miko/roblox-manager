@@ -79,14 +79,18 @@ ssh-keygen -Y check-novalidate -n roblox-manager-release -s "$OUT/roblox-manager
 echo "== Windows package"
 python3 tools/build_windows.py "$OUT/win"
 mv "$OUT/win/roblox-manager-windows-$VERSION.zip" "$OUT/"
+if [[ -z "${SKIP_INSTALLER:-}" ]]; then
+  echo "== Windows installer (Inno Setup under Wine)"
+  tools/build_installer.sh "$VERSION" "$OUT/win/RobloxManager" "$OUT"
+fi
 rm -rf "$OUT/win"
 
-(cd "$OUT" && sha256sum roblox-manager-* > SHA256SUMS.txt)
+(cd "$OUT" && sha256sum roblox-manager-* Roblox-Manager-Setup-* 2>/dev/null > SHA256SUMS.txt)
 
 if [[ "$PUSH" == "--push" ]]; then
   git push origin release "v$VERSION"
   # created as a draft and published after the upload, so nothing sees a release with files still missing
-  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT/SHA256SUMS.txt" --draft --title "Roblox Manager $VERSION" --notes "$(printf '%s' "${NOTES:-Release $VERSION}" | tr '|' '\n' | sed 's/^ */- /')" --verify-tag
+  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT"/Roblox-Manager-Setup-*.exe "$OUT/SHA256SUMS.txt" --draft --title "Roblox Manager $VERSION" --notes "$(printf '%s' "${NOTES:-Release $VERSION}" | tr '|' '\n' | sed 's/^ */- /')" --verify-tag
   gh release edit "v$VERSION" --draft=false --latest
   echo "Pushed and released. Linux, Android and Windows apps will pick it up at their next start."
 else

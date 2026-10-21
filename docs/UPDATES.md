@@ -47,6 +47,15 @@ tools/ban.sh list
 
 No new version is needed. GitHub's cache can delay a change by a few minutes. The ids and reasons are public, so keep reasons short and factual.
 
+## The Windows installer
+
+`Roblox-Manager-Setup-X.Y.Z.exe` is a normal Windows setup program made with Inno Setup (`tools/windows/installer.iss`, built by `tools/build_installer.sh`, which runs
+Inno Setup under Wine so a release can be made on Linux; Wine's menu-builder is switched off so the build adds nothing to the build computer). It contains the same
+folder as the zip. Per-user install (no administrator rights) into a folder the person chooses (default `%APPDATA%\RobloxManager\App`), optional Start menu entry and
+desktop icon, an entry in Windows' Apps list, and an uninstaller that can also remove the person's data. The `installer` job of the Windows workflow installs and uninstalls
+the released file on a real Windows machine (defaults, custom folder, optional items, data removal). It is not signed with a paid code-signing certificate; the release's
+`SHA256SUMS.txt` lets people check it.
+
 ## The Windows package
 
 `roblox-manager-windows-X.Y.Z.zip` holds a folder with the official embeddable Python, PySide6 and requests (Windows builds from PyPI, with the Qt parts the

@@ -99,3 +99,79 @@ jobs:
           $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
           Write-Host $s.TargetPath $s.Arguments
           if (-not (Test-Path $s.TargetPath)) { throw "the shortcut points nowhere" }
+
+  installer:
+    name: The Windows installer of the release
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the installer
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "release") { "${{ github.event.release.tag_name }}" } else { (gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName) }
+          gh release download $tag --repo "${{ github.repository }}" --pattern "Roblox-Manager-Setup-*.exe" --pattern "SHA256SUMS.txt"
+          $exe = Get-ChildItem Roblox-Manager-Setup-*.exe | Select-Object -First 1
+          $want = (Select-String -Path SHA256SUMS.txt -Pattern $exe.Name).Line.Split(" ")[0]
+          $got = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          if ($want -ne $got) { throw "checksum mismatch: $want vs $got" }
+          Write-Host "$($exe.Name) $([math]::Round($exe.Length / 1MB)) MB, checksum ok"
+      - name: Install with the defaults (Start menu entry, no desktop icon)
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem Roblox-Manager-Setup-*.exe | Select-Object -First 1).FullName
+          $p = Start-Process $exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/LOG=$PWD\setup.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content setup.log -Tail 40; throw "setup exit code $($p.ExitCode)" }
+          $dir = Join-Path $env:APPDATA "RobloxManager\App"
+          foreach ($f in "python\pythonw.exe","app\launcher.py","app\app.py","site-packages\PySide6\QtCore.pyd","trust\allowed_signers","unins000.exe") {
+            if (-not (Test-Path (Join-Path $dir $f))) { throw "missing after install: $f" }
+          }
+          $menu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Roblox Manager.lnk"
+          if (-not (Test-Path $menu)) { throw "no Start menu entry" }
+          $s = (New-Object -ComObject WScript.Shell).CreateShortcut($menu)
+          if (-not (Test-Path $s.TargetPath)) { throw "the Start menu entry points nowhere: $($s.TargetPath)" }
+          if (Test-Path (Join-Path ([Environment]::GetFolderPath("Desktop")) "Roblox Manager.lnk")) { throw "a desktop icon was made although it is optional and off by default" }
+          $key = Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" | Where-Object { $_.PSChildName -like "*B9F4E6A8-3D2C-4C57-9E3A-5D8A1F7C2E41*" }
+          if (-not $key) { throw "not listed in Apps and features" }
+          Write-Host "listed as:" $key.GetValue("DisplayName") $key.GetValue("DisplayVersion")
+      - name: The installed app starts
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:APPDATA "RobloxManager\App"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & "$dir\python\python.exe" "$dir\app\launcher.py" --selftest
+          if ($LASTEXITCODE -ne 0) { throw "selftest failed" }
+      - name: Uninstall (keeping the person's data)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:APPDATA "RobloxManager\App"
+          $p = Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          Start-Sleep -Seconds 3
+          if (Test-Path "$dir\python") { throw "files were left behind" }
+          if (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Roblox Manager.lnk")) { throw "the Start menu entry is still there" }
+          if (-not (Test-Path (Join-Path $env:APPDATA "RobloxManager"))) { throw "the person's data folder was removed although it should be kept" }
+      - name: Install in a folder of choice, with the desktop icon and without the Start menu entry
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem Roblox-Manager-Setup-*.exe | Select-Object -First 1).FullName
+          $dir = Join-Path $env:USERPROFILE "My Programs\Roblox Mgr"
+          $p = Start-Process $exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=`"$dir`"","/TASKS=desktopicon" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "setup exit code $($p.ExitCode)" }
+          if (-not (Test-Path "$dir\python\pythonw.exe")) { throw "not installed in the chosen folder" }
+          if (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Roblox Manager.lnk")) { throw "a Start menu entry was made although it was switched off" }
+          $desk = Join-Path ([Environment]::GetFolderPath("Desktop")) "Roblox Manager.lnk"
+          if (-not (Test-Path $desk)) { throw "no desktop icon" }
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & "$dir\python\python.exe" "$dir\app\launcher.py" --selftest
+          if ($LASTEXITCODE -ne 0) { throw "selftest failed" }
+      - name: Uninstall again, also removing the data
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:USERPROFILE "My Programs\Roblox Mgr"
+          Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/REMOVEDATA=yes" -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path "$dir\python") { throw "files were left behind" }
+          if (Test-Path (Join-Path ([Environment]::GetFolderPath("Desktop")) "Roblox Manager.lnk")) { throw "the desktop icon is still there" }
+          if (Test-Path (Join-Path $env:APPDATA "RobloxManager")) { throw "the data was not removed with /REMOVEDATA=yes" }
