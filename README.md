@@ -6,6 +6,17 @@ update themselves from this repository.
 
 Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/releases/latest).
 
+## About this project
+
+This is a **just-for-fun project**. I built it to test how far AI has progressed in the last year, by comparing it with an older private project of
+mine whose quality was really, really bad. Most of the code here was written with an AI assistant (Claude), and I check how it behaves by using it.
+
+- I may keep updating it, but I'm not sure yet. Don't expect a support schedule.
+- A **Windows version** is planned and should come soon.
+- It is an unofficial tool and is **not affiliated with or endorsed by Roblox**. It talks to Roblox's web endpoints the same way the website does, which can
+  change at any time and break things. Use it at your own risk, and only with accounts you own.
+- Bug reports and ideas are welcome as GitHub issues.
+
 ## Install on Linux
 
 You need `python3` with **PySide6** (and its WebEngine, for the built-in browser sign-in) and **requests**, plus `git` for automatic updates.
@@ -59,12 +70,43 @@ repository rather than from other copies). *Settings → Updates* shows the stat
 
 To verify a download, compare it with `SHA256SUMS.txt` from the same release (`sha256sum -c SHA256SUMS.txt`).
 
-## How your logins are kept
+## How your data is handled
 
-- Passwords are only sent to Roblox for the sign-in and are never stored or logged.
-- Linux: the sign-in cookie is stored in the system wallet (encrypted). If no wallet is available the app warns you that it fell back to an owner-only file.
-- Android: the cookie is encrypted with an AES-256-GCM key held in the Android Keystore; app backups are turned off.
-- The cookie is only ever sent to `roblox.com`. The request log never contains cookies, passwords, codes or request bodies.
+Short version: everything stays on your own device, and the apps only talk to Roblox and to GitHub (for updates). There is no server of mine, no account
+with me, no analytics, no telemetry and no ads.
+
+**Sign-in**
+- Your **password** and 2-step codes are sent only to Roblox (`auth.roblox.com`, `twostepverification.roblox.com`, `apis.roblox.com`) over https, to sign in.
+  They are never stored and never written to a log, and are dropped from memory when the sign-in ends.
+- What is kept afterwards is Roblox's **sign-in cookie** (`.ROBLOSECURITY`), which works like a key to the account. It is stored **encrypted**:
+  - Linux: in the system wallet (KDE Wallet / GNOME Keyring through `secret-tool`). If no wallet is available, the app warns you and falls back to a file
+    only your user can read.
+  - Android: encrypted with an AES-256-GCM key that lives inside the Android Keystore (it cannot be copied out of the phone). Android app backup is turned off.
+- The cookie is sent only to `roblox.com` addresses, never anywhere else. Anyone who gets your cookie is signed in as you, so don't share it, and use
+  "sign out" on roblox.com to invalidate it if you ever lose a device.
+- The built-in browser sign-in (Linux) uses a private profile, so nothing from that page is kept on disk.
+
+**What is saved on your device** (nothing is uploaded)
+- A list of your saved accounts (user id and name; the cookies are stored encrypted as above) and the app's settings.
+- A cache of names and profile pictures of people the app has shown, so it doesn't ask Roblox again (clear it any time under Info → Settings).
+- A **request log** of what the app asked Roblox (address, answer code and timing). It never contains cookies, passwords, codes or request bodies, and
+  secret-looking parts of an address are masked. It can be switched off and cleared in Settings.
+- On Linux, small records of bulk actions you ran (for example which friends you removed), so you can look back at what happened.
+- Where: Linux keeps this in `~/.config/roblox-manager` and `~/.local/state/roblox-manager`. Android keeps it in the app's private storage.
+  Removing an account deletes its saved sign-in; uninstalling the Android app, or deleting those Linux folders, removes everything.
+
+**What goes over the network**
+- To Roblox: the requests for the features you use (friends, groups, VIP servers, Robux ...), with your cookie. Pictures are downloaded from Roblox's
+  image servers without any cookie.
+- To GitHub: the update check (`github.com` for Linux, `raw.githubusercontent.com` for Android). It sends no account data; GitHub can of course see your
+  IP address like for any download.
+- Nothing else. There is no crash reporting and no third-party service.
+
+**Spending**: the apps never buy anything by themselves. The Android app has no purchase feature, and the Linux app always shows the price and asks first
+before anything that costs Robux.
+
+**Updates are verified**: Linux only installs commits signed with the release key (and never an older version), Android only installs an APK whose
+checksum matches and that is signed with the same key as the installed app. See [docs/UPDATES.md](docs/UPDATES.md).
 
 ## For maintainers
 
