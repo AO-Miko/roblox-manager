@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.5.0",
+    "date": "2026-10-22",
+    "changes": [
+      "New: a real Windows installer (Roblox-Manager-Setup.exe): choose where to install, optional Start menu entry (findable with the Windows key) and desktop icon, listed in Apps with an uninstaller",
+      "Default install location is inside %APPDATA%",
+      "The portable zip is still available"
+    ]
+  },
+  {
     "version": "1.4.0",
     "date": "2026-10-21",
     "changes": [

@@ -1,7 +1,7 @@
 {
-  "versionName": "1.4.0",
-  "versionCode": 9,
+  "versionName": "1.5.0",
+  "versionCode": 10,
   "apk": "roblox-manager.apk",
-  "sha256": "a949f85f6ca131e8e724d377a70c30dc42fbf9d4fce4673ba1a1c49fd18d70d5",
-  "notes": "New: ban list. The maintainer can ban a Roblox user id with a reason; a banned account is signed out and removed at once, even in a running session|The ban list is signed with the release key and checked in all three apps (Linux, Windows, Android)|Nothing about you is sent when the list is checked"
+  "sha256": "b45a3ef1ccb67ab77d1781102651913d061390da7064f7fc8e7ab84428180313",
+  "notes": "New: a real Windows installer (Roblox-Manager-Setup.exe): choose where to install, optional Start menu entry (findable with the Windows key) and desktop icon, listed in Apps with an uninstaller|Default install location is inside %APPDATA%|The portable zip is still available"
 }
