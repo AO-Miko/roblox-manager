@@ -2,7 +2,7 @@
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QCheckBox, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
+    QCheckBox, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -10,7 +10,7 @@ import accounts
 import cleanup
 import rbx
 import settings
-from ui_common import button, hint, make_table
+from ui_common import WrapCheck, button, hint, make_table
 
 
 class SettingsTab(QWidget):
@@ -48,6 +48,11 @@ class SettingsTab(QWidget):
         lay.addWidget(hint("Clearing is permanent. Your sign-ins (kept encrypted in the wallet), the list of accounts and these settings are never touched here."))
         self.table = make_table(["What", "Files", "Size", ""], [210, 60, 90, 130], stretch_last=False)
         self.table.setSortingEnabled(False)
+        hh = self.table.horizontalHeader()
+        hh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)           # the name takes what is left, so the buttons are never cut off
+        for c in (1, 2, 3):
+            hh.setSectionResizeMode(c, QHeaderView.ResizeMode.Fixed)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.table.setSelectionMode(self.table.SelectionMode.NoSelection)
         self.table.setMaximumHeight(150)
         self.table.setRowCount(len(cleanup.CATEGORIES))
@@ -140,8 +145,16 @@ class SettingsTab(QWidget):
         self.widgets[key] = sp
         return sp
 
+    @staticmethod
+    def _form(box):
+        """A form whose long labels move above their field when the window is narrow, instead of running off the edge."""
+        form = QFormLayout(box)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        return form
+
     def _check(self, key, text):
-        cb = QCheckBox(text)
+        cb = WrapCheck(text)
         cb.setChecked(settings.get(key))
         cb.toggled.connect(lambda v, k=key: settings.set(k, v))
         self.widgets[key] = cb
@@ -164,7 +177,7 @@ class SettingsTab(QWidget):
 
     def _rate_box(self):
         box = QGroupBox("Rate limits")
-        form = QFormLayout(box)
+        form = self._form(box)
         form.addRow("A read may use", self._spin("rate.read_burst", " % of a route's limit at once"))
         form.addRow(hint("Roblox limits how many requests each route allows per minute. Changes (unfriend, leave, switch on ...) are always "
                          "spread evenly over the time. For reads, a higher number loads screens faster; 0 spreads them evenly too."))
@@ -173,21 +186,21 @@ class SettingsTab(QWidget):
 
     def _log_box(self):
         box = QGroupBox("Request log")
-        form = QFormLayout(box)
+        form = self._form(box)
         form.addRow(self._check("log.requests", "Write every request to requests.log"))
         form.addRow("Rows kept in the Request log tab", self._spin("log.keep_rows", " rows", 100))
         return box
 
     def _cache_box(self):
         box = QGroupBox("Saved pictures and names")
-        form = QFormLayout(box)
+        form = self._form(box)
         form.addRow("Reuse a saved picture for", self._spin("cache.avatar_days", " days"))
         form.addRow("Reuse a saved name for", self._spin("cache.names_days", " days"))
         return box
 
     def _ui_box(self):
         box = QGroupBox("Window and confirmations")
-        form = QFormLayout(box)
+        form = self._form(box)
         form.addRow(self._check("ui.remember_window", "Remember the window size and the tab you were on"))
         form.addRow("Ask me to type the number when I change", self._spin("confirm.typed_from", " people or groups or more at once"))
         row = QHBoxLayout()
@@ -212,12 +225,13 @@ class SettingsTab(QWidget):
         self.upd_version.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         lay.addWidget(self.upd_version)
         form = QFormLayout()
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.upd_repo = QLineEdit()
         self.upd_repo.setPlaceholderText("Address of the update repository, for example https://github.com/you/roblox-manager.git")
         self.upd_branch = QLineEdit()
         self.upd_branch.setMaximumWidth(200)
-        self.upd_auto = QCheckBox("Look for updates and install them every time the app starts")
-        self.upd_sig = QCheckBox("Only install updates signed with a key I trust (strongly recommended)")
+        self.upd_auto = WrapCheck("Look for updates and install them every time the app starts")
+        self.upd_sig = WrapCheck("Only install updates signed with a key I trust (strongly recommended)")
         form.addRow("Update server", self.upd_repo)
         form.addRow("Branch", self.upd_branch)
         form.addRow(self.upd_auto)

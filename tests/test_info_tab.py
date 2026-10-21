@@ -71,5 +71,16 @@ check("the version label of the update box still works", "1.1.2" in tab.settings
 tab.setCurrentIndex(1)
 app.processEvents()
 check("the Updates page can be shown", tab.currentWidget() is tab.updates)
+from PySide6.QtWidgets import QScrollArea
+tab.resize(560, 700)
+for page, nm in ((tab.settings_tab, "Settings"), (tab.updates, "Updates")):
+    tab.setCurrentWidget(page)
+    app.processEvents()
+    sa = page.findChild(QScrollArea)
+    check(f"{nm} page fits a 560 px wide window without a sideways scroll (nothing cut off)", sa.widget().minimumSizeHint().width() <= sa.viewport().width(),
+          (sa.widget().minimumSizeHint().width(), sa.viewport().width()))
+wc = tab.settings_tab.upd_sig
+check("a long check box needs more height when it is narrow (it wraps instead of being cut)", wc.heightForWidth(200) > wc.heightForWidth(900) and wc.text().startswith("Only install"),
+      (wc.heightForWidth(200), wc.heightForWidth(900)))
 print(f"\n{sum(res)}/{len(res)} passed")
 sys.exit(0 if all(res) else 1)

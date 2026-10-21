@@ -6,10 +6,10 @@ import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPainter, QShortcut
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QHeaderView, QLabel, QMenu, QMessageBox, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QCheckBox, QFileDialog, QStyle, QHBoxLayout, QHeaderView, QLabel, QMenu, QMessageBox, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 import rbx
@@ -321,6 +321,49 @@ def hint(text):
     l.setWordWrap(True)
     l.setProperty("role", "hint")
     return l
+
+
+class WrapCheck(QCheckBox):
+    """A check box whose text wraps onto more lines when the window is narrow, instead of being cut off at the edge. It is a normal
+    QCheckBox otherwise (isChecked, setChecked, toggled ...); clicking the text toggles it."""
+
+    def __init__(self, text=""):
+        super().__init__()
+        self._label = QLabel(text, self)
+        self._label.setWordWrap(True)
+        self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self._label.setMinimumWidth(60)
+        self._gap = self.style().pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth) + self.style().pixelMetric(QStyle.PixelMetric.PM_CheckBoxLabelSpacing) + 2
+        sp = self.sizePolicy()
+        sp.setHeightForWidth(True)
+        self.setSizePolicy(sp)
+
+    def setText(self, text):
+        self._label.setText(text)
+        self.updateGeometry()
+
+    def text(self):
+        return self._label.text()
+
+    def changeEvent(self, e):
+        super().changeEvent(e)
+        self._label.setEnabled(self.isEnabled())
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._label.setGeometry(self._gap, 0, max(self.width() - self._gap, 1), self.height())
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, w):
+        return max(self._label.heightForWidth(max(w - self._gap, 1)), super().sizeHint().height())
+
+    def sizeHint(self):
+        return QSize(self._gap + self._label.sizeHint().width(), self.heightForWidth(self._gap + self._label.sizeHint().width()))
+
+    def minimumSizeHint(self):
+        return QSize(self._gap + 80, super().sizeHint().height())
 
 
 class BulkBar(QWidget):
