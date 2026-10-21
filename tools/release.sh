@@ -49,9 +49,18 @@ git commit -q -m "Release $VERSION" -m "${NOTES}"
 git tag -s "v$VERSION" -m "Release $VERSION"
 git verify-commit HEAD
 
+echo "== Release packages"
+OUT="build/release"
+rm -rf "$OUT"; mkdir -p "$OUT"
+cp dist/roblox-manager.apk "$OUT/roblox-manager-$VERSION.apk"
+git archive --format=tar.gz --prefix="roblox-manager-linux-$VERSION/" -o "$OUT/roblox-manager-linux-$VERSION.tar.gz" HEAD \
+  linux tools/install-linux.sh tools/roblox-manager.sh tools/trust README.md
+(cd "$OUT" && sha256sum roblox-manager-* > SHA256SUMS.txt)
+
 if [[ "$PUSH" == "--push" ]]; then
   git push origin release "v$VERSION"
-  echo "Pushed. Linux and Android apps will pick it up at their next start."
+  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT/SHA256SUMS.txt" --title "Roblox Manager $VERSION" --notes "${NOTES:-Release $VERSION}" --verify-tag
+  echo "Pushed and released. Linux and Android apps will pick it up at their next start."
 else
   echo "Done locally. Publish with:  git push origin release v$VERSION"
 fi

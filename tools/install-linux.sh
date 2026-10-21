@@ -3,8 +3,13 @@
 #
 #   tools/install-linux.sh [UPDATE-REPOSITORY-ADDRESS]
 #
-# Nothing is needed beyond python3 and git. Your sign-in, settings and logs (in ~/.config and ~/.local/state) are never touched.
+# Needs python3 with PySide6 and requests, and git (for the updates). Your sign-in, settings and logs (in ~/.config and ~/.local/state)
+# are never touched.
 set -e
+DEFAULT_REPO="https://github.com/AO-Miko/roblox-manager.git"
+command -v python3 >/dev/null 2>&1 || { echo "python3 is required"; exit 1; }
+python3 -c 'import PySide6, requests' 2>/dev/null || echo "Note: python3 PySide6 and requests are needed to run the app (see the README)."
+command -v git >/dev/null 2>&1 || echo "Note: git is needed for automatic updates."
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$HOME/.local/share/roblox-manager"
 CFG="${ROBLOX_MANAGER_CONFIG:-$HOME/.config/roblox-manager}"
@@ -35,7 +40,7 @@ if [ ! -s "$CFG/trusted_signers" ]; then
 fi
 # the update server
 if [ ! -f "$CFG/update.json" ]; then
-    printf '{"repo": "%s", "branch": "release", "auto": true, "require_signature": true}\n' "${1:-}" > "$CFG/update.json"
+    printf '{"repo": "%s", "branch": "release", "auto": true, "require_signature": true}\n' "${1:-$DEFAULT_REPO}" > "$CFG/update.json"
 elif [ -n "${1:-}" ]; then
     python3 - "$CFG/update.json" "$1" <<'PY'
 import json, sys
