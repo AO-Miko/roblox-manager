@@ -157,6 +157,7 @@ jobs:
         shell: pwsh
         run: |
           $dir = Join-Path $env:APPDATA "RobloxManager\App"
+          Set-Content (Join-Path $env:APPDATA "RobloxManager\mydata.txt") "a person's own data (settings, saved accounts)"
           $p = Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/LOG=$PWD\uninstall.log" -Wait -PassThru
           Start-Sleep -Seconds 3
           $ulog = Get-Content uninstall.log -Raw
@@ -167,7 +168,7 @@ jobs:
           if ($ulog -match "Could not delete") { throw "the uninstaller could not delete something" }
           if (Test-Path "$dir\python") { throw "files were left behind" }
           if (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Roblox Manager.lnk")) { throw "the Start menu entry is still there" }
-          if (-not (Test-Path (Join-Path $env:APPDATA "RobloxManager"))) { throw "the person's data folder was removed although it should be kept" }
+          if (-not (Test-Path (Join-Path $env:APPDATA "RobloxManager\mydata.txt"))) { throw "the person's data was removed although it should be kept" }
       - name: Install in a folder of choice, with the desktop icon and without the Start menu entry
         shell: pwsh
         run: |
