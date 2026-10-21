@@ -64,9 +64,14 @@ class Services(app: Application) {
         scope.launch { restore() }
         scope.launch {                         // the ban list: at the start and every ten minutes while the app is open
             while (true) {
-                enforce()
-                withContext(Dispatchers.IO) { bans.refresh() }
-                enforce()
+                try {                              // (a problem with the ban list must never stop or crash the app)
+                    enforce()
+                    withContext(Dispatchers.IO) { bans.refresh() }
+                    enforce()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Throwable) {
+                }
                 delay(BanStore.REFRESH_MS)
             }
         }
@@ -78,7 +83,7 @@ class Services(app: Application) {
         refreshList()
         val id = accounts.activeId
         val cookie = id?.let { accounts.cookie(it) }
-        if (cookie != null) try { signIn(cookie, save = false) } catch (_: Exception) { }
+        if (cookie != null) try { signIn(cookie, save = false) } catch (_: Throwable) { }
         ready.value = true
     }
 
@@ -98,7 +103,7 @@ class Services(app: Application) {
         if (save) accounts.save(acc, cookie)
         current.value = acc
         refreshList()
-        scope.launch { if (withContext(Dispatchers.IO) { bans.refresh() } == true) enforce() }      // a fresh list at every sign-in
+        scope.launch { try { if (withContext(Dispatchers.IO) { bans.refresh() } == true) enforce() } catch (_: Throwable) { } }      // a fresh list at every sign-in
         return acc
     }
 

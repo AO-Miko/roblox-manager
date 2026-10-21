@@ -11,11 +11,12 @@ import okhttp3.Request
 
 /** Ed25519 signature checking (RFC 8032), verification only: enough to check the signed ban list without an extra library. */
 object Ed25519 {
-    private val P = BigInteger.TWO.pow(255) - BigInteger.valueOf(19)
-    private val Q = BigInteger.TWO.pow(252) + BigInteger("27742317777372353535851937790883648493")
-    private fun inv(x: BigInteger) = x.modPow(P - BigInteger.TWO, P)
+    private val TWO = BigInteger.valueOf(2)          // (BigInteger.TWO needs Android 13)
+    private val P = TWO.pow(255) - BigInteger.valueOf(19)
+    private val Q = TWO.pow(252) + BigInteger("27742317777372353535851937790883648493")
+    private fun inv(x: BigInteger) = x.modPow(P - TWO, P)
     private val D = (BigInteger.valueOf(-121665) * inv(BigInteger.valueOf(121666))).mod(P)
-    private val I = BigInteger.TWO.modPow((P - BigInteger.ONE) / BigInteger.valueOf(4), P)
+    private val I = TWO.modPow((P - BigInteger.ONE) / BigInteger.valueOf(4), P)
 
     private fun recoverX(y: BigInteger, sign: Int): BigInteger? {
         if (y >= P) return null
@@ -31,8 +32,8 @@ object Ed25519 {
     private fun add(a: Array<BigInteger>, b: Array<BigInteger>): Array<BigInteger> {
         val aa = ((a[1] - a[0]) * (b[1] - b[0])).mod(P)
         val bb = ((a[1] + a[0]) * (b[1] + b[0])).mod(P)
-        val c = (BigInteger.TWO * a[3] * b[3] * D).mod(P)
-        val d = (BigInteger.TWO * a[2] * b[2]).mod(P)
+        val c = (TWO * a[3] * b[3] * D).mod(P)
+        val d = (TWO * a[2] * b[2]).mod(P)
         val e = bb - aa; val f = d - c; val g = d + c; val h = bb + aa
         return arrayOf((e * f).mod(P), (g * h).mod(P), (f * g).mod(P), (e * h).mod(P))
     }
@@ -121,7 +122,7 @@ object SshSig {
                 }
             }
         }
-    } catch (_: Exception) {
+    } catch (_: Throwable) {
         false
     }
 }
@@ -165,12 +166,12 @@ class BanStore(
         val list = try {
             val o = AppJson.parseToJsonElement(file.readText()).obj
             parse(Base64.getDecoder().decode(o?.str("data") ?: ""), o?.str("sig") ?: "", trusted)
-        } catch (_: Exception) { null }
+        } catch (_: Throwable) { null }
         return (list ?: BanList(0, emptyMap())).also { cached = it }
     }
 
     /** The reason (possibly empty) if this user id is banned, otherwise null. */
-    fun banned(userId: Long): String? = load().bans[userId]
+    fun banned(userId: Long): String? = try { load().bans[userId] } catch (_: Throwable) { null }
 
     private fun get(url: String, limit: Long): ByteArray {
         require(url.startsWith("https://"))
@@ -192,7 +193,7 @@ class BanStore(
         } catch (_: Exception) {
             return null
         }
-        val got = parse(data, sig, trusted) ?: return null
+        val got = try { parse(data, sig, trusted) } catch (_: Throwable) { null } ?: return null
         val have = load()
         if (got.serial < have.serial || (got.serial == have.serial && got.bans == have.bans)) return false
         try {

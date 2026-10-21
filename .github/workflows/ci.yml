@@ -69,3 +69,6 @@ jobs:
       - name: Unit tests
         working-directory: android
         run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest
+      - name: Android lint (finds calls that need a newer Android than the app supports)
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain :app:lintDebug
