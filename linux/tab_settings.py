@@ -147,6 +147,18 @@ class SettingsTab(QWidget):
         return sp
 
     @staticmethod
+    def _lab(text):
+        """A form label that wraps when the window is narrow."""
+        l = QLabel(text)
+        l.setWordWrap(True)
+        return l
+
+    @staticmethod
+    def _breakable(path):
+        """A folder name for a label: lets a long path break after each separator instead of forcing the window wider."""
+        return str(path).replace("\\", "\\\u200b").replace("/", "/\u200b")
+
+    @staticmethod
     def _form(box):
         """A form whose long labels move above their field when the window is narrow, instead of running off the edge."""
         form = QFormLayout(box)
@@ -179,7 +191,7 @@ class SettingsTab(QWidget):
     def _rate_box(self):
         box = QGroupBox("Rate limits")
         form = self._form(box)
-        form.addRow("A read may use", self._spin("rate.read_burst", " % of a route's limit at once"))
+        form.addRow(self._lab("A read may use"), self._spin("rate.read_burst", " % of a route's limit at once"))
         form.addRow(hint("Roblox limits how many requests each route allows per minute. Changes (unfriend, leave, switch on ...) are always "
                          "spread evenly over the time. For reads, a higher number loads screens faster; 0 spreads them evenly too."))
         form.addRow(self._check("ui.rate_notes", "Show the orange note when the app waits to stay within Roblox's limit"))
@@ -189,21 +201,21 @@ class SettingsTab(QWidget):
         box = QGroupBox("Request log")
         form = self._form(box)
         form.addRow(self._check("log.requests", "Write every request to requests.log"))
-        form.addRow("Rows kept in the Request log tab", self._spin("log.keep_rows", " rows", 100))
+        form.addRow(self._lab("Rows kept in the Request log tab"), self._spin("log.keep_rows", " rows", 100))
         return box
 
     def _cache_box(self):
         box = QGroupBox("Saved pictures and names")
         form = self._form(box)
-        form.addRow("Reuse a saved picture for", self._spin("cache.avatar_days", " days"))
-        form.addRow("Reuse a saved name for", self._spin("cache.names_days", " days"))
+        form.addRow(self._lab("Reuse a saved picture for"), self._spin("cache.avatar_days", " days"))
+        form.addRow(self._lab("Reuse a saved name for"), self._spin("cache.names_days", " days"))
         return box
 
     def _ui_box(self):
         box = QGroupBox("Window and confirmations")
         form = self._form(box)
         form.addRow(self._check("ui.remember_window", "Remember the window size and the tab you were on"))
-        form.addRow("Ask me to type the number when I change", self._spin("confirm.typed_from", " people or groups or more at once"))
+        form.addRow(self._lab("Ask me to type the number when I change"), self._spin("confirm.typed_from", " people or groups or more at once"))
         row = FlowLayout()
         row.addWidget(button("Reset all settings", self.reset))
         row.addStretch()
@@ -233,8 +245,8 @@ class SettingsTab(QWidget):
         self.upd_branch.setMaximumWidth(200)
         self.upd_auto = WrapCheck("Look for updates and install them every time the app starts")
         self.upd_sig = WrapCheck("Only install updates signed with a key I trust (strongly recommended)")
-        form.addRow("Update server", self.upd_repo)
-        form.addRow("Branch", self.upd_branch)
+        form.addRow(self._lab("Update server"), self.upd_repo)
+        form.addRow(self._lab("Branch"), self.upd_branch)
         form.addRow(self.upd_auto)
         form.addRow(self.upd_sig)
         lay.addLayout(form)
@@ -358,8 +370,8 @@ class SettingsTab(QWidget):
         kind, plain = accounts.storage_status()
         where = {"encrypted": f"encrypted ({plat.WALLET})", "plain": f"in {plain} plain private file(s): NOT encrypted (the wallet was not available)",
                  "none": "not saved (no account is signed in)"}[kind]
-        self.about.setText(f"Sign-ins: {where}.<br>Settings, accounts list: <code>{rbx.CONFIG_DIR}</code><br>Logs, records, saved pictures and names: "
-                           f"<code>{rbx.STATE_DIR}</code>")
+        self.about.setText(f"Sign-ins: {where}.<br>Settings, accounts list: <code>{self._breakable(rbx.CONFIG_DIR)}</code><br>Logs, records, saved pictures and names: "
+                           f"<code>{self._breakable(rbx.STATE_DIR)}</code>")
         self.about.setTextFormat(Qt.TextFormat.RichText)
 
     def showEvent(self, ev):
