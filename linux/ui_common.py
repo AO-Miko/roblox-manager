@@ -182,6 +182,28 @@ class Table(QTableWidget):
         super().__init__(rows, cols)
         self.empty_text = ""
 
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self.fit_headers()
+
+    def fit_headers(self):
+        """Widen columns that are too narrow for their title or their buttons (fonts differ between Windows and Linux)."""
+        h = self.horizontalHeader()
+        fm = h.fontMetrics()
+        for c in range(self.columnCount()):
+            if h.isSectionHidden(c) or (c == self.columnCount() - 1 and h.stretchLastSection()):
+                continue
+            if h.sectionResizeMode(c) not in (QHeaderView.ResizeMode.Interactive, QHeaderView.ResizeMode.Fixed):
+                continue
+            item = self.horizontalHeaderItem(c)
+            need = fm.horizontalAdvance(item.text() if item else "") + 32
+            for r in range(self.rowCount()):
+                cw = self.cellWidget(r, c)
+                if cw is not None:
+                    need = max(need, cw.sizeHint().width() + 16)
+            if h.sectionSize(c) < need:
+                h.resizeSection(c, need)
+
     def paintEvent(self, ev):
         super().paintEvent(ev)
         if self.empty_text and self.rowCount() == 0:

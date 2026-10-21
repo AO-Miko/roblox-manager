@@ -17,6 +17,9 @@ import browser_login  # noqa: F401
 from PySide6.QtWidgets import QApplication
 
 app = QApplication(sys.argv)
+if os.environ.get("RM_FIT_FONT"):                  # try a wider font on purpose (Windows' fonts are wider than most Linux ones), e.g. "DejaVu Sans"
+    from PySide6.QtGui import QFont
+    app.setFont(QFont(os.environ["RM_FIT_FONT"]))
 import app as appmod
 import textfit
 

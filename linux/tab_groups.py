@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 
 import rbx
 import settings
-from ui_common import BulkBar, button, cell, day_in_range, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
+from ui_common import BulkBar, FlowLayout, button, cell, day_in_range, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
 
 
 def perm(p, section, key):
@@ -48,7 +48,7 @@ class GroupsTab(QWidget):
         self.gfilter.textChanged.connect(lambda _=None: self._show_groups())
         ll.addWidget(self.gfilter)
         ll.addWidget(self.glist, 1)
-        pick = QHBoxLayout()
+        pick = FlowLayout()
         pick.addWidget(QLabel("Select:"))
         pick.addWidget(button("All shown", lambda: self.select_groups_where(lambda g: True)))
         pick.addWidget(button("None", lambda: self.select_groups_where(lambda g: False)))
@@ -57,7 +57,7 @@ class GroupsTab(QWidget):
                               "Groups where you have no special role (rank 1 or lower)"))
         pick.addStretch()
         ll.addLayout(pick)
-        bydate = QHBoxLayout()
+        bydate = FlowLayout()
         bydate.addWidget(QLabel("Created from"))
         self.date_from = QDateEdit(QDate(2006, 1, 1))
         self.date_to = QDateEdit(QDate.currentDate().addYears(-3))
