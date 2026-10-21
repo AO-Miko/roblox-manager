@@ -4,46 +4,91 @@
 #
 #   tools/ban.sh ban 12345678 "reason shown to the person"     (the reason is optional, at most 200 characters)
 #   tools/ban.sh unban 12345678
-#   tools/ban.sh list
-#   add --push to publish (signed commit on `release`, and `main`); without it the change stays local
+#   tools/ban.sh list [--json]
+#   --by ID     the Roblox user id of whoever does this (the Admin tab passes it); the roles in dist/roles.json decide what is allowed:
+#               nobody bans themselves, nobody bans someone with the same or a higher role, an unban needs at least the role of the ban's author.
+#               Without --by the action is the owner's own (the key holder): it can ban admins but not another owner.
+#   --push      publish (signed commit on `release`, and `main`); without it the change stays local
 #
 # No new app version is needed: the apps read the list from GitHub. (GitHub's cache can delay it by a few minutes.)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 ACTION="${1:-}"
-ID="${2:-}"
-REASON="${3:-}"
+ID=""
+REASON=""
+BY=""
 PUSH=""
-for a in "$@"; do [[ "$a" == "--push" ]] && PUSH=1; done
-[[ "$REASON" == "--push" ]] && REASON=""
-KEY="$HOME/.config/roblox-manager-release/signing_key"
+JSON=""
+shift || true
+POS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --push) PUSH=1 ;;
+    --json) JSON=1 ;;
+    --by) BY="${2:-}"; shift ;;
+    *) POS+=("$1") ;;
+  esac
+  shift
+done
+ID="${POS[0]:-}"
+REASON="${POS[1]:-}"
+KEY="${ROBLOX_MANAGER_SIGNING_KEY:-$HOME/.config/roblox-manager-release/signing_key}"
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "release" ]] || { echo "Run this on the 'release' branch"; exit 1; }
 mkdir -p dist
 [[ -f dist/bans.json ]] || printf '{\n  "serial": 0,\n  "bans": []\n}\n' > dist/bans.json
 
 case "$ACTION" in
   list)
-    python3 -I - <<'PY'
-import json
+    python3 -I - "$JSON" <<'PY'
+import json, sys
 d = json.load(open("dist/bans.json"))
+if sys.argv[1]:
+    print(json.dumps(d))
+    sys.exit(0)
 print(f"serial {d['serial']}, {len(d['bans'])} ban(s)")
 for b in d["bans"]:
-    print(f"  {b['id']}  {b.get('reason', '')}  ({b.get('since', '')})")
+    print(f"  {b['id']}  {b.get('reason', '')}  ({b.get('since', '')}, by {b.get('by') or 'owner'})")
 PY
     exit 0 ;;
   ban|unban) [[ "$ID" =~ ^[0-9]{1,15}$ ]] || { echo "The user id must be a number (the digits in roblox.com/users/NUMBER/profile)"; exit 1; } ;;
-  *) sed -n 2,12p "$0"; exit 2 ;;
+  *) sed -n 2,16p "$0"; exit 2 ;;
 esac
+[[ -z "$BY" || "$BY" =~ ^[0-9]{1,15}$ ]] || { echo "--by must be a user id"; exit 1; }
 
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit or stash your changes first"; exit 1; }
-python3 -I - "$ACTION" "$ID" "$REASON" <<'PY'
+python3 -I - "$ACTION" "$ID" "$REASON" "$BY" <<'PY'
 import datetime, json, sys
-action, uid, reason = sys.argv[1], int(sys.argv[2]), sys.argv[3][:200]
+action, uid, reason, by = sys.argv[1], int(sys.argv[2]), sys.argv[3][:200], sys.argv[4]
+RANKS = {"admin": 1, "owner": 2}
+try:
+    roles = {int(k): RANKS.get(str(v).lower(), 0) for k, v in json.load(open("dist/roles.json")).get("roles", {}).items()}
+except (OSError, ValueError):
+    roles = {}
+if by:
+    actor_rank = roles.get(int(by), 0)
+    if actor_rank < 1:
+        sys.exit("Refused: you are not an admin.")
+else:
+    actor_rank = 2                                   # the key holder acting without an account
+target_rank = roles.get(uid, 0)
 d = json.load(open("dist/bans.json"))
+old = next((b for b in d["bans"] if b["id"] == uid), None)
+if action == "ban":
+    if by and int(by) == uid:
+        sys.exit("Refused: you cannot ban yourself.")
+    if target_rank >= actor_rank:
+        sys.exit(f"Refused: {uid} is {'the owner' if target_rank >= 2 else 'an admin'}, with the same role as you or a higher one.")
+else:
+    if by and int(by) == uid:
+        sys.exit("Refused: you cannot unban yourself.")
+    if old is None:
+        sys.exit(f"{uid} is not banned.")
+    if actor_rank < int(old.get("rank", 2)):
+        sys.exit("Refused: this ban was placed by someone with a higher role than yours.")
 d["bans"] = [b for b in d["bans"] if b["id"] != uid]
 if action == "ban":
-    d["bans"].append({"id": uid, "reason": reason, "since": datetime.date.today().isoformat()})
+    d["bans"].append({"id": uid, "reason": reason, "since": datetime.date.today().isoformat(), "by": int(by) if by else None, "rank": actor_rank})
 d["bans"].sort(key=lambda b: b["id"])
 d["serial"] += 1
 json.dump(d, open("dist/bans.json", "w"), indent=2, ensure_ascii=False)
@@ -53,7 +98,7 @@ PY
 rm -f dist/bans.json.sig
 ssh-keygen -q -Y sign -f "$KEY" -n roblox-manager-bans dist/bans.json
 git add dist/bans.json dist/bans.json.sig
-git commit -q -m "Ban list: $ACTION $ID"
+git commit -q -m "Ban list: $ACTION $ID${BY:+ (by $BY)}"
 git verify-commit HEAD
 if [[ -n "$PUSH" ]]; then
   git push origin release

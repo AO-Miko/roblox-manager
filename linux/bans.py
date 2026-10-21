@@ -94,3 +94,15 @@ def refresh(get=None, base=None):
     except OSError:
         return None
     return True
+
+
+def entries():
+    """The full entries of the last good list from disk ({'id', 'reason', 'since', 'by', 'rank'}), for the Admin tab; [] if there is none."""
+    try:
+        c = json.loads(_cache_file().read_text(encoding="utf-8"))
+        data = base64.b64decode(c["data"])
+        if parse(data, c["sig"]) is None:
+            return []
+        return json.loads(data.decode("utf-8")).get("bans", [])
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return []

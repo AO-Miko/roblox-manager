@@ -27,11 +27,13 @@ from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QLabel, QMai
 import accounts
 import bans
 import nav
+import roles
 import plat
 import rbx
 import settings
 import theme
 from tab_account import AccountTab
+from tab_admin import AdminTab
 from tab_explorer import ExplorerTab
 from tab_groups import GroupsTab
 from tab_money import MoneyTab
@@ -62,12 +64,13 @@ class MainWindow(QMainWindow):
         self.money = MoneyTab(self.ctx, show_pending=self.account.pending_details)
         self.requests = RequestsTab(self.ctx)
         self.explorer = ExplorerTab(self.ctx)
+        self.admin = AdminTab(self.ctx)
         self.info_tab = InfoTab(self.ctx, on_cleared=self._cleared)
         self.holders = {}
         self.settings_tab = self.info_tab.settings_tab
         for w, name in ((self.account, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
                         (self.money, "Money"), (self.requests, "Request log"), (self.explorer, "API Explorer"),
-                        (self.info_tab, "Info")):
+                        (self.admin, "Admin"), (self.info_tab, "Info")):
             holder = nav.PageHolder(w)
             self.holders[w] = holder
             self.tabs.addTab(holder, name)
@@ -100,12 +103,15 @@ class MainWindow(QMainWindow):
         self.palette_box = nav.Palette(self, self._search_entries)
         self._shortcuts = nav.install_shortcuts(self)
         self.header.show_page(self.tabs.tabText(0))
+        self.ctx.signed_in.connect(self.update_admin)
+        self.ctx.signed_out.connect(self.update_admin)
         self.ctx.accounts_changed.connect(self._fill_accounts)
         self._fill_accounts()
         self.counts = {}
         self.ctx.counts.connect(self._on_count)
         self.ctx.signed_out.connect(lambda: [self.ctx.counts.emit(k, None) for k in ("friends", "requests", "followers", "following", "blocked", "groups", "vip")])
         self._restore_state(auto_login)
+        self.update_admin()
         self.who = QLabel("Not signed in")
         self.who.setContentsMargins(0, 0, 10, 0)
         self.statusBar().addPermanentWidget(self.who)
@@ -144,7 +150,7 @@ class MainWindow(QMainWindow):
     def _search_entries(self):
         """Everything the search can jump to: pages, their sub pages, accounts, and the friends, groups and servers that are loaded."""
         out = []
-        for i in range(self.tabs.count()):
+        for i in self.visible_pages():
             name = nav.base_title(self.tabs.tabText(i))[0]
             page = self.tabs.widget(i).page
             out.append((name, "page", nav.KEYWORDS.get(name, ""), lambda page=page: self._go(page)))
@@ -179,7 +185,26 @@ class MainWindow(QMainWindow):
                 return
 
     def _check_bans(self):
-        self.ctx.async_.run(bans.refresh, lambda _: self.account.enforce_bans())
+        self.ctx.async_.run(lambda: (bans.refresh(), roles.refresh()), lambda _: (self.account.enforce_bans(), self.update_admin()))
+
+    def update_admin(self):
+        """The Admin page exists only for an account that has a role (see roles.py); for everybody else it is hidden and cannot be opened."""
+        allowed = bool(self.ctx.me) and roles.rank_of(self.ctx.me["id"]) >= 1
+        i = self.tabs.indexOf(self.holders[self.admin])
+        self.tabs.setTabVisible(i, allowed)
+        self.sidebar.set_page_visible("Admin", allowed)
+        if allowed:
+            self.admin.refresh()
+        elif self.tabs.currentIndex() == i:
+            self.tabs.setCurrentIndex(0)
+
+    def visible_pages(self):
+        return [i for i in range(self.tabs.count()) if self.tabs.isTabVisible(i)]
+
+    def open_nth_page(self, n):
+        pages = self.visible_pages()
+        if n < len(pages):
+            self.tabs.setCurrentIndex(pages[n])
 
     def _cleared(self, category):
         if category == "logs":

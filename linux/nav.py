@@ -17,6 +17,7 @@ PAGES = {
     "Money": ("Roblox", "Robux balance, pending, totals per period and the transaction history."),
     "Request log": ("Tools", "Every request the app sends to Roblox and how Roblox answered."),
     "API Explorer": ("Tools", "Send any Roblox web API request and read the answer."),
+    "Admin": ("Admin", "Ban and unban Roblox user ids. Only accounts with a role (owner, admin) see this page."),
     "Info": ("", "Settings, updates and what changed in each version."),
 }
 KEYWORDS = {                      # extra words the search also understands, so "robux" finds Money and "private server" finds VIP servers
@@ -28,6 +29,7 @@ KEYWORDS = {                      # extra words the search also understands, so 
     "Request log": "log requests http rate limit errors",
     "API Explorer": "api endpoint http get post developer",
     "Info": "settings updates update log version changes about preferences theme confirm cache",
+    "Admin": "ban unban banned reason roles owner moderator",
 }
 
 
@@ -62,6 +64,9 @@ def icon_path(name):
             p.moveTo(8, y); p.lineTo(16, y)
     elif name == "API Explorer":
         p.moveTo(9, 7); p.lineTo(4, 12); p.lineTo(9, 17); p.moveTo(15, 7); p.lineTo(20, 12); p.lineTo(15, 17); p.moveTo(13.4, 5.5); p.lineTo(10.6, 18.5)
+    elif name == "Admin":
+        p.moveTo(12, 3.5); p.lineTo(19.5, 6.5); p.lineTo(19.5, 12); p.cubicTo(19.5, 16.5, 16, 19.5, 12, 20.8); p.cubicTo(8, 19.5, 4.5, 16.5, 4.5, 12)
+        p.lineTo(4.5, 6.5); p.closeSubpath(); p.moveTo(9, 12); p.lineTo(11.2, 14.2); p.lineTo(15.2, 9.8)
     elif name == "Info":
         p.moveTo(4, 7); p.lineTo(20, 7); p.moveTo(4, 17); p.lineTo(20, 17); p.addEllipse(QPointF(9, 7), 2.2, 2.2); p.addEllipse(QPointF(15, 17), 2.2, 2.2)
     elif name == "search":
@@ -238,21 +243,25 @@ class Sidebar(QFrame):
         lay.addSpacing(8)
         self.items = []
         self.group_labels = []
-        last = None
+        self.compact = False
+        last, label = None, None
         for i in range(tabs.count()):
             title = base_title(tabs.tabText(i))[0]
             group = PAGES.get(title, ("", ""))[0]
             if i == tabs.count() - 1 and title == "Info":
                 lay.addStretch(1)
                 group = ""
-            elif group != last and group:
-                lab = QLabel(group.upper())
-                lab.setProperty("role", "group")
-                lay.addSpacing(8)
-                lay.addWidget(lab)
-                self.group_labels.append(lab)
-            last = group or last
+            if group != last:
+                label = None
+                if group:
+                    label = QLabel(group.upper())
+                    label.setProperty("role", "group")
+                    lay.addSpacing(8)
+                    lay.addWidget(label)
+                    self.group_labels.append(label)
+                last = group
             it = NavItem(title)
+            it.group_label = label
             it.set_title(tabs.tabText(i))
             it.clicked.connect(lambda _=False, n=i: self.picked.emit(n))
             lay.addWidget(it)
@@ -270,13 +279,26 @@ class Sidebar(QFrame):
             it.set_title(self.tabs.tabText(i))
             it.setChecked(i == cur)
 
+    def set_page_visible(self, title, visible):
+        """Show or hide the entry of a page (the Admin page only exists for admins); a group name goes when all its pages are hidden."""
+        for it in self.items:
+            if it.title == title:
+                it.setVisible(visible)
+        self._sync_labels()
+
+    def _sync_labels(self):
+        for lab in self.group_labels:
+            lab.setVisible(not self.compact and any(it.group_label is lab and not it.isHidden() for it in self.items))
+
     def set_compact(self, compact):
+        self.compact = compact
         self.setFixedWidth(self.COMPACT if compact else self.FULL)
         for w in [*self.items, self.search]:
             w.compact = compact
             w.update()
-        for w in [self.brand, self.account, self.version, *self.group_labels]:
+        for w in [self.brand, self.account, self.version]:
             w.setVisible(not compact)
+        self._sync_labels()
         for it in self.items:
             it.setToolTip(it.title + (f" ({it.badge})" if it.badge else ""))
 
@@ -403,7 +425,7 @@ class Palette(QDialog):
 def install_shortcuts(win):
     """Ctrl+K opens the search, Ctrl+1 ... Ctrl+8 open the pages, F5 reloads the page in view."""
     out = [QShortcut(QKeySequence("Ctrl+K"), win, activated=win.open_search)]
-    for n in range(min(win.tabs.count(), 9)):
-        out.append(QShortcut(QKeySequence(f"Ctrl+{n + 1}"), win, activated=lambda n=n: win.tabs.setCurrentIndex(n)))
+    for n in range(9):
+        out.append(QShortcut(QKeySequence(f"Ctrl+{n + 1}"), win, activated=lambda n=n: win.open_nth_page(n)))
     out.append(QShortcut(QKeySequence("F5"), win, activated=win.reload_page))
     return out
