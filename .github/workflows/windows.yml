@@ -43,6 +43,9 @@ jobs:
       - name: Info tab
         if: ${{ !cancelled() }}
         run: python tests/test_info_tab.py
+      - name: Navigation and search
+        if: ${{ !cancelled() }}
+        run: python tests/test_nav.py
       - name: Updates box
         if: ${{ !cancelled() }}
         run: python tests/test_settings_updates.py

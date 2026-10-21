@@ -240,7 +240,7 @@ class SettingsTab(QWidget):
         form = QFormLayout()
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.upd_repo = QLineEdit()
-        self.upd_repo.setPlaceholderText("Address of the update repository, for example https://github.com/you/roblox-manager.git")
+        self.upd_repo.setPlaceholderText("Update repository, e.g. https://github.com/you/roblox-manager.git")
         self.upd_branch = QLineEdit()
         self.upd_branch.setMaximumWidth(200)
         self.upd_auto = WrapCheck("Look for updates and install them every time the app starts")

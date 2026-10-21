@@ -14,7 +14,7 @@ from PySide6.QtCore import QItemSelectionModel, Qt, QTimer, Signal
 
 import rbx
 import settings
-from ui_common import button, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
+from ui_common import FlowLayout, button, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
 
 
 def vip_id(item):
@@ -301,7 +301,7 @@ class VipTab(QWidget):
         top = QWidget()
         tl = QVBoxLayout(top)
         tl.setContentsMargins(0, 0, 0, 0)
-        head = QHBoxLayout()
+        head = FlowLayout()
         title = QLabel("My VIP servers")
         title.setProperty("role", "title")
         head.addWidget(title)
@@ -336,7 +336,7 @@ class VipTab(QWidget):
         self.mtable.setSelectionMode(self.mtable.SelectionMode.ExtendedSelection)
         self.apply_column_order()
         tl.addWidget(self.mtable, 1)
-        row = QHBoxLayout()
+        row = FlowLayout()
         self.b_active = button("Switch on/off", self.toggle_active, "A VIP server that is switched off cannot be joined")
         self.b_allow = button("Allow people...", self.allow_people, "Choose who can join: your friends and specific people")
         self.b_copy = button("Copy join link", self.copy_join)
@@ -351,7 +351,7 @@ class VipTab(QWidget):
             row.addWidget(b)
         row.addStretch()
         tl.addLayout(row)
-        pick = QHBoxLayout()
+        pick = FlowLayout()
         pick.addWidget(QLabel("Select:"))
         for text, what in (("All expired", "expired"), ("All disabled", "disabled"), ("All enabled", "enabled"), ("One per game", "best"), ("Duplicates", "extras"), ("All", "all"), ("None", "none")):
             pick.addWidget(button(text, lambda w=what: self.select_group(w)))
@@ -363,7 +363,7 @@ class VipTab(QWidget):
             pick.addWidget(b)
         pick.addStretch()
         tl.addLayout(pick)
-        cost = QHBoxLayout()
+        cost = FlowLayout()
         cost.addWidget(QLabel("By cost:"))
         for text, what, tip in (("Plus-free", "plus", "Servers that are free because of Roblox Plus"), ("Game-free", "gamefree", "Servers the game itself offers for free"),
                                 ("All free", "free", "Both kinds of free server"), ("Paid", "paid", "Servers that cost Robux")):

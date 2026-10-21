@@ -40,7 +40,7 @@ class GroupsTab(QWidget):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
         self.glist = make_table(["Group", "My role", "Rank", "Members", "Created"], [185, 120, 60, 90, 125], empty="No groups to show.")
-        left.setMinimumWidth(540)
+        left.setMinimumWidth(330)
         self.glist.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.glist.itemSelectionChanged.connect(self.pick_group)
         self.gfilter = QLineEdit()

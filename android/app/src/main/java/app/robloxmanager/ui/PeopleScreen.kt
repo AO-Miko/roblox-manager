@@ -51,9 +51,10 @@ class AvatarBook(private val sv: Services) {
 }
 
 @Composable
-fun PeopleScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>) {
+fun PeopleScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>, jump: Jump? = null) {
     val kinds = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find")
     var tab by remember { mutableStateOf(0) }
+    LaunchedEffect(jump) { if (jump != null && jump.dest == "people") tab = jump.sub.coerceIn(0, kinds.size - 1) }
     val api = sv.api
     Column(Modifier.fillMaxSize()) {
         ScrollableTabRow(selectedTabIndex = tab, containerColor = C.bg, edgePadding = 8.dp) {

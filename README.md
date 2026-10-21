@@ -49,7 +49,9 @@ tools/install-linux.sh
 ```
 
 This puts the app in `~/.local/share/roblox-manager`, the `roblox-manager` command in `~/.local/bin` (make sure that folder is in your `PATH`), and a
-menu entry. Start it from the menu or with `roblox-manager`. Sign in on the **Home** tab.
+menu entry. Start it from the menu or with `roblox-manager`. Sign in on the **Home** page.
+
+**Finding your way around.** On the PC the pages are in a side bar (Home, People, Groups, VIP servers, Money, Request log, API Explorer, Info) with counts next to the names. **Ctrl+K** opens a search that jumps to any page, setting, account, and to any friend, group or VIP server that is loaded; **Ctrl+1 ... Ctrl+8** open the pages and **F5** reloads the page you are on. On the phone the four main pages and **More** (Money, Request log, Info) are in a bottom bar, the magnifier at the top searches pages and settings, and the round button switches accounts from any page.
 
 **Updates:** every time you start it, the launcher checks this repository (a few seconds at most, never blocking) and installs a newer version if the
 commit is signed by the release key. *Settings → Updates* shows the version, lets you check now, and go back to the previous version.

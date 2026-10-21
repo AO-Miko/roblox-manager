@@ -11,13 +11,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,13 +27,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import app.robloxmanager.ui.AppTheme
+import app.robloxmanager.ui.ALL
+import app.robloxmanager.ui.BottomBar
 import app.robloxmanager.ui.BulkBar
+import app.robloxmanager.ui.GROUPS
+import app.robloxmanager.ui.HOME
+import app.robloxmanager.ui.IN_MORE
+import app.robloxmanager.ui.INFO
+import app.robloxmanager.ui.Jump
+import app.robloxmanager.ui.LOG
+import app.robloxmanager.ui.MONEY
+import app.robloxmanager.ui.MORE
+import app.robloxmanager.ui.MoreScreen
+import app.robloxmanager.ui.PEOPLE
+import app.robloxmanager.ui.SearchDialog
+import app.robloxmanager.ui.TopBar
+import app.robloxmanager.ui.VIP
 import app.robloxmanager.ui.C
 import app.robloxmanager.ui.GroupsScreen
 import app.robloxmanager.ui.HomeScreen
@@ -83,37 +100,50 @@ private fun Root(sv: Services) {
 
 @Composable
 private fun Main(sv: Services, addAccount: () -> Unit) {
-    val titles = listOf("Home", "People", "Groups", "VIP servers", "Money", "Request log", "Info")
-    var tab by remember { mutableStateOf(0) }
+    var dest by rememberSaveable { mutableStateOf(HOME.id) }
+    val visited = remember { mutableStateListOf(dest) }           // pages already opened stay alive, so going back to one does not load it again
+    var jump by remember { mutableStateOf<Jump?>(null) }
+    var searching by remember { mutableStateOf(false) }
     val counts = remember { mutableStateMapOf<String, Int>() }
     val bulk = remember { Bulk(sv.scope) }
     val upd by Updates.state.collectAsState()
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val me by sv.current.collectAsState()
+    val accounts by sv.accountList.collectAsState()
+    fun open(id: String, sub: Int = 0) {
+        if (id !in visited) visited.add(id)
+        dest = id
+        if (id == PEOPLE.id || id == INFO.id) jump = Jump(id, sub, (jump?.nonce ?: 0) + 1)
+    }
+    if (dest !in visited) visited.add(dest)
+    val inMore = IN_MORE.any { it.id == dest }
+    BackHandler(enabled = inMore) { open(MORE.id) }
+    BackHandler(enabled = !inMore && dest != HOME.id) { open(HOME.id) }
     key(me?.id) {
         Column(Modifier.fillMaxSize()) {
+            TopBar(
+                title = ALL.firstOrNull { it.id == dest }?.title ?: MORE.title, onBack = if (inMore) ({ open(MORE.id) }) else null,
+                accounts = accounts, me = me, onAdd = addAccount, onSearch = { searching = true },
+                onSwitch = { a -> sv.scope.launch { try { sv.switchTo(a.id) } catch (_: Exception) { } } },
+            )
             if (upd.ready != null) Row(Modifier.fillMaxWidth().background(C.accentDim).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Update ${upd.available?.versionName ?: ""} is ready", Modifier.weight(1f), fontSize = 13.sp)
                 TextButton(onClick = { Updates.install(ctx, upd.ready!!) }) { Text("Install") }
             }
-            ScrollableTabRow(selectedTabIndex = tab, containerColor = C.bg, edgePadding = 8.dp) {
-                titles.forEachIndexed { i, t ->
-                    val n = when (t) { "VIP servers" -> counts["VIP"]; "Groups" -> counts["Groups"]; "People" -> counts["Friends"]; else -> null }
-                    Tab(selected = tab == i, onClick = { tab = i }, text = { Text(if (n != null) "$t ($n)" else t) })
-                }
-            }
             Box(Modifier.weight(1f)) {
-                when (tab) {
-                    0 -> HomeScreen(sv, addAccount)
-                    1 -> PeopleScreen(sv, bulk, counts)
-                    2 -> GroupsScreen(sv, bulk, counts)
-                    3 -> VipScreen(sv, bulk, counts)
-                    4 -> MoneyScreen(sv)
-                    5 -> LogScreen(sv)
-                    else -> InfoScreen(sv)
-                }
+                fun shown(id: String) = if (dest == id) Modifier.fillMaxSize() else Modifier.size(0.dp)
+                if (HOME.id in visited) Box(shown(HOME.id)) { HomeScreen(sv, addAccount) }
+                if (PEOPLE.id in visited) Box(shown(PEOPLE.id)) { PeopleScreen(sv, bulk, counts, jump) }
+                if (GROUPS.id in visited) Box(shown(GROUPS.id)) { GroupsScreen(sv, bulk, counts) }
+                if (VIP.id in visited) Box(shown(VIP.id)) { VipScreen(sv, bulk, counts) }
+                if (MONEY.id in visited) Box(shown(MONEY.id)) { MoneyScreen(sv) }
+                if (LOG.id in visited) Box(shown(LOG.id)) { LogScreen(sv) }
+                if (INFO.id in visited) Box(shown(INFO.id)) { InfoScreen(sv, jump) }
+                if (dest == MORE.id) MoreScreen { open(it.id) }
             }
             BulkBar(bulk)
+            BottomBar(current = dest, counts = counts) { open(it.id) }
         }
     }
+    if (searching) SearchDialog(onClose = { searching = false }) { j -> searching = false; open(j.dest, j.sub) }
 }

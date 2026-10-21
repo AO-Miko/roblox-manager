@@ -17,6 +17,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -194,8 +195,9 @@ fun UpdateLog() {
 
 /** The Info tab: Settings, and Updates (controls and the update log). */
 @Composable
-fun InfoScreen(sv: Services) {
+fun InfoScreen(sv: Services, jump: Jump? = null) {
     var sub by remember { mutableStateOf(0) }
+    LaunchedEffect(jump) { if (jump != null && jump.dest == "info") sub = jump.sub.coerceIn(0, 1) }
     Column(Modifier.fillMaxSize()) {
         androidx.compose.material3.TabRow(selectedTabIndex = sub, containerColor = C.bg) {
             listOf("Settings", "Updates").forEachIndexed { i, t -> androidx.compose.material3.Tab(selected = sub == i, onClick = { sub = i }, text = { Text(t) }) }

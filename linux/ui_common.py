@@ -291,6 +291,7 @@ def fill_table(table, rows, colours=None, keys=None, icons=None):
     keys: one hidden value per row (kept on column 0, so it stays with its row when the user sorts).
     icons: {row: QIcon} shown in column 0."""
     table.setSortingEnabled(False)
+    table.setUpdatesEnabled(False)          # one repaint at the end, not one per cell (a few hundred servers fill noticeably faster)
     table.setRowCount(len(rows))
     for r, row in enumerate(rows):
         for c, val in enumerate(row):
@@ -307,6 +308,7 @@ def fill_table(table, rows, colours=None, keys=None, icons=None):
                 if icons and r in icons:
                     it.setIcon(icons[r])
             table.setItem(r, c, it)
+    table.setUpdatesEnabled(True)
     table.setSortingEnabled(True)
 
 
@@ -358,6 +360,9 @@ class FlowLayout(QLayout):
         self._items.append(item)
 
     def addStretch(self, *a):
+        pass
+
+    def addSpacing(self, *a):
         pass
 
     def count(self):

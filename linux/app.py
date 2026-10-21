@@ -22,10 +22,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PySide6.QtCore import QByteArray, QLockFile, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import QApplication, QComboBox, QLabel, QMainWindow, QMessageBox, QTabWidget
+from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
 
 import accounts
 import bans
+import nav
 import plat
 import rbx
 import settings
@@ -47,10 +48,12 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Roblox Manager")
         self.resize(1180, 760)
+        self.setMinimumSize(560, 420)
         theme.apply(QApplication.instance(), rbx.STATE_DIR / "ui-assets")
         self.ctx = Context(client or rbx.Client(), self)
         self.tabs = QTabWidget()
-        self.setCentralWidget(self.tabs)
+        self.tabs.tabBar().hide()               # the side bar is the way around now (the tab widget still holds the pages, their titles and the counts)
+        self.tabs.setDocumentMode(True)
         self.account = AccountTab(self.ctx)
         self.people = PeopleTab(self.ctx)
         self.friends = self.people.friends
@@ -60,18 +63,43 @@ class MainWindow(QMainWindow):
         self.requests = RequestsTab(self.ctx)
         self.explorer = ExplorerTab(self.ctx)
         self.info_tab = InfoTab(self.ctx, on_cleared=self._cleared)
+        self.holders = {}
         self.settings_tab = self.info_tab.settings_tab
         for w, name in ((self.account, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
                         (self.money, "Money"), (self.requests, "Request log"), (self.explorer, "API Explorer"),
                         (self.info_tab, "Info")):
-            self.tabs.addTab(w, name)
-        self.tabs.currentChanged.connect(lambda i: getattr(self.tabs.widget(i), "ensure_loaded", lambda: None)())
+            holder = nav.PageHolder(w)
+            self.holders[w] = holder
+            self.tabs.addTab(holder, name)
+        self.tabs.currentChanged.connect(lambda i: self.tabs.widget(i).ensure_loaded())
         # quick account switch, visible on every tab
         self.acct_combo = QComboBox()
         self.acct_combo.setMinimumWidth(190)
         self.acct_combo.setToolTip("The account in use. Pick another to switch to it, or add one.")
         self.acct_combo.activated.connect(self._account_picked)
-        self.tabs.setCornerWidget(self.acct_combo, Qt.Corner.TopRightCorner)
+        import updater
+        self.sidebar = nav.Sidebar(self.tabs, self.acct_combo, f"Version {updater.version()}")
+        self.sidebar.picked.connect(self.tabs.setCurrentIndex)
+        self.sidebar.search_requested.connect(self.open_search)
+        self.header = nav.PageHeader()
+        self.tabs.currentChanged.connect(lambda i: self.header.show_page(self.tabs.tabText(i)))
+        self.tabs.currentChanged.connect(lambda i: self.setWindowTitle(f"{nav.base_title(self.tabs.tabText(i))[0]} - Roblox Manager"))
+        right = QWidget()
+        rl = QVBoxLayout(right)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(0)
+        rl.addWidget(self.header)
+        rl.addWidget(self.tabs, 1)
+        shell = QWidget()
+        sl = QHBoxLayout(shell)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.setSpacing(0)
+        sl.addWidget(self.sidebar)
+        sl.addWidget(right, 1)
+        self.setCentralWidget(shell)
+        self.palette_box = nav.Palette(self, self._search_entries)
+        self._shortcuts = nav.install_shortcuts(self)
+        self.header.show_page(self.tabs.tabText(0))
         self.ctx.accounts_changed.connect(self._fill_accounts)
         self._fill_accounts()
         self.counts = {}
@@ -92,6 +120,64 @@ class MainWindow(QMainWindow):
             self._ban_timer.start(bans.REFRESH_SECONDS * 1000)
             QTimer.singleShot(1500, self._check_bans)
 
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        compact = self.width() < 1000            # a narrow window keeps only the icons, so the pages get the room
+        if compact != (self.sidebar.width() == self.sidebar.COMPACT):
+            self.sidebar.set_compact(compact)
+
+    # ---- search (Ctrl+K) and reload (F5)
+    def current_page(self):
+        return self.tabs.currentWidget().page
+
+    def open_search(self):
+        self.palette_box.open()
+
+    def _go(self, page, sub=None, row=None, table=None):
+        self.tabs.setCurrentIndex(self.tabs.indexOf(self.holders[page]))
+        if sub is not None and hasattr(page, "tabs"):
+            page.tabs.setCurrentIndex(sub)
+        if table is not None and row is not None and row < table.rowCount():
+            table.selectRow(row)
+            table.scrollToItem(table.item(row, 0))
+
+    def _search_entries(self):
+        """Everything the search can jump to: pages, their sub pages, accounts, and the friends, groups and servers that are loaded."""
+        out = []
+        for i in range(self.tabs.count()):
+            name = nav.base_title(self.tabs.tabText(i))[0]
+            page = self.tabs.widget(i).page
+            out.append((name, "page", nav.KEYWORDS.get(name, ""), lambda page=page: self._go(page)))
+            if page is self.people:
+                for j in range(page.tabs.count()):
+                    sub = nav.base_title(page.tabs.tabText(j))[0]
+                    out.append((sub, "People", "", lambda page=page, j=j: self._go(page, j)))
+            if page is self.info_tab:
+                for j in range(page.count()):
+                    sub = page.tabText(j)
+                    out.append((sub, "Info", "update version changes" if sub == "Updates" else "preferences options", lambda page=page, j=j: (self._go(page), page.setCurrentIndex(j))))
+        for a in accounts.list_accounts():
+            if a["id"] != accounts.active_id():
+                out.append((f"Switch to {a['displayName'] or a['name']}", "account", f"@{a['name']} account", lambda a=a: self.account.switch_to(a["id"])))
+        out.append(("Add another account", "account", "sign in login cookie", lambda: self.account.set_cookie()))
+        loaded = ((self.friends.table, self.people, 0, "friend", 2), (self.groups.glist, self.groups, None, "group", 1), (self.vip.mtable, self.vip, None, "VIP server", 2))
+        for table, page, sub, kind, ncols in loaded:
+            for r in range(min(table.rowCount(), 2000)):
+                label = " - ".join(x for x in (table.item(r, c).text() if table.item(r, c) else "" for c in range(ncols)) if x)
+                if label:
+                    out.append((label, kind, "", lambda page=page, sub=sub, r=r, table=table: self._go(page, sub, r, table)))
+        return out
+
+    def reload_page(self):
+        page = self.current_page()
+        inner = page.tabs.currentWidget() if page is self.people else page
+        for name in ("load", "load_groups", "load_mine"):
+            fn = getattr(inner, name, None)
+            if callable(fn) and self.ctx.client.has_cookie:
+                fn()
+                self.statusBar().showMessage("Reloading...", 2000)
+                return
+
     def _check_bans(self):
         self.ctx.async_.run(bans.refresh, lambda _: self.account.enforce_bans())
 
@@ -104,10 +190,12 @@ class MainWindow(QMainWindow):
         self.counts[what] = n
         for widget, base, what_ in ((self.groups, "Groups", "groups"), (self.vip, "VIP servers", "vip")):
             if what == what_:
-                self.tabs.setTabText(self.tabs.indexOf(widget), f"{base} ({format(n, ',')})" if n else base)
+                self.tabs.setTabText(self.tabs.indexOf(self.holders[widget]), f"{base} ({format(n, ',')})" if n else base)
+                self.sidebar.sync()
         if what == "requests":
             shown = n if isinstance(n, str) or n is None else format(n, ",")
-            self.tabs.setTabText(self.tabs.indexOf(self.people), f"People ({shown} request{'' if n == 1 else 's'})" if n else "People")
+            self.tabs.setTabText(self.tabs.indexOf(self.holders[self.people]), f"People ({shown} request{'' if n == 1 else 's'})" if n else "People")
+            self.sidebar.sync()
 
     def _fill_accounts(self):
         active = accounts.active_id()

@@ -102,7 +102,8 @@ def check_window(win, widths, problems, app=None):
             time.sleep(0.02)
         for name, page in every_page(win, app):
             inspect((width, name), page, problems)
-        inspect((width, "(window tabs)"), win.tabs.tabBar().parentWidget(), problems)
+        inspect((width, "(side bar)"), win.sidebar, problems)
+        inspect((width, "(page header)"), win.header, problems)
 
 
 def lines(problems):

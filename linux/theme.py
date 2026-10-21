@@ -91,6 +91,7 @@ QScrollBar::handle:horizontal:hover { background: $border2; }
 QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
 QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
 QScrollArea { background: transparent; border: none; }
+QScrollArea[holder="true"] > QWidget > QWidget { background: $bg; }
 QScrollArea > QWidget > QWidget { background: transparent; }
 
 /* cards */
@@ -105,6 +106,16 @@ QLabel[role="tile-value"] { font-size: 19px; font-weight: 700; }
 QLabel[role="tile-caption"] { color: $muted; font-size: 11px; }
 QLabel[role="warn"] { color: $warn; }
 QLabel[role="notice"] { background: #33280f; border: 1px solid #6b5120; border-radius: 10px; padding: 10px; }
+
+/* navigation: side bar, page header, search */
+QFrame[sidebar="true"] { background: #0f1115; border: none; border-right: 1px solid $border; }
+QFrame[sidebar="true"] QLabel { background: transparent; }
+QLabel[role="brand"] { font-size: 15px; font-weight: 800; color: $text; padding: 2px 6px; }
+QLabel[role="group"] { color: $muted; font-size: 10px; font-weight: 700; padding: 2px 8px; }
+QWidget[header="true"] { background: $bg; }
+QDialog[palette="true"] { background: $surface; border: 1px solid $border2; border-radius: 12px; }
+QListWidget[palette_list="true"] { border: none; background: transparent; }
+QListWidget[palette_list="true"]::item { padding: 8px 10px; border-radius: 7px; }
 
 /* progress, splitters, menus, status bar */
 QProgressBar { background: $surface2; border: 1px solid $border; border-radius: 8px; text-align: center; min-height: 18px; color: $text; }

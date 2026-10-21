@@ -36,6 +36,7 @@ python tests/test_updater.py
 python tests/test_updater_release.py
 python tests/test_windows_native.py
 python tests/test_info_tab.py
+python tests/test_nav.py                  # side bar, search, shortcuts
 python tests/test_settings_updates.py
 python tests/test_text_fit.py             # no cut-off text on any tab
 python tests/test_gui_full.py             # the whole app against a fake Roblox
