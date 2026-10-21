@@ -1,7 +1,7 @@
 {
-  "versionName": "1.1.1",
-  "versionCode": 3,
+  "versionName": "1.1.2",
+  "versionCode": 4,
   "apk": "roblox-manager.apk",
-  "sha256": "214828a90efdd1e975c391edaf78239f29c2f36b5804210e0127d67c9f9bc520",
-  "notes": "Updates now come from GitHub"
+  "sha256": "634d8da23b53dd09a235b7cd1bd2c4898fad45fc637544816e2ad4a60ad821ee",
+  "notes": "Install guides in the README; release packages for Linux and Android"
 }
