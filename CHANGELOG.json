@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.2.1",
+    "date": "2026-10-21",
+    "changes": [
+      "Fixed texts and buttons being cut off at the edge of the Settings and Updates pages in a narrow window"
+    ]
+  },
+  {
     "version": "1.2.0",
     "date": "2026-10-21",
     "changes": [

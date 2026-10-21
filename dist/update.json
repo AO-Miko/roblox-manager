@@ -1,7 +1,7 @@
 {
-  "versionName": "1.2.0",
-  "versionCode": 5,
+  "versionName": "1.2.1",
+  "versionCode": 6,
   "apk": "roblox-manager.apk",
-  "sha256": "4e5bd405a92ad4887769eb61c841d4bab7d48fd54726a366aa51a1224ad18495",
-  "notes": "New Info tab with Settings and Updates, and an update log that says what changed in each version|Update log is built into both the Linux and Android apps"
+  "sha256": "d2f312d6abb4ae0dd24daf397a9d120d1c844d3b374b9277635008ecdd780f21",
+  "notes": "Fixed texts and buttons being cut off at the edge of the Settings and Updates pages in a narrow window"
 }
