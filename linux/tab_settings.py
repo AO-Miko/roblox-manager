@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 
 import accounts
 import cleanup
+import plat
 import rbx
 import settings
 from ui_common import WrapCheck, button, hint, make_table
@@ -325,9 +326,17 @@ class SettingsTab(QWidget):
     def restart_app(self):
         import subprocess
         from pathlib import Path
-        launcher = Path.home() / ".local/bin/roblox-manager"
-        if launcher.exists():
-            subprocess.Popen(["sh", "-c", f'sleep 1.5; exec "{launcher}"'], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if plat.IS_WIN:
+            # the same program that runs the app, started again after a moment (the launcher checks for updates first)
+            import sys
+            script = Path(__file__).resolve().parent / "launcher.py"
+            wait = "import subprocess, sys, time; time.sleep(1.5); subprocess.Popen(sys.argv[1:], close_fds=True)"
+            subprocess.Popen([sys.executable, "-c", wait, sys.executable, str(script)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             creationflags=0x00000008 | 0x00000200)           # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        else:
+            launcher = Path.home() / ".local/bin/roblox-manager"
+            if launcher.exists():
+                subprocess.Popen(["sh", "-c", f'sleep 1.5; exec "{launcher}"'], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         from PySide6.QtWidgets import QApplication
         QApplication.instance().quit()
 
@@ -347,7 +356,7 @@ class SettingsTab(QWidget):
 
     def update_about(self):
         kind, plain = accounts.storage_status()
-        where = {"encrypted": "encrypted in the system wallet (KDE Wallet)", "plain": f"in {plain} plain private file(s): NOT encrypted (the wallet was not available)",
+        where = {"encrypted": f"encrypted ({plat.WALLET})", "plain": f"in {plain} plain private file(s): NOT encrypted (the wallet was not available)",
                  "none": "not saved (no account is signed in)"}[kind]
         self.about.setText(f"Sign-ins: {where}.<br>Settings, accounts list: <code>{rbx.CONFIG_DIR}</code><br>Logs, records, saved pictures and names: "
                            f"<code>{rbx.STATE_DIR}</code>")

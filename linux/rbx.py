@@ -18,10 +18,11 @@ from urllib.parse import urlparse
 
 import requests
 
+import plat
 import vault
 
-CONFIG_DIR = Path(os.environ.get("ROBLOX_MANAGER_CONFIG", Path.home() / ".config/roblox-manager"))
-STATE_DIR = Path(os.environ.get("ROBLOX_MANAGER_STATE", Path.home() / ".local/state/roblox-manager"))
+CONFIG_DIR = plat.config_dir()
+STATE_DIR = plat.state_dir()
 COOKIE_FILE = CONFIG_DIR / "cookie"
 for _d in (CONFIG_DIR, STATE_DIR):
     _d.mkdir(parents=True, exist_ok=True)

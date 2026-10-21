@@ -1,15 +1,54 @@
-"""Keeps sign-in cookies encrypted, in the system wallet (KDE Wallet / any Secret Service) through the `secret-tool` program.
+"""Keeps sign-in cookies encrypted.
 
-The cookie is passed to secret-tool on its standard input, never on the command line, so it does not show up in the process list.
-If the wallet cannot be used (not installed, locked and not unlocked in time ...), the cookie falls back to a private file
-(owner-only permissions) and `plaintext_in_use()` says so, so the app can warn. A cookie already sitting in a plain file is moved into
-the wallet the first time it is read, and the file is overwritten and deleted.
+Linux: in the system wallet (KDE Wallet / any Secret Service) through the `secret-tool` program. The cookie is passed to secret-tool on its
+standard input, never on the command line, so it does not show up in the process list.
+Windows: encrypted with DPAPI (CryptProtectData), which only the same Windows user can decrypt; the encrypted blobs are files in the settings
+folder (useless on their own, and not readable by another Windows account or another PC).
+If neither can be used, the cookie falls back to a private file (owner-only permissions) and `plaintext_in_use()` says so, so the app can warn.
+A cookie already sitting in a plain file is moved into the safe store the first time it is read, and the file is overwritten and deleted.
 """
+import hashlib
 import os
 import shutil
 import subprocess
 
+import plat
+
 TOOL = shutil.which("secret-tool")
+_DPAPI_ENTROPY = b"roblox-manager"
+
+
+def _dpapi(data, protect):
+    """Windows DPAPI: bytes in, bytes out (None if it does not work). Only the current Windows user can undo what it does."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Blob(ctypes.Structure):
+        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+
+    def blob(b):
+        buf = ctypes.create_string_buffer(b, len(b))
+        return Blob(len(b), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), buf
+
+    try:
+        crypt32, kernel32 = ctypes.windll.crypt32, ctypes.windll.kernel32
+        fn = crypt32.CryptProtectData if protect else crypt32.CryptUnprotectData
+        src, keep1 = blob(data)
+        ent, keep2 = blob(_DPAPI_ENTROPY)
+        out = Blob()
+        ok = fn(ctypes.byref(src), None, ctypes.byref(ent), None, None, 0x01, ctypes.byref(out))      # 0x01: never show a dialog
+        if not ok:
+            return None
+        try:
+            return ctypes.string_at(out.pbData, out.cbData)
+        finally:
+            kernel32.LocalFree(out.pbData)
+    except (OSError, AttributeError):
+        return None
+
+
+def _win_file(key):
+    return plat.config_dir() / "vault" / (hashlib.sha256(f"{_app()}\0{key}".encode()).hexdigest()[:40] + ".bin")
 TIMEOUT = 30            # a locked wallet shows a password prompt; give the person time, but never hang for ever
 
 _state = {"ok": None}
@@ -29,8 +68,15 @@ def _run(args, value=None):
 
 
 def available(refresh=False):
-    """True if a wallet answers. (A missing entry is an ordinary 'not found'; an unreachable service prints an error.)"""
-    if os.environ.get("ROBLOX_MANAGER_VAULT") == "off" or not TOOL:
+    """True if a safe store answers. (Linux: a missing entry is an ordinary 'not found'; an unreachable service prints an error.)"""
+    if os.environ.get("ROBLOX_MANAGER_VAULT") == "off":
+        return False
+    if plat.IS_WIN:
+        if _state["ok"] is None or refresh:
+            sealed = _dpapi(b"probe", True)
+            _state["ok"] = bool(sealed) and _dpapi(sealed, False) == b"probe"
+        return _state["ok"]
+    if not TOOL:
         return False
     if _state["ok"] is None or refresh:
         r = _run(["lookup", "application", _app(), "account", "__probe__"])
@@ -41,6 +87,12 @@ def available(refresh=False):
 def get(key):
     if not available():
         return ""
+    if plat.IS_WIN:
+        try:
+            plain = _dpapi(_win_file(key).read_bytes(), False)
+        except OSError:
+            return ""
+        return plain.decode("utf-8", "replace") if plain else ""
     r = _run(["lookup", "application", _app(), "account", key])
     return r.stdout.strip() if r is not None and r.returncode == 0 else ""
 
@@ -48,6 +100,19 @@ def get(key):
 def put(key, value, label="Roblox Manager sign-in"):
     if not available():
         return False
+    if plat.IS_WIN:
+        sealed = _dpapi(value.encode("utf-8"), True)
+        if not sealed:
+            return False
+        f = _win_file(key)
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            tmp = f.with_suffix(".tmp")
+            tmp.write_bytes(sealed)
+            tmp.replace(f)
+            return True
+        except OSError:
+            return False
     r = _run(["store", "--label", label, "application", _app(), "account", key], value)
     ok = r is not None and r.returncode == 0
     if not ok:
@@ -56,6 +121,9 @@ def put(key, value, label="Roblox Manager sign-in"):
 
 
 def delete(key):
+    if plat.IS_WIN:
+        _win_file(key).unlink(missing_ok=True)
+        return
     if available():
         _run(["clear", "application", _app(), "account", key])
 

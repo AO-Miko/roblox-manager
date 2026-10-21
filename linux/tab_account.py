@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 import accounts
+import plat
 import rbx
 import settings
 from signin import SignInDialog
@@ -42,7 +43,7 @@ class CookieDialog(QDialog):
         warn = QLabel(
             "<b>Your cookie is the key to your account.</b> Anyone who has it can log in as you, <b>skipping your password and 2-step "
             "verification</b>, and take your Robux and items. Roblox staff never ask for it.<br><br>"
-            "This app keeps it in a file only you can read (<code>~/.config/roblox-manager/cookie</code>), sends it <b>only to roblox.com</b>, "
+            f"This app keeps it encrypted ({plat.WALLET}; if that is not available, in a file only you can read in <code>{plat.CONFIG_TEXT}</code>), sends it <b>only to roblox.com</b>, "
             "and never shows it or writes it to its log. Do not paste it anywhere else, and never share this file.")
         warn.setWordWrap(True)
         warn.setProperty("role", "notice")
@@ -283,11 +284,12 @@ class AccountTab(QWidget):
             self.safety.setText("Not signed in. Press Sign in... (password with 2-step code, browser, or cookie). Without signing in you can still use the API Explorer and look up public groups.")
             self.safety.setStyleSheet("color: #9a9da6;")
         elif kind == "plain":
-            self.safety.setText(f"Warning: {plain} sign-in(s) are stored in plain private files, NOT encrypted, because the system wallet (KDE Wallet) could not be used. "
+            self.safety.setText(f"Warning: {plain} sign-in(s) are stored in plain private files, NOT encrypted, because the safe store ("
+                                f"{plat.WALLET}) could not be used. "
                                 "Unlock or start the wallet and restart the app: they will be moved into it automatically.")
             self.safety.setStyleSheet("color: #e0a030;")
         else:
-            self.safety.setText("Your sign-ins are stored encrypted in the system wallet (KDE Wallet) and sent only to roblox.com. Your password is never stored.")
+            self.safety.setText(f"Your sign-ins are stored encrypted ({plat.WALLET}) and sent only to roblox.com. Your password is never stored.")
             self.safety.setStyleSheet("color: #9a9da6;")
 
     # ---- several accounts

@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
 
 import auth
 import browser_login
+import plat
 from ui_common import hint
 
 WARN_STYLE = "background: #3a2a1e; border: 1px solid #8a5a2a; border-radius: 8px; padding: 10px;"
@@ -215,7 +216,7 @@ class SignInDialog(QDialog):
         lay = QVBoxLayout(w)
         warn = QLabel("<b>Your cookie is the key to your account.</b> Anyone who has it can log in as you, <b>skipping your password and "
                       "2-step verification</b>, and take your Robux and items. Roblox staff never ask for it. This app keeps it in a file "
-                      "only you can read (<code>~/.config/roblox-manager/cookie</code>), sends it <b>only to roblox.com</b>, and never "
+                      f"only you can read (<code>{plat.CONFIG_TEXT}</code>) if no secure store is available, otherwise encrypted ({plat.WALLET}); it is sent <b>only to roblox.com</b>, and never "
                       "shows it or writes it to its log.")
         warn.setWordWrap(True)
         warn.setProperty("role", "notice")

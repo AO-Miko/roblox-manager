@@ -16,20 +16,28 @@ problem is written to update.log and the installed version is used as it is.
   updater.py --rollback   go back to the previous version
   updater.py --status     print what is installed, as JSON
 """
+import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 import time
+import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))        # (python -I does not add the script's own folder)
+import plat
+
 APP_DIR = Path(os.environ.get("ROBLOX_MANAGER_APP_DIR") or Path(__file__).resolve().parent)
-CONFIG_DIR = Path(os.environ.get("ROBLOX_MANAGER_CONFIG", Path.home() / ".config/roblox-manager"))
-STATE_DIR = Path(os.environ.get("ROBLOX_MANAGER_STATE", Path.home() / ".local/state/roblox-manager"))
-CACHE_DIR = Path(os.environ.get("ROBLOX_MANAGER_UPDATE_CACHE", Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "roblox-manager" / "update-repo"))
+CONFIG_DIR = plat.config_dir()
+STATE_DIR = plat.state_dir()
+CACHE_DIR = plat.cache_dir()
+RELEASE_NAMESPACE = "roblox-manager-release"     # what the release packages are signed for (see tools/release.sh)
+API = "https://api.github.com"
 CONFIG_FILE = CONFIG_DIR / "update.json"
 TRUST_FILE = CONFIG_DIR / "trusted_signers"
 MARKER = APP_DIR / ".installed.json"
@@ -159,13 +167,18 @@ def _export(sha, dest):
     r = subprocess.run(["git", "archive", "--format=tar", sha, SUBDIR], cwd=CACHE_DIR, capture_output=True, timeout=120)
     if r.returncode != 0 or not r.stdout:
         raise UpdateError(f"the update has no '{SUBDIR}' folder")
-    if len(r.stdout) > MAX_BYTES:
+    _unpack(r.stdout, dest)
+
+
+def _unpack(data, dest):
+    """Unpack a tar (or tar.gz) of the linux/ folder into dest with no links, no odd paths and a size limit."""
+    if len(data) > MAX_BYTES:
         raise UpdateError("the update is unexpectedly large")
     fd, name = tempfile.mkstemp(suffix=".tar")
     tmp = Path(name)
     try:
         with os.fdopen(fd, "wb") as f:
-            f.write(r.stdout)
+            f.write(data)
         with tarfile.open(tmp) as tf:
             total, members = 0, []
             for m in tf.getmembers():
@@ -204,13 +217,56 @@ def _swap(dest, sha):
     (dest / ".installed.json").write_text(json.dumps(marker))
     if previous.exists():
         shutil.rmtree(previous)
-    os.rename(APP_DIR, previous)
+    try:
+        os.rename(APP_DIR, previous)
+    except OSError:                                            # (Windows: a file of the running app is still open)
+        raise UpdateError("could not replace the app folder; close the app and try again")
     try:
         os.rename(dest, APP_DIR)
     except OSError:
         os.rename(previous, APP_DIR)                           # could not put the new one in: the old one stays
         raise UpdateError("could not put the update in place")
     return marker
+
+
+# ------------------------------------------------------------------ releases (no git needed: used on Windows)
+def _http_get(url, limit=MAX_BYTES, timeout=25):
+    """The bytes at an https address (the update server and its download links only; nothing about you is sent)."""
+    if not url.startswith("https://"):
+        raise UpdateError("refusing an address that is not https")
+    req = urllib.request.Request(url, headers={"User-Agent": "RobloxManager-updater", "Accept": "application/vnd.github+json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = r.read(limit + 1)
+    except Exception as e:                                       # noqa: BLE001 - any network problem is just "could not reach"
+        raise UpdateError(f"could not reach the update server ({e.__class__.__name__})")
+    if len(data) > limit:
+        raise UpdateError("the download is unexpectedly large")
+    return data
+
+
+def version_key(v):
+    return tuple(int(x) for x in re.findall(r"\d+", str(v))) or (0,)
+
+
+def release_latest(cfg):
+    """{'version', 'tag', 'tar_url', 'sig_url'} of the newest GitHub release of the repository in cfg['repo']."""
+    m = re.search(r"github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?/?$", cfg["repo"] or "")
+    if not m:
+        raise UpdateError("the update server is not a GitHub repository address")
+    try:
+        d = json.loads(_http_get(f"{API}/repos/{m.group(1)}/{m.group(2)}/releases/latest", limit=2_000_000))
+    except ValueError:
+        raise UpdateError("the update server sent something unexpected")
+    tag = str(d.get("tag_name") or "")
+    ver = tag.lstrip("v")
+    if not re.fullmatch(r"\d+(\.\d+){1,3}", ver):
+        raise UpdateError("the newest release has no usable version")
+    assets = {a.get("name"): a.get("browser_download_url") for a in d.get("assets", []) if isinstance(a, dict)}
+    name = f"roblox-manager-app-{ver}.tar.gz"
+    if name not in assets or name + ".sig" not in assets:
+        raise UpdateError(f"the newest release ({ver}) has no signed update package yet")
+    return {"version": ver, "tag": tag, "tar_url": assets[name], "sig_url": assets[name + ".sig"]}
 
 
 # ------------------------------------------------------------------ the public steps
@@ -220,6 +276,14 @@ def check(cfg=None):
     out = {"installed": installed().get("commit", ""), "version": version()}
     if not cfg["repo"]:
         return dict(out, status="disabled", message="No update server is set.")
+    if plat.update_backend() == "release":
+        try:
+            rel = release_latest(cfg)
+        except UpdateError as e:
+            return dict(out, status="error", message=str(e))
+        if version_key(rel["version"]) <= version_key(out["version"]):
+            return dict(out, status="up-to-date", remote=rel["tag"], message="You have the newest version.")
+        return dict(out, status="available", remote=rel["tag"], release=rel, message="A newer version is available.")
     try:
         head = remote_head(cfg)
     except UpdateError as e:
@@ -236,20 +300,35 @@ def apply(cfg=None):
     if res["status"] != "available":
         return res
     head, old = res["remote"], res["installed"]
+    release = res.get("release")
+    staging = None
     try:
-        _fetch(cfg, head)
-        who = signer_of(head)
-        if cfg["require_signature"] and not who:
-            raise UpdateError("the newest version is not signed with a key you trust, so it was NOT installed")
-        if not is_continuation(old, head):
-            raise UpdateError("the newest version does not continue the one you have (it would be a step back), so it was NOT installed")
-        staging = Path(tempfile.mkdtemp(prefix=APP_DIR.name + ".new-", dir=APP_DIR.parent))
-        try:
+        if release:                                                    # Windows: a signed package from the newest GitHub release
+            data = _http_get(release["tar_url"])
+            sig = _http_get(release["sig_url"], limit=20_000).decode("utf-8", "replace")
+            trust = TRUST_FILE.read_text() if TRUST_FILE.exists() else ""
+            who = None
+            if trust.strip():
+                import sshsig
+                who = sshsig.verify(data, sig, trust, RELEASE_NAMESPACE)
+            if cfg["require_signature"] and not who:
+                raise UpdateError("the newest version is not signed with a key you trust, so it was NOT installed")
+            staging = Path(tempfile.mkdtemp(prefix=APP_DIR.name + ".new-", dir=APP_DIR.parent))
+            _unpack(data, staging)
+            _validate(staging)
+            if version_key((staging / "VERSION").read_text()) != version_key(release["version"]):
+                raise UpdateError("the package does not match the release it came with, so it was NOT installed")
+        else:                                                          # Linux: the newest signed commit of the repository
+            _fetch(cfg, head)
+            who = signer_of(head)
+            if cfg["require_signature"] and not who:
+                raise UpdateError("the newest version is not signed with a key you trust, so it was NOT installed")
+            if not is_continuation(old, head):
+                raise UpdateError("the newest version does not continue the one you have (it would be a step back), so it was NOT installed")
+            staging = Path(tempfile.mkdtemp(prefix=APP_DIR.name + ".new-", dir=APP_DIR.parent))
             _export(head, staging)
             _validate(staging)
-            marker = _swap(staging, head)
-        finally:
-            shutil.rmtree(staging, ignore_errors=True)
+        marker = _swap(staging, head)
     except UpdateError as e:
         log(f"update to {head[:10]} refused: {e}")
         return dict(res, status="refused", message=str(e))
@@ -257,6 +336,9 @@ def apply(cfg=None):
         import traceback
         log(f"update to {head[:10]} failed: {e.__class__.__name__}: {e} | {' / '.join(traceback.format_exc().strip().splitlines()[-4:])}")
         return dict(res, status="error", message=f"the update failed ({e.__class__.__name__}); the installed version is unchanged")
+    finally:
+        if staging is not None:
+            shutil.rmtree(staging, ignore_errors=True)
     log(f"updated {old[:10] or '-'} -> {head[:10]} (version {marker['version']}, signed by {who or 'nobody (signatures not required)'})")
     return dict(res, status="updated", version=marker["version"], installed=head, signer=who,
                 message=f"Updated to version {marker['version']}. Restart the app to use it.")

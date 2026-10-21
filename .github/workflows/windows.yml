@@ -1,0 +1,78 @@
+name: Windows
+
+# Runs the tests on a real Windows machine, and checks the Windows package of every release.
+on:
+  push:
+    branches: [release]
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  test:
+    name: Tests on Windows
+    runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r tools/windows/requirements.txt
+      - name: Windows specifics (folders, DPAPI, signatures, TLS)
+        run: python tests/test_windows_native.py
+      - name: Signature check (against OpenSSH)
+        run: python tests/test_sshsig.py
+      - name: Release updater
+        run: python tests/test_updater_release.py
+      - name: Info tab
+        run: python tests/test_info_tab.py
+      - name: Updates box
+        run: python tests/test_settings_updates.py
+      - name: The whole app against a fake Roblox
+        run: python tests/test_gui_full.py
+      - name: The app starts
+        run: python linux/launcher.py --selftest
+
+  package:
+    name: The Windows package of the release
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the package
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "release") { "${{ github.event.release.tag_name }}" } else { (gh release view --repo "${{ github.repository }}" --json tagName --jq .tagName) }
+          Write-Host "release $tag"
+          gh release download $tag --repo "${{ github.repository }}" --pattern "roblox-manager-windows-*.zip" --pattern "SHA256SUMS.txt"
+          Get-ChildItem
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem roblox-manager-windows-*.zip | Select-Object -First 1
+          $want = (Select-String -Path SHA256SUMS.txt -Pattern $zip.Name).Line.Split(" ")[0]
+          $got = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower()
+          if ($want -ne $got) { throw "checksum mismatch: $want vs $got" }
+          Expand-Archive $zip.FullName -DestinationPath pkg
+      - name: The package starts (its own Python, no installation)
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          .\pkg\RobloxManager\python\python.exe .\pkg\RobloxManager\app\launcher.py --selftest
+          if ($LASTEXITCODE -ne 0) { throw "selftest failed" }
+      - name: Shortcut script
+        shell: pwsh
+        run: |
+          $dest = (Resolve-Path .\pkg\RobloxManager).Path
+          powershell -NoProfile -ExecutionPolicy Bypass -File "$dest\shortcut.ps1" -Dest $dest
+          $lnk = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Roblox Manager.lnk"
+          if (-not (Test-Path $lnk)) { throw "no shortcut was made" }
+          $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
+          Write-Host $s.TargetPath $s.Arguments
+          if (-not (Test-Path $s.TargetPath)) { throw "the shortcut points nowhere" }

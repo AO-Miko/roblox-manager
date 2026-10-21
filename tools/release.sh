@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Publish a new version of Roblox Manager (Linux and Android) to the update server.
+# Publish a new version of Roblox Manager (Linux, Android and Windows) to the update server.
 #
 #   tools/release.sh 1.2.0 "one change|another change"   build, sign and commit (stays local); "|" separates the update-log bullets
 #   tools/release.sh 1.2.0 "what changed" --push  ... and push to the `origin` remote
 #
 # What it does: bumps linux/VERSION and android/version.properties, runs the Android unit tests, builds the signed release APK,
 # writes dist/update.json (version, APK name, SHA-256, notes), makes a SSH-signed commit and tag on the `release` branch, and
-# optionally pushes. The Linux app follows the branch itself (it checks the commit signature); the Android app reads dist/update.json.
+# optionally pushes. The Linux app follows the branch itself (it checks the commit signature); the Android app reads dist/update.json;
+# the Windows app downloads the signed app package (roblox-manager-app-X.Y.Z.tar.gz + .sig) of the newest GitHub release. The release
+# also carries the Windows zip (its own Python and Qt inside, built by tools/build_windows.py), the Linux package, the APK and checksums.
 # Signing keys live outside the repository: ~/.config/roblox-manager-release/ (back that folder up: without the Android keystore,
 # installed phones can never be updated again).
 set -euo pipefail
@@ -57,7 +59,7 @@ open("dist/update.json", "a").write("\n")
 PY
 
 echo "== Commit and tag (signed)"
-git add linux/VERSION android/version.properties dist/roblox-manager.apk dist/update.json CHANGELOG.json linux/CHANGELOG.json android/app/src/main/assets/changelog.json
+git add linux/VERSION android/version.properties dist/roblox-manager.apk dist/update.json CHANGELOG.json linux/CHANGELOG.json android/app/src/main/assets/changelog.json linux/icon.ico
 git commit -q -m "Release $VERSION" -m "${NOTES}"
 git tag -s "v$VERSION" -m "Release $VERSION"
 git verify-commit HEAD
@@ -68,12 +70,25 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 cp dist/roblox-manager.apk "$OUT/roblox-manager-$VERSION.apk"
 git archive --format=tar.gz --prefix="roblox-manager-linux-$VERSION/" -o "$OUT/roblox-manager-linux-$VERSION.tar.gz" HEAD \
   linux tools/install-linux.sh tools/roblox-manager.sh tools/trust README.md
+
+echo "== Signed app package (what the Windows app updates from)"
+git archive --format=tar.gz -o "$OUT/roblox-manager-app-$VERSION.tar.gz" HEAD linux
+ssh-keygen -q -Y sign -f "$HOME/.config/roblox-manager-release/signing_key" -n roblox-manager-release "$OUT/roblox-manager-app-$VERSION.tar.gz"
+ssh-keygen -Y check-novalidate -n roblox-manager-release -s "$OUT/roblox-manager-app-$VERSION.tar.gz.sig" < "$OUT/roblox-manager-app-$VERSION.tar.gz" >/dev/null
+
+echo "== Windows package"
+python3 tools/build_windows.py "$OUT/win"
+mv "$OUT/win/roblox-manager-windows-$VERSION.zip" "$OUT/"
+rm -rf "$OUT/win"
+
 (cd "$OUT" && sha256sum roblox-manager-* > SHA256SUMS.txt)
 
 if [[ "$PUSH" == "--push" ]]; then
   git push origin release "v$VERSION"
-  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT/SHA256SUMS.txt" --title "Roblox Manager $VERSION" --notes "$(printf '%s' "${NOTES:-Release $VERSION}" | tr '|' '\n' | sed 's/^ */- /')" --verify-tag
-  echo "Pushed and released. Linux and Android apps will pick it up at their next start."
+  # created as a draft and published after the upload, so nothing sees a release with files still missing
+  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT/SHA256SUMS.txt" --draft --title "Roblox Manager $VERSION" --notes "$(printf '%s' "${NOTES:-Release $VERSION}" | tr '|' '\n' | sed 's/^ */- /')" --verify-tag
+  gh release edit "v$VERSION" --draft=false --latest
+  echo "Pushed and released. Linux, Android and Windows apps will pick it up at their next start."
 else
   echo "Done locally. Publish with:  git push origin release v$VERSION"
 fi
