@@ -297,6 +297,21 @@ class RobloxApi(val client: RobloxClient, val names: NameCache = NameCache()) {
     suspend fun transactionTotals(frame: String = "Month"): JsonObject? = client.get("https://economy.roblox.com/v2/users/$me/transaction-totals",
         mapOf("timeFrame" to frame, "transactionType" to "summary")).json.obj
 
+    /** Your newest transactions of one kind (Sale, Purchase, GroupPayout ...), newest first. */
+    suspend fun transactions(kind: String, maxPages: Int = 3): List<JsonObject> {
+        val items = ArrayList<JsonObject>()
+        var cursor: String? = null
+        repeat(maxPages) {
+            val q = hashMapOf("transactionType" to kind, "limit" to "100", "sortOrder" to "Desc")
+            if (cursor != null) q["cursor"] = cursor!!
+            val d = client.get("https://economy.roblox.com/v2/users/$me/transactions", q, retries = 1).json
+            items += d.items()
+            cursor = d.obj?.str("nextPageCursor")
+            if (cursor.isNullOrEmpty()) return items
+        }
+        return items
+    }
+
     suspend fun emailStatus(): Pair<String, Boolean> {
         val d = client.get("https://accountsettings.roblox.com/v1/email").json.obj
         return (d?.str("emailAddress") ?: "") to (d?.bool("verified") ?: false)

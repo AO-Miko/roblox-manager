@@ -125,6 +125,7 @@ class Prefs(private val file: File) {
     fun double(key: String, def: Double) = (data[key] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull() ?: def
     fun bool(key: String, def: Boolean) = data.bool(key) ?: def
     fun str(key: String, def: String) = data.str(key) ?: def
+    fun raw(key: String): JsonElement? = data[key]
 
     fun put(key: String, value: Any) {
         data = JsonObject(data + (key to value.toJson()))

@@ -1,0 +1,165 @@
+package app.robloxmanager.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import app.robloxmanager.BuildConfig
+import app.robloxmanager.Services
+import app.robloxmanager.Updates
+import app.robloxmanager.core.Account
+import java.io.File
+import java.text.NumberFormat
+import kotlinx.coroutines.launch
+
+@Composable
+fun HomeScreen(sv: Services, onAddAccount: () -> Unit) {
+    val me = sv.current.collectAsState().value ?: return
+    val accounts by sv.accountList.collectAsState()
+    val scope = rememberCoroutineScope()
+    val fmt = NumberFormat.getInstance()
+    val avatar = rememberLoader(me.id) { sv.api.headshots(listOf(me.id), "150x150")[me.id] }
+    val robux = rememberLoader(me.id) { sv.api.robux() }
+    val pending = rememberLoader(me.id) { sv.api.pendingTotal() }
+    val counts = rememberLoader(me.id) { sv.api.counts(me.id) }
+    val premium = rememberLoader(me.id) { sv.api.hasPremium() }
+    var msg by remember { mutableStateOf("") }
+    var confirmRemove by remember { mutableStateOf<Account?>(null) }
+    var busy by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Card {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Avatar(avatar.value, 72)
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text(me.displayName.ifEmpty { me.name }, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                    Text("@${me.name}  ·  id ${me.id}", color = C.muted, fontSize = 12.sp)
+                    premium.value?.let { Text(if (it) "Roblox Plus: active" else "Roblox Plus: not active", color = if (it) C.success else C.muted, fontSize = 12.sp) }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box2("Robux", robux.value?.let { "R$ ${fmt.format(it)}" } ?: "…", Modifier.weight(1f))
+            Box2("Pending", pending.value?.let { fmt.format(it) } ?: "…", Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val c = counts.value
+            Box2("Friends", c?.get("friends")?.toString() ?: "…", Modifier.weight(1f))
+            Box2("Followers", c?.get("followers")?.toString() ?: "…", Modifier.weight(1f))
+            Box2("Following", c?.get("following")?.toString() ?: "…", Modifier.weight(1f))
+        }
+        QuietButton("↻ Refresh") { avatar.load(); robux.load(); pending.load(); counts.load(); premium.load() }
+
+        Section("ACCOUNTS") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                accounts.forEach { a ->
+                    Card {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(a.displayName.ifEmpty { a.name } + if (a.id == me.id) "  (active)" else "", fontWeight = FontWeight.Medium)
+                                Text("@${a.name}", color = C.muted, fontSize = 12.sp)
+                            }
+                            if (a.id != me.id) QuietButton("Switch", enabled = !busy) {
+                                busy = true; msg = ""
+                                scope.launch { try { sv.switchTo(a.id) } catch (e: Exception) { msg = errorText(e) }; busy = false }
+                            }
+                            Spacer(Modifier.width(6.dp))
+                            DangerButton("Remove") { confirmRemove = a }
+                        }
+                    }
+                }
+                QuietButton("＋ Add another account", onClick = onAddAccount)
+            }
+        }
+        if (msg.isNotEmpty()) Text(msg, color = C.danger)
+    }
+    confirmRemove?.let { a ->
+        Confirm("Remove account", "Remove @${a.name} from this phone? Its saved sign-in is deleted (you are not signed out on roblox.com elsewhere).", "Remove", true, {
+            confirmRemove = null
+            if (a.id == me.id) sv.signOut(true) else { sv.accounts.remove(a.id); sv.accountList.value = sv.accounts.all() }
+        }, { confirmRemove = null })
+    }
+}
+
+@Composable
+private fun Box2(title: String, value: String, modifier: Modifier) = Card(modifier) {
+    Column { Text(title, color = C.muted, fontSize = 12.sp); Text(value, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
+}
+
+@Composable
+fun SettingsScreen(sv: Services) {
+    val ctx = LocalContext.current
+    val upd by Updates.state.collectAsState()
+    var burst by remember { mutableStateOf(sv.client.readBurst.toFloat()) }
+    var logFile by remember { mutableStateOf(sv.log.writeFile) }
+    var url by remember { mutableStateOf(Updates.url(sv)) }
+    var auto by remember { mutableStateOf(sv.prefs.bool("autoUpdate", true)) }
+    var msg by remember { mutableStateOf("") }
+    var confirmSignOut by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Section("UPDATES") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})", fontWeight = FontWeight.Medium)
+                OutlinedTextField(url, { url = it }, label = { Text("Update server address") }, supportingText = { Text("The raw address of the repository's dist/ folder, ending in /dist/") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                Row(verticalAlignment = Alignment.CenterVertically) { Switch(auto, { auto = it; sv.prefs.put("autoUpdate", it) }); Spacer(Modifier.width(8.dp)); Text("Check at every start") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    QuietButton("Save and check", enabled = !upd.busy) { sv.prefs.put("updateUrl", url.trim()); Updates.check(sv, ctx) }
+                    if (upd.ready != null) PrimaryButton("Install ${upd.available?.versionName ?: ""}") { msg = Updates.install(ctx, upd.ready!!) }
+                }
+                if (upd.busy && upd.progress > 0f) LinearProgressIndicator(progress = { upd.progress }, modifier = Modifier.fillMaxWidth())
+                if (upd.message.isNotEmpty()) Text(upd.message, color = C.muted, fontSize = 12.sp)
+                upd.available?.notes?.takeIf { it.isNotEmpty() }?.let { Text(it, color = C.muted, fontSize = 12.sp) }
+                Text("Android always asks you to confirm an install; it only accepts an update signed with the same key as this app.", color = C.muted, fontSize = 11.sp)
+            }
+        }
+        Section("RATE LIMITS") {
+            Column {
+                Text("How much of a route's limit a read may use at once: ${(burst * 100).toInt()}%", fontSize = 13.sp)
+                Slider(burst, { burst = it }, valueRange = 0.1f..1f, onValueChangeFinished = { sv.client.readBurst = burst.toDouble(); sv.prefs.put("readBurst", burst.toDouble()) })
+                Text("Changes (unfriend, leave, switch on …) are always spread out evenly. Lower = gentler on Roblox, slower lists.", color = C.muted, fontSize = 12.sp)
+            }
+        }
+        Section("LOGS AND CACHE") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(logFile, { logFile = it; sv.log.writeFile = it; sv.prefs.put("logToFile", it) }); Spacer(Modifier.width(8.dp)); Text("Keep the request log in a file")
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    QuietButton("Clear request log") { sv.log.clear(); File(sv.filesDir, "requests.log").delete(); File(sv.filesDir, "requests.log.1").delete(); msg = "Request log cleared." }
+                    QuietButton("Forget saved names") { File(sv.filesDir, "names.json").delete(); msg = "Saved names are forgotten the next time the app starts." }
+                }
+                Text("The log never contains your cookie, passwords, codes or request bodies.", color = C.muted, fontSize = 12.sp)
+            }
+        }
+        Section("ACCOUNT") { DangerButton("Sign out") { confirmSignOut = true } }
+        if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)
+    }
+    if (confirmSignOut) Confirm("Sign out", "Sign out and remove this account from the phone?", "Sign out", true, { confirmSignOut = false; sv.signOut(true) }, { confirmSignOut = false })
+}
