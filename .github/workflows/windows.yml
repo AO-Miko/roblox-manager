@@ -41,7 +41,11 @@ jobs:
         run: python tests/test_gui_full.py
       - name: The app starts
         if: ${{ !cancelled() }}
-        run: python linux/launcher.py --selftest
+        shell: pwsh
+        run: |
+          python -X faulthandler linux/launcher.py --selftest
+          Write-Host "exit code: $LASTEXITCODE"
+          exit $LASTEXITCODE
 
   package:
     name: The Windows package of the release
