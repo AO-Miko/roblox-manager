@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.2.0",
+    "date": "2026-10-21",
+    "changes": [
+      "New Info tab with Settings and Updates, and an update log that says what changed in each version",
+      "Update log is built into both the Linux and Android apps"
+    ]
+  },
+  {
     "version": "1.1.2",
     "date": "2026-10-21",
     "changes": [
