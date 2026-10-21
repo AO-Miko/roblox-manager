@@ -1,0 +1,11 @@
+.claude/
+__pycache__/
+*.pyc
+*.keystore
+*.jks
+local.properties
+.gradle/
+build/
+.idea/
+*.apk
+!dist/*.apk
