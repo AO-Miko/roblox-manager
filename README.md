@@ -68,5 +68,5 @@ To verify a download, compare it with `SHA256SUMS.txt` from the same release (`s
 
 ## For maintainers
 
-`tools/release.sh 1.2.0 "what changed" --push` builds and signs everything, updates `dist/update.json`, pushes the `release` branch and publishes a
+`tools/release.sh 1.2.0 "one change|another change" --push` (the `|` splits the bullets of the update log shown in both apps under **Info → Updates**) builds and signs everything, updates `dist/update.json`, pushes the `release` branch and publishes a
 GitHub Release with the APK and the Linux package. See [docs/UPDATES.md](docs/UPDATES.md) for how updates and keys work.

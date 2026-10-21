@@ -31,7 +31,7 @@ class SettingsTab(QWidget):
         lay.addWidget(self._rate_box())
         lay.addWidget(self._log_box())
         lay.addWidget(self._cache_box())
-        lay.addWidget(self._update_box())
+        self.update_box = self._update_box()       # shown on the Info tab's Updates page, next to the update log
         lay.addWidget(self._ui_box())
         lay.addWidget(self._about_box())
         lay.addStretch()

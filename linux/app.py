@@ -34,7 +34,7 @@ from tab_groups import GroupsTab
 from tab_money import MoneyTab
 from tab_people import PeopleTab
 from tab_requests import RequestsTab
-from tab_settings import SettingsTab
+from tab_info import InfoTab
 from tab_vip import VipTab
 from ui_common import Context
 
@@ -57,10 +57,11 @@ class MainWindow(QMainWindow):
         self.money = MoneyTab(self.ctx, show_pending=self.account.pending_details)
         self.requests = RequestsTab(self.ctx)
         self.explorer = ExplorerTab(self.ctx)
-        self.settings_tab = SettingsTab(self.ctx, on_cleared=self._cleared)
+        self.info_tab = InfoTab(self.ctx, on_cleared=self._cleared)
+        self.settings_tab = self.info_tab.settings_tab
         for w, name in ((self.account, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
                         (self.money, "Money"), (self.requests, "Request log"), (self.explorer, "API Explorer"),
-                        (self.settings_tab, "Settings")):
+                        (self.info_tab, "Info")):
             self.tabs.addTab(w, name)
         self.tabs.currentChanged.connect(lambda i: getattr(self.tabs.widget(i), "ensure_loaded", lambda: None)())
         # quick account switch, visible on every tab

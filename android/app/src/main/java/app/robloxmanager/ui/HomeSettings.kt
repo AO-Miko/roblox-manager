@@ -113,7 +113,7 @@ private fun Box2(title: String, value: String, modifier: Modifier) = Card(modifi
 }
 
 @Composable
-fun SettingsScreen(sv: Services) {
+fun SettingsScreen(sv: Services, part: String = "settings") {
     val ctx = LocalContext.current
     val upd by Updates.state.collectAsState()
     var burst by remember { mutableStateOf(sv.client.readBurst.toFloat()) }
@@ -124,7 +124,7 @@ fun SettingsScreen(sv: Services) {
     var confirmSignOut by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Section("UPDATES") {
+        if (part == "updates") Section("UPDATES") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})", fontWeight = FontWeight.Medium)
                 OutlinedTextField(url, { url = it }, label = { Text("Update server address") }, supportingText = { Text("The raw address of the repository's dist/ folder, ending in /dist/") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
@@ -139,14 +139,15 @@ fun SettingsScreen(sv: Services) {
                 Text("Android always asks you to confirm an install; it only accepts an update signed with the same key as this app.", color = C.muted, fontSize = 11.sp)
             }
         }
-        Section("RATE LIMITS") {
+        if (part == "updates") UpdateLog()
+        if (part == "settings") Section("RATE LIMITS") {
             Column {
                 Text("How much of a route's limit a read may use at once: ${(burst * 100).toInt()}%", fontSize = 13.sp)
                 Slider(burst, { burst = it }, valueRange = 0.1f..1f, onValueChangeFinished = { sv.client.readBurst = burst.toDouble(); sv.prefs.put("readBurst", burst.toDouble()) })
                 Text("Changes (unfriend, leave, switch on …) are always spread out evenly. Lower = gentler on Roblox, slower lists.", color = C.muted, fontSize = 12.sp)
             }
         }
-        Section("LOGS AND CACHE") {
+        if (part == "settings") Section("LOGS AND CACHE") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(logFile, { logFile = it; sv.log.writeFile = it; sv.prefs.put("logToFile", it) }); Spacer(Modifier.width(8.dp)); Text("Keep the request log in a file")
@@ -158,8 +159,47 @@ fun SettingsScreen(sv: Services) {
                 Text("The log never contains your cookie, passwords, codes or request bodies.", color = C.muted, fontSize = 12.sp)
             }
         }
-        Section("ACCOUNT") { DangerButton("Sign out") { confirmSignOut = true } }
+        if (part == "settings") Section("ACCOUNT") { DangerButton("Sign out") { confirmSignOut = true } }
         if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)
     }
     if (confirmSignOut) Confirm("Sign out", "Sign out and remove this account from the phone?", "Sign out", true, { confirmSignOut = false; sv.signOut(true) }, { confirmSignOut = false })
+}
+
+/** What changed in each version (the log ships inside the app). The installed version is marked. */
+@Composable
+fun UpdateLog() {
+    val ctx = LocalContext.current
+    val entries = remember {
+        try { app.robloxmanager.core.Changelog.parse(ctx.assets.open("changelog.json").bufferedReader().use { it.readText() }) } catch (_: Exception) { emptyList() }
+    }
+    Section("UPDATE LOG") {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (entries.isEmpty()) Text("No update log is available.", color = C.muted)
+            entries.forEach { e ->
+                Card {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Version ${e.version}", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                            if (e.version == BuildConfig.VERSION_NAME) Text("● installed", color = C.success, fontSize = 12.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(e.date, color = C.muted, fontSize = 12.sp)
+                        }
+                        e.changes.forEach { Text("•  $it", fontSize = 13.sp) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The Info tab: Settings, and Updates (controls and the update log). */
+@Composable
+fun InfoScreen(sv: Services) {
+    var sub by remember { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        androidx.compose.material3.TabRow(selectedTabIndex = sub, containerColor = C.bg) {
+            listOf("Settings", "Updates").forEachIndexed { i, t -> androidx.compose.material3.Tab(selected = sub == i, onClick = { sub = i }, text = { Text(t) }) }
+        }
+        SettingsScreen(sv, if (sub == 0) "settings" else "updates")
+    }
 }

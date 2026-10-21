@@ -1,0 +1,45 @@
+[
+  {
+    "version": "1.1.2",
+    "date": "2026-10-21",
+    "changes": [
+      "Install guides for Linux and Android in the README",
+      "Each release now includes the Android APK, a Linux package and checksums on GitHub",
+      "The Linux installer points at the GitHub update server by default"
+    ]
+  },
+  {
+    "version": "1.1.1",
+    "date": "2026-10-21",
+    "changes": [
+      "Both apps now update from the public GitHub repository",
+      "The Android app has the update address built in"
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-10-21",
+    "changes": [
+      "New: the Android app (Home, People, Groups, VIP servers, Money, Request log, Settings) with password, 2-step, browser and cookie sign-in",
+      "Android logins are encrypted with the Android Keystore",
+      "One signed release process for the Linux and Android apps"
+    ]
+  },
+  {
+    "version": "1.0.1",
+    "date": "2026-10-21",
+    "changes": [
+      "First version delivered by the automatic updater"
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-10-21",
+    "changes": [
+      "Linux desktop app: friends, requests, followers, following and blocked lists; groups; VIP servers; Robux and transactions; request log; API explorer",
+      "Several accounts, with sign-in by password and 2-step, browser or cookie; logins kept encrypted in the system wallet",
+      "Requests follow Roblox's rate limits, with progress and a Stop button for long batches",
+      "Automatic updates at every start, only from commits signed with the release key, with a way back to the previous version"
+    ]
+  }
+]

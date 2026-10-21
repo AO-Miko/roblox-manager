@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Publish a new version of Roblox Manager (Linux and Android) to the update server.
 #
-#   tools/release.sh 1.2.0 "what changed"        build, sign and commit (stays local)
+#   tools/release.sh 1.2.0 "one change|another change"   build, sign and commit (stays local); "|" separates the update-log bullets
 #   tools/release.sh 1.2.0 "what changed" --push  ... and push to the `origin` remote
 #
 # What it does: bumps linux/VERSION and android/version.properties, runs the Android unit tests, builds the signed release APK,
@@ -27,6 +27,19 @@ CODE=$(( $(grep '^versionCode=' android/version.properties | cut -d= -f2) + 1 ))
 echo "$VERSION" > linux/VERSION
 printf 'versionName=%s\nversionCode=%s\n' "$VERSION" "$CODE" > android/version.properties
 
+# The update log (shown in both apps under Info > Updates): notes are separated by "|", one bullet each.
+python3 -I - "$VERSION" "$NOTES" <<'PY'
+import datetime, json, sys
+v, notes = sys.argv[1:3]
+log = [e for e in json.load(open("CHANGELOG.json")) if e["version"] != v]
+changes = [n.strip() for n in notes.split("|") if n.strip()] or ["Maintenance release"]
+log.insert(0, {"version": v, "date": datetime.date.today().isoformat(), "changes": changes})
+open("CHANGELOG.json", "w").write(json.dumps(log, indent=2, ensure_ascii=False) + "\n")
+PY
+cp CHANGELOG.json linux/CHANGELOG.json
+mkdir -p android/app/src/main/assets
+cp CHANGELOG.json android/app/src/main/assets/changelog.json
+
 echo "== Android tests"
 (cd android && ./gradlew --console=plain -q :app:testDebugUnitTest)
 echo "== Android release build"
@@ -44,7 +57,7 @@ open("dist/update.json", "a").write("\n")
 PY
 
 echo "== Commit and tag (signed)"
-git add linux/VERSION android/version.properties dist/roblox-manager.apk dist/update.json
+git add linux/VERSION android/version.properties dist/roblox-manager.apk dist/update.json CHANGELOG.json linux/CHANGELOG.json android/app/src/main/assets/changelog.json
 git commit -q -m "Release $VERSION" -m "${NOTES}"
 git tag -s "v$VERSION" -m "Release $VERSION"
 git verify-commit HEAD
@@ -59,7 +72,7 @@ git archive --format=tar.gz --prefix="roblox-manager-linux-$VERSION/" -o "$OUT/r
 
 if [[ "$PUSH" == "--push" ]]; then
   git push origin release "v$VERSION"
-  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT/SHA256SUMS.txt" --title "Roblox Manager $VERSION" --notes "${NOTES:-Release $VERSION}" --verify-tag
+  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT/SHA256SUMS.txt" --title "Roblox Manager $VERSION" --notes "$(printf '%s' "${NOTES:-Release $VERSION}" | tr '|' '\n' | sed 's/^ */- /')" --verify-tag
   echo "Pushed and released. Linux and Android apps will pick it up at their next start."
 else
   echo "Done locally. Publish with:  git push origin release v$VERSION"

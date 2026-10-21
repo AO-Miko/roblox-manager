@@ -41,7 +41,7 @@ import app.robloxmanager.ui.LoginScreen
 import app.robloxmanager.ui.LogScreen
 import app.robloxmanager.ui.MoneyScreen
 import app.robloxmanager.ui.PeopleScreen
-import app.robloxmanager.ui.SettingsScreen
+import app.robloxmanager.ui.InfoScreen
 import app.robloxmanager.ui.VipScreen
 
 class MainActivity : ComponentActivity() {
@@ -74,7 +74,7 @@ private fun Root(sv: Services) {
 
 @Composable
 private fun Main(sv: Services, addAccount: () -> Unit) {
-    val titles = listOf("Home", "People", "Groups", "VIP servers", "Money", "Request log", "Settings")
+    val titles = listOf("Home", "People", "Groups", "VIP servers", "Money", "Request log", "Info")
     var tab by remember { mutableStateOf(0) }
     val counts = remember { mutableStateMapOf<String, Int>() }
     val bulk = remember { Bulk(sv.scope) }
@@ -101,7 +101,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
                     3 -> VipScreen(sv, bulk, counts)
                     4 -> MoneyScreen(sv)
                     5 -> LogScreen(sv)
-                    else -> SettingsScreen(sv)
+                    else -> InfoScreen(sv)
                 }
             }
             BulkBar(bulk)
