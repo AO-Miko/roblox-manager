@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.6.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Phone: fixed a small stray box at the top left of every page"
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-10-22",
     "changes": [

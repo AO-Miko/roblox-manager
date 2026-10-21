@@ -1,7 +1,7 @@
 {
-  "versionName": "1.6.0",
-  "versionCode": 13,
+  "versionName": "1.6.1",
+  "versionCode": 14,
   "apk": "roblox-manager.apk",
-  "sha256": "b32344fc61003fa5bc47fdb1e3f0f0f36667269c487283ad6766113081671329",
-  "notes": "New look on the PC: a side bar with the pages in groups and their counts, a page title with a help line, and the account switch on top|Search everything with Ctrl+K: pages, settings, accounts, and the friends, groups and VIP servers that are loaded (Ctrl+1 to 8 open the pages, F5 reloads)|New look on the phone: a bottom bar (Home, People, Groups, VIP servers, More), a search for pages and settings, and an account switch on every page|Faster: pages on the phone keep what they loaded instead of asking Roblox again each time you come back; tables fill faster on the PC|The window can be made much smaller: a page that does not fit scrolls instead of forcing the window wide|The side bar shrinks to icons in a narrow window"
+  "sha256": "74f8444c708de2a6c64bc26d00c0a953f1bac4701190cdce31dc20d44df989c9",
+  "notes": "Phone: fixed a small stray box at the top left of every page"
 }
