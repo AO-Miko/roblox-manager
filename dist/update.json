@@ -1,7 +1,7 @@
 {
-  "versionName": "1.3.1",
-  "versionCode": 8,
+  "versionName": "1.4.0",
+  "versionCode": 9,
   "apk": "roblox-manager.apk",
-  "sha256": "955aa768f71e8ec3dd91bffaad915ff46045bb600144fa82f17b48bb3c3476f8",
-  "notes": "Fixed cut-off text on the Windows version: table headers, buttons and Settings now fit with Windows fonts|Repository now accepts pull requests (see CONTRIBUTING.md) with protected branches, security policy and automatic checks"
+  "sha256": "a949f85f6ca131e8e724d377a70c30dc42fbf9d4fce4673ba1a1c49fd18d70d5",
+  "notes": "New: ban list. The maintainer can ban a Roblox user id with a reason; a banned account is signed out and removed at once, even in a running session|The ban list is signed with the release key and checked in all three apps (Linux, Windows, Android)|Nothing about you is sent when the list is checked"
 }

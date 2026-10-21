@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-10-21",
+    "changes": [
+      "New: ban list. The maintainer can ban a Roblox user id with a reason; a banned account is signed out and removed at once, even in a running session",
+      "The ban list is signed with the release key and checked in all three apps (Linux, Windows, Android)",
+      "Nothing about you is sent when the list is checked"
+    ]
+  },
+  {
     "version": "1.3.1",
     "date": "2026-10-21",
     "changes": [
