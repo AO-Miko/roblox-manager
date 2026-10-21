@@ -1,0 +1,250 @@
+{
+ "swagger": "2.0",
+ "info": {
+  "title": "games (hand-written: Roblox publishes no spec for this service)"
+ },
+ "host": "games.roblox.com",
+ "paths": {
+  "/v1/games": {
+   "get": {
+    "summary": "Game details by universe ids",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "universeIds",
+      "required": true,
+      "type": "string",
+      "description": "comma separated universe ids"
+     }
+    ]
+   }
+  },
+  "/v1/games/multiget-place-details": {
+   "get": {
+    "summary": "Details of places by place ids (needs login)",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "placeIds",
+      "required": true,
+      "type": "string",
+      "description": "comma separated place ids"
+     }
+    ]
+   }
+  },
+  "/v1/games/{placeId}/servers/{serverType}": {
+   "get": {
+    "summary": "Public / Friend / VIP servers of a game",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "placeId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "path",
+      "name": "serverType",
+      "required": true,
+      "type": "string",
+      "description": "Public, Friend or VIP"
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "type": "string",
+      "description": "10, 25, 50 or 100"
+     },
+     {
+      "in": "query",
+      "name": "sortOrder",
+      "required": false,
+      "type": "string",
+      "description": "Asc or Desc"
+     },
+     {
+      "in": "query",
+      "name": "excludeFullGames",
+      "required": false,
+      "type": "string",
+      "description": "true or false"
+     }
+    ]
+   }
+  },
+  "/v1/games/{placeId}/private-servers": {
+   "get": {
+    "summary": "Private (VIP) servers of a game that this account can see (needs login)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "placeId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "type": "string",
+      "description": ""
+     },
+     {
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "type": "string",
+      "description": ""
+     }
+    ]
+   }
+  },
+  "/v1/vip-servers/{id}": {
+   "get": {
+    "summary": "A VIP server's settings, link and subscription (needs login)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "type": "integer",
+      "description": "VIP server id"
+     }
+    ]
+   },
+   "patch": {
+    "summary": "Rename, make a new link or switch a VIP server on/off",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "type": "integer",
+      "description": "VIP server id"
+     },
+     {
+      "in": "body",
+      "name": "body",
+      "required": true,
+      "schema": {
+       "example": {
+        "name": "New name",
+        "newJoinCode": false,
+        "active": true
+       }
+      }
+     }
+    ]
+   }
+  },
+  "/v1/vip-servers/{id}/permissions": {
+   "patch": {
+    "summary": "Who may join a VIP server",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "body",
+      "name": "body",
+      "required": true,
+      "schema": {
+       "example": {
+        "clanAllowed": false,
+        "enemyClanId": null,
+        "friendsAllowed": true,
+        "users": []
+       }
+      }
+     }
+    ]
+   }
+  },
+  "/v1/vip-servers/{id}/subscription": {
+   "patch": {
+    "summary": "Turn a VIP server's renewal on/off",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "body",
+      "name": "body",
+      "required": true,
+      "schema": {
+       "example": {
+        "active": false,
+        "price": 0
+       }
+      }
+     }
+    ]
+   }
+  },
+  "/v1/games/vip-servers/{universeId}": {
+   "post": {
+    "summary": "Create a VIP server. SPENDS ROBUX if the game charges for it.",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "universeId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "body",
+      "name": "body",
+      "required": true,
+      "schema": {
+       "example": {
+        "name": "My VIP server",
+        "expectedPrice": 0
+       }
+      }
+     }
+    ]
+   }
+  },
+  "/v1/games/{universeId}/favorites/count": {
+   "get": {
+    "summary": "How many players favourited a game",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "universeId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     }
+    ]
+   }
+  },
+  "/v1/games/votes": {
+   "get": {
+    "summary": "Up/down votes of games",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "universeIds",
+      "required": true,
+      "type": "string",
+      "description": "comma separated"
+     }
+    ]
+   }
+  }
+ }
+}

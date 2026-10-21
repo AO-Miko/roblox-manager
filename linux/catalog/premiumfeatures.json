@@ -1,0 +1,90 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "PremiumFeatures Api v1",
+    "version": "v1"
+  },
+  "host": "premiumfeatures.roblox.com",
+  "schemes": ["https"],
+  "paths": {
+    "/v1/users/{userId}/premium-upsell-precheck": {
+      "get": {
+        "tags": ["PremiumFeaturesUsers"],
+        "summary": "Premium upsell precheck",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "description": "User ID",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "query",
+            "name": "universeId",
+            "description": "",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "in": "query",
+            "name": "placeId",
+            "description": "",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["PremiumFeaturesUsers:PremiumUpsellPrecheck"]
+        },
+        "x-documentation-category": "Hidden",
+        "x-documentation-category-hidden-reason": "Other",
+        "x-documentation-category-hidden-description": "Endpoint planned for deprecation on 4/30 (Roblox Plus launch)"
+      }
+    },
+    "/v1/users/{userId}/validate-membership": {
+      "get": {
+        "tags": ["PremiumFeaturesUsers"],
+        "summary": "Get if a user has a Premium membership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "description": "User ID",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["PremiumFeaturesUsers:GetIsPremiumUserForUser"]
+        },
+        "x-documentation-category": "Hidden",
+        "x-documentation-category-hidden-reason": "Other",
+        "x-documentation-category-hidden-description": "Endpoint planned for deprecation on 4/30 (Roblox Plus launch)"
+      }
+    }
+  },
+  "definitions": {}
+}

@@ -1,0 +1,527 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "PrivateMessages Api v1",
+    "version": "v1"
+  },
+  "host": "privatemessages.roblox.com",
+  "schemes": ["https"],
+  "paths": {
+    "/v1/announcements": {
+      "get": {
+        "tags": ["Announcements"],
+        "summary": "Migrate from RobloxWebsite project, return news notification for Private Message page",
+        "produces": ["application/json", "text/json"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.GetAnnouncementsResponse"
+            }
+          },
+          "400": {
+            "description": "2: Message does not exist or the current user is not authorized to view it."
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Announcements:GetNews"]
+        }
+      }
+    },
+    "/v1/announcements/metadata": {
+      "get": {
+        "tags": ["Announcements"],
+        "summary": "",
+        "produces": ["application/json", "text/json"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.AnnouncementsMetadataResponse"
+            }
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Announcements:GetMetadata"]
+        }
+      }
+    },
+    "/v1/messages": {
+      "get": {
+        "tags": ["Messages"],
+        "summary": "Gets a user's messages.",
+        "produces": ["application/json", "text/json"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "pageNumber",
+            "description": "",
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "description": "",
+            "type": "integer",
+            "format": "int32",
+            "default": 20
+          },
+          {
+            "in": "query",
+            "name": "messageTab",
+            "description": "",
+            "type": "string",
+            "default": "Inbox",
+            "enum": ["Inbox", "Sent", "Archive"]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.GetMessagesResponse"
+            }
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Messages:GetMessages"]
+        }
+      }
+    },
+    "/v1/messages/{messageId}": {
+      "get": {
+        "tags": ["Messages"],
+        "summary": "Gets a message's details.",
+        "produces": ["application/json", "text/json"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "messageId",
+            "description": "",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.MessageDetailsResponse"
+            }
+          },
+          "400": {
+            "description": "2: Message does not exist or the current user is not authorized to view it."
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Messages:GetMessage"]
+        }
+      }
+    },
+    "/v1/messages/unread/count": {
+      "get": {
+        "tags": ["Messages"],
+        "summary": "Gets unread messages for the authenticated user.",
+        "produces": ["application/json", "text/json"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.UnreadMessagesCountResponse"
+            }
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Messages:GetUnreadMessagesCount"]
+        }
+      }
+    },
+    "/v1/messages/archive": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Archives a batch of messages.",
+        "consumes": ["application/json", "text/json"],
+        "produces": ["application/json", "text/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "batchMessagesRequest",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesResponse"
+            }
+          },
+          "400": {
+            "description": "5: Too many ids in a batch request."
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          },
+          "403": {
+            "description": "0: Token Validation Failed"
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Messages:ArchiveMessages"]
+        }
+      }
+    },
+    "/v1/messages/mark-read": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Marks a batch of messages as read.",
+        "consumes": ["application/json", "text/json"],
+        "produces": ["application/json", "text/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "batchMessagesRequest",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesResponse"
+            }
+          },
+          "400": {
+            "description": "5: Too many ids in a batch request."
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          },
+          "403": {
+            "description": "0: Token Validation Failed"
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Messages:MarkMessagesRead"]
+        }
+      }
+    },
+    "/v1/messages/mark-unread": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Marks a batch of messages as unread.",
+        "consumes": ["application/json", "text/json"],
+        "produces": ["application/json", "text/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "batchMessagesRequest",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesResponse"
+            }
+          },
+          "400": {
+            "description": "5: Too many ids in a batch request."
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          },
+          "403": {
+            "description": "0: Token Validation Failed"
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Messages:MarkMessagesUnread"]
+        }
+      }
+    },
+    "/v1/messages/unarchive": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Unarchives a batch of messages.",
+        "consumes": ["application/json", "text/json"],
+        "produces": ["application/json", "text/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "batchMessagesRequest",
+            "description": "",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.BatchMessagesResponse"
+            }
+          },
+          "400": {
+            "description": "5: Too many ids in a batch request."
+          },
+          "401": {
+            "description": "0: Authorization has been denied for this request."
+          },
+          "403": {
+            "description": "0: Token Validation Failed"
+          }
+        },
+        "properties": {
+          "internal": false,
+          "metricIds": ["Messages:UnarchiveMessages"]
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Roblox.PrivateMessages.Api.Models.AnnouncementsDetailsResponse": {
+      "description": "A message details response.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int64",
+          "description": "The message's ID.",
+          "type": "integer"
+        },
+        "sender": {
+          "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.VerifiedSkinnyUserResponse"
+        },
+        "subject": {
+          "description": "The subject of the message.",
+          "type": "string"
+        },
+        "body": {
+          "description": "The body of the message.",
+          "type": "string"
+        },
+        "created": {
+          "format": "date-time",
+          "description": "When the message was created.",
+          "type": "string"
+        },
+        "updated": {
+          "format": "date-time",
+          "description": "When the message was last updated.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.AnnouncementsMetadataResponse": {
+      "description": "A message details response.",
+      "type": "object",
+      "properties": {
+        "numOfAnnouncements": {
+          "format": "int32",
+          "description": "Number of incoming news",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.BatchMessagesRequest": {
+      "type": "object",
+      "properties": {
+        "messageIds": {
+          "type": "array",
+          "items": {
+            "format": "int64",
+            "type": "integer"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.BatchMessagesResponse": {
+      "type": "object",
+      "properties": {
+        "failedMessages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.FailedMessageResponse"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.FailedMessageResponse": {
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "errorMessage": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.GetAnnouncementsResponse": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.AnnouncementsDetailsResponse"
+          }
+        },
+        "totalCollectionSize": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.GetMessagesResponse": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.MessageDetailsResponse"
+          }
+        },
+        "totalCollectionSize": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "totalPages": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "pageNumber": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.MessageDetailsResponse": {
+      "description": "A message details response.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int64",
+          "description": "The message's ID.",
+          "type": "integer"
+        },
+        "sender": {
+          "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.VerifiedSkinnyUserResponse"
+        },
+        "recipient": {
+          "$ref": "#/definitions/Roblox.PrivateMessages.Api.Models.VerifiedSkinnyUserResponse"
+        },
+        "subject": {
+          "description": "The subject of the message.",
+          "type": "string"
+        },
+        "body": {
+          "description": "The body of the message.",
+          "type": "string"
+        },
+        "created": {
+          "format": "date-time",
+          "description": "When the message was created.",
+          "type": "string"
+        },
+        "updated": {
+          "format": "date-time",
+          "description": "When the message was last updated.",
+          "type": "string"
+        },
+        "isRead": {
+          "description": "Whether or not the message has been read.",
+          "type": "boolean"
+        },
+        "isSystemMessage": {
+          "description": "Whether or not the message is a system message.",
+          "type": "boolean"
+        },
+        "isReportAbuseDisplayed": {
+          "description": "Whether or not the abuse report link is displayed for the message.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.UnreadMessagesCountResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Roblox.PrivateMessages.Api.Models.VerifiedSkinnyUserResponse": {
+      "description": "A response model representing user basic information and the user's verified badge status.",
+      "type": "object",
+      "properties": {
+        "hasVerifiedBadge": {
+          "description": "Whether the user has a verified badge.",
+          "type": "boolean"
+        },
+        "id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

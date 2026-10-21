@@ -1,0 +1,204 @@
+{
+ "swagger": "2.0",
+ "info": {
+  "title": "economy (hand-written)"
+ },
+ "host": "economy.roblox.com",
+ "paths": {
+  "/v1/user/currency": {
+   "get": {
+    "summary": "Your Robux balance (needs login)",
+    "parameters": []
+   }
+  },
+  "/v1/groups/{groupId}/currency": {
+   "get": {
+    "summary": "A group's Robux balance (needs permission)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "groupId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     }
+    ]
+   }
+  },
+  "/v1/groups/{groupId}/revenue/summary/{timeFrame}": {
+   "get": {
+    "summary": "A group's revenue summary",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "groupId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "path",
+      "name": "timeFrame",
+      "required": true,
+      "type": "string",
+      "description": "Day, Week, Month or Year"
+     }
+    ]
+   }
+  },
+  "/v1/users/{userId}/transaction-totals": {
+   "get": {
+    "summary": "Your transaction totals (needs login)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "userId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "query",
+      "name": "timeFrame",
+      "required": true,
+      "type": "string",
+      "description": "Day, Week, Month, Year"
+     },
+     {
+      "in": "query",
+      "name": "transactionType",
+      "required": true,
+      "type": "string",
+      "description": "summary"
+     }
+    ]
+   }
+  },
+  "/v2/users/{userId}/transactions": {
+   "get": {
+    "summary": "Your transactions of one type. Use PendingRobux for pending Robux (needs login)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "userId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "query",
+      "name": "transactionType",
+      "required": true,
+      "type": "string",
+      "description": "Sale, Purchase, AffiliateSale, DevEx, GroupPayout, AdImpressionPayout, CurrencyPurchase, TradeRobux, PremiumStipend, PendingRobux, EngagementPayout, GroupEngagementPayout, AdSpend, Summary, IndividualToGroup, CSAdjustment"
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "type": "integer",
+      "description": "10, 25, 50 or 100"
+     },
+     {
+      "in": "query",
+      "name": "sortOrder",
+      "required": false,
+      "type": "string",
+      "description": "Asc or Desc"
+     },
+     {
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "type": "string",
+      "description": "from nextPageCursor"
+     }
+    ]
+   }
+  },
+  "/v2/users/{userId}/transaction-totals": {
+   "get": {
+    "summary": "Totals for a period, including pendingRobuxTotal (needs login)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "userId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "query",
+      "name": "timeFrame",
+      "required": true,
+      "type": "string",
+      "description": "Day, Week, Month or Year"
+     },
+     {
+      "in": "query",
+      "name": "transactionType",
+      "required": true,
+      "type": "string",
+      "description": "summary"
+     }
+    ]
+   }
+  },
+  "/v2/groups/{groupId}/transactions": {
+   "get": {
+    "summary": "A group's transactions of one type; PendingRobux for pending (needs permission)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "groupId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     },
+     {
+      "in": "query",
+      "name": "transactionType",
+      "required": true,
+      "type": "string",
+      "description": "Sale, Purchase, AffiliateSale, DevEx, GroupPayout, AdImpressionPayout, CurrencyPurchase, TradeRobux, PremiumStipend, PendingRobux, EngagementPayout, GroupEngagementPayout, AdSpend, Summary, IndividualToGroup, CSAdjustment"
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "type": "integer",
+      "description": "10, 25, 50 or 100"
+     },
+     {
+      "in": "query",
+      "name": "sortOrder",
+      "required": false,
+      "type": "string",
+      "description": "Asc or Desc"
+     },
+     {
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "type": "string",
+      "description": ""
+     }
+    ]
+   }
+  },
+  "/v2/users/{userId}/transaction-types": {
+   "get": {
+    "summary": "Which kinds of transactions you have (needs login)",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "userId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     }
+    ]
+   }
+  }
+ }
+}

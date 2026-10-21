@@ -1,0 +1,179 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "presence-api",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "https://presence.roblox.com"
+    }
+  ],
+  "paths": {
+    "/v1/presence/users": {
+      "post": {
+        "tags": ["Presence"],
+        "operationId": "Presence_GetUserPresences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UserPresenceRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPresencesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PresenceType": {
+        "enum": [0, 1, 2, 3],
+        "type": "integer",
+        "format": "int32"
+      },
+      "UserPresence": {
+        "type": "object",
+        "properties": {
+          "userPresenceType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PresenceType"
+              }
+            ]
+          },
+          "lastLocation": {
+            "type": "string",
+            "nullable": true
+          },
+          "placeId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "rootPlaceId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "gameId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "universeId": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserPresenceRequest": {
+        "type": "object",
+        "properties": {
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserPresencesResponse": {
+        "type": "object",
+        "properties": {
+          "userPresences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserPresence"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

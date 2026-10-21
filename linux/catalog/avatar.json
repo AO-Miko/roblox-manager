@@ -1,0 +1,29 @@
+{
+ "swagger": "2.0",
+ "info": {
+  "title": "avatar (hand-written)"
+ },
+ "host": "avatar.roblox.com",
+ "paths": {
+  "/v1/users/{userId}/avatar": {
+   "get": {
+    "summary": "A user's current avatar",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "userId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     }
+    ]
+   }
+  },
+  "/v1/avatar": {
+   "get": {
+    "summary": "Your avatar (needs login)",
+    "parameters": []
+   }
+  }
+ }
+}

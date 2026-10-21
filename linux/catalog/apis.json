@@ -1,0 +1,44 @@
+{
+ "swagger": "2.0",
+ "info": {
+  "title": "apis (hand-written)"
+ },
+ "host": "apis.roblox.com",
+ "paths": {
+  "/universes/v1/places/{placeId}/universe": {
+   "get": {
+    "summary": "Which universe a place belongs to",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "placeId",
+      "required": true,
+      "type": "integer",
+      "description": ""
+     }
+    ]
+   }
+  },
+  "/search-api/omni-search": {
+   "get": {
+    "summary": "Search games and users",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "searchQuery",
+      "required": true,
+      "type": "string",
+      "description": "text"
+     },
+     {
+      "in": "query",
+      "name": "sessionId",
+      "required": false,
+      "type": "string",
+      "description": "any uuid"
+     }
+    ]
+   }
+  }
+ }
+}
