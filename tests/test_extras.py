@@ -289,7 +289,7 @@ dlg.answer(True)
 spin(0.3)
 check("a large batch asks you to type the number, and a wrong number cancels it", asked and not [x for x in State.log[mark:] if x[0] == "POST"], asked)
 dlg.close()
-check("the dialog is reachable from the Groups page by a button", any(b.text().startswith("Join requests in all groups") for b in w.groups.findChildren(type(w.groups.b_leave))))
+check("the dialog is reachable from the Groups page by a button", any(b.text().startswith("All join requests") for b in w.groups.findChildren(type(w.groups.b_leave))))
 
 # ================================================================ backup
 settings.set("log.keep_rows", 777)

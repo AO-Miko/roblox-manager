@@ -88,7 +88,7 @@ class GroupsTab(QWidget):
         row = FlowLayout()
         row.addWidget(button("Refresh", self.load_groups))
         row.addWidget(button("Open another group...", self.open_other, "Look at any group by id or link"))
-        row.addWidget(button("Join requests in all groups...", self.all_requests, "Every join request of the groups where you may answer them, in one list"))
+        row.addWidget(button("All join requests...", self.all_requests, "Every join request of the groups where you may answer them, in one list"))
         ll.addLayout(row)
         split.addWidget(left)
 

@@ -202,7 +202,7 @@ The apps update from two other branches that only receive signed release commits
   newer asks for permission to show notifications, and Android may pause the app when it has been in the background for long.
   Alerts can be switched off in Settings or on the Alerts page. The app also checks the system's own notification settings (the phone's app and channel settings and
   Do Not Disturb, Windows' notification switch, a notification service on Linux) and says so when they would stop the alerts from showing.
-- **Join requests in all groups** (Groups → *Join requests in all groups* on PC, Groups → Join requests on the phone): checks the groups where your role may accept requests
+- **Join requests in all groups** (Groups → *All join requests...* on PC, Groups → Join requests on the phone): checks the groups where your role may accept requests
   and lists everybody waiting, so you can accept or decline them in one go. It only offers what your role allows, and large batches ask you to confirm.
 - **Backup** (Settings): saves your settings, friend alerts, recently viewed games and, if you want, a copy of your friends, followers, following and groups to a JSON file, and
   restores them later or on another device. Sign-ins are never in the file, and restoring never changes anything on Roblox.
