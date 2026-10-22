@@ -141,33 +141,33 @@ if os.name == "posix":                                    # (the shell restart i
 
 
 else:
-    src = (ROOT / "linux" / "tab_settings.py").read_text()
+    src = (ROOT / "linux" / "tab_settings.py").read_text(encoding="utf-8")
     check("restarting runs a fixed shell text and gives the launcher's path as an argument (checked in the source on Windows)", """["sh", "-c", 'sleep 1.5; exec "$0"', str(launcher)]""" in src)
 
 # ---------------------------------------------------------------- private folders
 if os.name == "posix":
     check("the settings folder is private (only you)", stat.S_IMODE(rbx.CONFIG_DIR.stat().st_mode) == 0o700, oct(stat.S_IMODE(rbx.CONFIG_DIR.stat().st_mode)))
     check("the folder with logs and saved names is private too", stat.S_IMODE(rbx.STATE_DIR.stat().st_mode) == 0o700, oct(stat.S_IMODE(rbx.STATE_DIR.stat().st_mode)))
-check("the open window's socket is for this user only", "UserAccessOption" in (ROOT / "linux" / "app.py").read_text())
+check("the open window's socket is for this user only", "UserAccessOption" in (ROOT / "linux" / "app.py").read_text(encoding="utf-8"))
 
 # ---------------------------------------------------------------- the Windows build installs only pinned, hashed libraries
-lock = (ROOT / "tools" / "windows" / "requirements.lock").read_text().splitlines()
+lock = (ROOT / "tools" / "windows" / "requirements.lock").read_text(encoding="utf-8").splitlines()
 entries = [x for x in lock if x and not x.startswith("#")]
 check("the lock pins every library with an exact version and a SHA-256", entries and all(re.fullmatch(r"[A-Za-z0-9_.-]+==[0-9][^ ]* --hash=sha256:[0-9a-f]{64}", x) for x in entries), entries[:2])
 names = {x.split("==")[0].lower() for x in entries}
 check("...including the libraries the two main ones need (requests' and PySide6's)", {"requests", "pyside6", "urllib3", "certifi", "idna", "charset-normalizer", "shiboken6"} <= names, sorted(names))
-check("the build installs only from the lock, and demands the hashes", '"--require-hashes"' in (ROOT / "tools" / "build_windows.py").read_text() and "requirements.lock" in (ROOT / "tools" / "build_windows.py").read_text())
+check("the build installs only from the lock, and demands the hashes", '"--require-hashes"' in (ROOT / "tools" / "build_windows.py").read_text(encoding="utf-8") and "requirements.lock" in (ROOT / "tools" / "build_windows.py").read_text(encoding="utf-8"))
 
 # ---------------------------------------------------------------- Android
-manifest = (ROOT / "android/app/src/main/AndroidManifest.xml").read_text()
+manifest = (ROOT / "android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
 check("Android: only the main screen is reachable from other apps (one exported component)", manifest.count('android:exported="true"') == 1 and 'android:name=".MainActivity"' in manifest.split('android:exported="true"')[0][-200:], manifest.count('android:exported="true"'))
 check("Android: no backups, no plain http, no extra permissions beyond internet and installing updates", 'android:allowBackup="false"' in manifest and 'usesCleartextTraffic="false"' in manifest
       and sorted(re.findall(r'uses-permission android:name="([^"]+)"', manifest)) == ["android.permission.INTERNET", "android.permission.REQUEST_INSTALL_PACKAGES"])
 check("Android: the only package the app asks about is Roblox", re.findall(r'<package android:name="([^"]+)"', manifest) == ["com.roblox.client"])
-login = (ROOT / "android/app/src/main/java/app/robloxmanager/ui/LoginScreen.kt").read_text()
+login = (ROOT / "android/app/src/main/java/app/robloxmanager/ui/LoginScreen.kt").read_text(encoding="utf-8")
 check("Android: the login web view reads no files or other apps' content, and only follows https links to Roblox", "allowFileAccess = false" in login and "allowContentAccess = false" in login
       and "MIXED_CONTENT_NEVER_ALLOW" in login and "shouldOverrideUrlLoading" in login and 'u.scheme == "https"' in login and "isRoblox" in login)
-check("Android: no JavaScript bridge into the app", "addJavascriptInterface" not in "".join(p.read_text() for p in (ROOT / "android/app/src/main/java").rglob("*.kt")))
+check("Android: no JavaScript bridge into the app", "addJavascriptInterface" not in "".join(p.read_text(encoding="utf-8") for p in (ROOT / "android/app/src/main/java").rglob("*.kt")))
 
 # ---------------------------------------------------------------- the sources contain none of the usual dangerous calls
 bad_patterns = {r"shell\s*=\s*True": "shell=True", r"\bos\.system\(": "os.system", r"\beval\(": "eval", r"\bexec\((?!\))": "exec of a string", r"verify\s*=\s*False": "verify=False",
@@ -183,7 +183,7 @@ for p in sorted((ROOT / "linux").glob("*.py")) + sorted((ROOT / "tools").glob("*
                 problems.append(f"{p.name}:{i}: {name}")
 check("no shell=True, os.system, eval, verify=False, pickle, yaml.load, mktemp in the code or the tests", not problems, problems[:8])
 secrets_in_logs = [f"{p.name}: {m.group(0)}" for p in (ROOT / "linux").glob("*.py")
-                   for m in re.finditer(r"log\.(?:info|debug|warning|error)\([^)]*[,(]\s*(?:self\._cookie|self\.cookie|cookie|password|pw|passwd)\s*[,)]", p.read_text())]
+                   for m in re.finditer(r"log\.(?:info|debug|warning|error)\([^)]*[,(]\s*(?:self\._cookie|self\.cookie|cookie|password|pw|passwd)\s*[,)]", p.read_text(encoding="utf-8"))]
 check("no log line is given a cookie or a password variable (the two that mention the cookie only log its length and where it is kept)", not secrets_in_logs, secrets_in_logs)
 
 print(f"{sum(res)}/{len(res)} checks passed")
