@@ -5,7 +5,7 @@ of your own VIP servers of that game. All of it is public data: it works without
 import time
 import uuid
 
-from PySide6.QtCore import QRectF, QUrl, Qt, Signal
+from PySide6.QtCore import QRectF, QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QPainter, QPixmap
 from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox, QPlainTextEdit, QScrollArea, QStackedWidget, QVBoxLayout,
                                QWidget)
@@ -269,7 +269,7 @@ class GameDetail(QWidget):
     def __init__(self, ctx):
         super().__init__()
         self.ctx = ctx
-        self.places, self.started, self.versions, self._locating, self._locate_stop = {}, {}, {}, False, False
+        self.places, self.started, self.versions, self._locating, self._locate_stop, self._auto_again = {}, {}, {}, False, False, False
         self.card = None
         self.place_id = None
         self.vip_servers_for = lambda universe_id, place_id: []        # the app connects this to the VIP servers page
@@ -512,6 +512,7 @@ class GameDetail(QWidget):
         if reset:
             self.server_gen += 1
             self.servers, self.server_cursor, self.places, self.started, self.versions = [], "", {}, {}, {}
+            self._locate_stop = True                      # (a look-up of the old list ends; the new list is looked up when it arrives)
         elif self.server_busy or not self.server_cursor:
             return
         self.server_busy = True
@@ -529,6 +530,7 @@ class GameDetail(QWidget):
             have = {s["id"] for s in self.servers}
             self.servers += [s for s in servers if s["id"] not in have]
             self._show_servers()
+            self._auto_locate()
 
         def failed(e):
             if gen == self.server_gen:
@@ -567,19 +569,30 @@ class GameDetail(QWidget):
             return "roseal"
         return "ipwho" if box.clickedButton() is b_ip else None
 
-    def locate_servers(self):
+    def _auto_locate(self):
+        """With 'look up by themselves' on (and a service allowed, and signed in), the servers that were just listed are looked up without pressing the button."""
+        if geo.auto_wanted(settings.get("geo.auto"), settings.get("geo.roseal"), settings.get("geo.allowed"), self.ctx.logged_in):
+            self.locate_servers(auto=True)
+
+    def locate_servers(self, auto=False):
         """The selected servers (or, if none is selected, the loaded ones not looked up yet; 25 at a time): Roblox's join answer gives each one's data centre, address and start time;
-        the place comes from RoSeal's list or ipwho.is, whichever the person allowed."""
+        the place comes from RoSeal's list or ipwho.is, whichever the person allowed. With auto=True (by itself, after the list arrived) the selection is ignored and nothing is asked."""
         c = self.ctx
-        if not self.place_id or c.need_login() or self._locating:
+        if not self.place_id or (not auto and c.need_login()):
             return
-        picked = [row_key(self.server_table, r) for r in selected_rows(self.server_table)]
+        if self._locating:
+            self._auto_again = self._auto_again or auto           # (the look-up of the old list is ending: this one follows)
+            return
+        picked = [] if auto else [row_key(self.server_table, r) for r in selected_rows(self.server_table)]
         ids = picked or [s["id"] for s in self.servers if s["id"] not in self.started]
         ids = [i for i in ids if i not in self.started][:self.LOCATE_AT_ONCE]
         if not ids:
-            c.status("Every loaded server is looked up already." if self.servers else "Press Find servers first.")
+            if not auto:
+                c.status("Every loaded server is looked up already." if self.servers else "Press Find servers first.")
             return
         if not settings.get("geo.roseal") and not settings.get("geo.allowed"):
+            if auto:
+                return
             choice = self.ask_geo_source()
             if choice is None:
                 return
@@ -620,6 +633,9 @@ class GameDetail(QWidget):
 
     def _locate_done(self):
         self._locating = False
+        again, self._auto_again = self._auto_again, False
+        if again:
+            QTimer.singleShot(0, self._auto_locate)
         self.b_locate.setEnabled(True)
         self.b_stop_locate.hide()
         self.b_stop_locate.setEnabled(True)

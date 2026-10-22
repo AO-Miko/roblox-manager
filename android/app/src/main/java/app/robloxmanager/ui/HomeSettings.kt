@@ -185,10 +185,12 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
         if (part == "settings") Section("SERVER LOCATIONS", collapsible = true) {
             var roseal by remember { mutableStateOf(sv.prefs.bool("geo.roseal", false)) }
             var ipwho by remember { mutableStateOf(sv.prefs.bool("geo.allowed", false)) }
+            var auto by remember { mutableStateOf(sv.prefs.bool("geo.auto", false)) }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(roseal, { roseal = it; sv.prefs.put("geo.roseal", it) }); Spacer(Modifier.width(8.dp)); Text("Download RoSeal's public data files (data.roseal.live): its list of Roblox data centres, to show where servers are, and its links to game wikis. Nothing about you is sent.", fontSize = 13.sp) }
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(ipwho, { ipwho = it; sv.prefs.put("geo.allowed", it) }); Spacer(Modifier.width(8.dp)); Text("Ask ipwho.is which city a server's public address is in. The address of the server is sent there, nothing else.", fontSize = 13.sp) }
-                Text("Used by Location and uptime on a game's page. Nothing is contacted unless one of these is on.", color = C.muted, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) { Switch(auto, { auto = it; sv.prefs.put("geo.auto", it) }); Spacer(Modifier.width(8.dp)); Text("Look up where servers are and how long they run by themselves when they are listed (needs one of the two above). One request to Roblox per server, up to 25 at a time.", fontSize = 13.sp) }
+                Text("Used by Location and uptime on a game's page. Nothing is contacted unless one of the first two is on.", color = C.muted, fontSize = 12.sp)
             }
         }
         if (part == "settings") BackupSection(sv) { msg = it }

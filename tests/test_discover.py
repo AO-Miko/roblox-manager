@@ -614,6 +614,40 @@ check("a lookup service that is down is reported in plain words (the uptime is s
 geo._fetch = geo_real
 det.find_servers(True); wait(lambda: det.server_table.rowCount() == 6 and not det.server_busy)
 check("a new list of servers starts without places and start times", det.places == {} and det.started == {} and all(det.server_table.item(r, 5).text() == "" and det.server_table.item(r, 6).text() == "" for r in range(det.server_table.rowCount())))
+# ---------------------------------------------------------------- looking up by itself
+check("the rule: switched on, a service allowed and signed in", [geo.auto_wanted(*a) for a in ((True, True, False, True), (True, False, True, True), (False, True, True, True), (True, False, False, True), (True, True, True, False))]
+      == [True, True, False, False, False])
+check("the switch is off by default", settings.DEFAULTS["geo.auto"][0] is False)
+settings.set("geo.roseal", True); settings.set("geo.allowed", False); settings.set("geo.auto", False)
+n, asked_n = len(JOIN_CALLS), len(asked_source)
+det.find_servers(True)
+wait(lambda: det.server_table.rowCount() == 5 and not det.server_busy); spin(0.6)
+check("with 'by themselves' off, listing servers asks Roblox nothing more", len(JOIN_CALLS) == n and det.started == {}, len(JOIN_CALLS) - n)
+settings.set("geo.auto", True)
+det.server_table.selectRow(0)
+det.find_servers(True)
+check("with it on, the listed servers are looked up by themselves, all of them (a selected row does not limit it), nothing pressed",
+      wait(lambda: len(det.started) == 5 and len(det.places) == 5 and not det._locating), (len(det.started), len(det.places)))
+check("...one request for each, and nobody was asked anything", len(JOIN_CALLS) == n + 5 and len(asked_source) == asked_n, (len(JOIN_CALLS) - n, len(asked_source) - asked_n))
+check("...the table shows the places and the running time at once", all(det.server_table.item(r, 5).text() and det.server_table.item(r, 6).text() for r in range(det.server_table.rowCount())))
+det.find_servers(False)
+check("Load more looks up only the new server", wait(lambda: len(det.started) == 6 and not det._locating) and len(JOIN_CALLS) == n + 6, len(JOIN_CALLS) - n)
+n = len(JOIN_CALLS)
+w.ctx.client.user = None
+det.find_servers(True); wait(lambda: det.server_table.rowCount() == 5 and not det.server_busy); spin(0.4)
+check("signed out, nothing is looked up by itself and no message appears", len(JOIN_CALLS) == n and not infos[1:], infos)
+w.ctx.client.user = {"id": 156, "name": "me", "displayName": "Me"}
+settings.set("geo.roseal", False)
+det.find_servers(True); wait(lambda: det.server_table.rowCount() == 5 and not det.server_busy); spin(0.4)
+check("with no service allowed, nothing is looked up by itself and nobody is asked", len(JOIN_CALLS) == n and len(asked_source) == asked_n and det.started == {})
+settings.set("geo.roseal", True)
+det._locating = True
+det.find_servers(True); wait(lambda: det.server_table.rowCount() == 5 and not det.server_busy)
+check("a list that arrives while the old one is still being looked up waits its turn", det._auto_again is True and det.started == {})
+det._locating = False
+det._locate_done()
+check("...and is looked up when the old look-up ends", wait(lambda: len(det.started) == 5 and not det._locating), len(det.started))
+settings.set("geo.auto", False)
 det.order.setCurrentIndex(0)
 det.sort.setCurrentIndex(1)
 det.b_servers.click()

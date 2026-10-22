@@ -214,6 +214,11 @@ class GeoTest {
         assertTrue((AppJson.parseToJsonElement(f.readText()).obj!!).size <= Geo.MAX_CACHED)
     }
 
+    @Test fun serversAreLookedUpByThemselvesOnlyWhenSwitchedOnAllowedAndSignedIn() {
+        assertEquals(listOf(true, true, false, false, false), listOf(Geo.autoWanted(true, true, false, true), Geo.autoWanted(true, false, true, true), Geo.autoWanted(false, true, true, true),
+            Geo.autoWanted(true, false, false, true), Geo.autoWanted(true, true, true, false)))
+    }
+
     // ---------------------------------------------------------------- the map's data
     @Test fun theMapKnowsWhereEverythingIs() {
         assertEquals(360f to 180f, WorldMap.project(0.0, 0.0, 720f, 360f)); assertEquals(0f to 0f, WorldMap.project(90.0, -180.0, 720f, 360f)); assertEquals(720f to 360f, WorldMap.project(-90.0, 180.0, 720f, 360f))

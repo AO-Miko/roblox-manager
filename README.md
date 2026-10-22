@@ -209,6 +209,8 @@ Settings has a switch for each (and you can turn them off again):
   one plain download (no cookie, nothing about you or the server), kept 6 hours.
 - **ipwho.is**: the server's public address is sent there and it says which city that is. Nothing else is sent.
 
+**Automatic look-up:** a separate switch in Settings makes the app look servers up by itself as soon as they are listed (Find servers, Load more), with no button to press. It needs one of the two services above and a sign-in, and is off by default because each server costs one request to Roblox (up to 25 at a time).
+
 Answers are kept on your device for 30 days by data centre, so most lookups need no request at all. The map is drawn from Natural Earth data (public domain). Thanks to RoSeal for the
 list. These two services are third parties: if one of them changes or stops, locations stop showing and everything else keeps working.
 

@@ -72,6 +72,7 @@ import app.robloxmanager.core.GameCard
 import app.robloxmanager.core.GameDetails
 import app.robloxmanager.core.Features
 import app.robloxmanager.core.FriendGame
+import app.robloxmanager.core.Geo
 import app.robloxmanager.core.GeoException
 import app.robloxmanager.core.Place
 import app.robloxmanager.core.WorldMap
@@ -398,6 +399,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     var askWiki by remember { mutableStateOf(false) }
     var locating by remember { mutableStateOf(false) }
     val stopLocate = remember { booleanArrayOf(false) }
+    val autoAgain = remember { booleanArrayOf(false) }
     var askGeo by remember { mutableStateOf(false) }
     var showMap by remember { mutableStateOf(false) }
     var mapFilter by remember(card.universeId) { mutableStateOf<List<String>?>(null) }
@@ -409,40 +411,14 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     val place = details?.placeId ?: card.placeId
     BackHandler { onBack() }
 
-    fun findServers(reset: Boolean) {
-        val p = place ?: return
-        if (srvBusy || (!reset && cursor.isEmpty())) return                         // one page at a time: pressing again meanwhile does nothing
-        srvBusy = true; srvNote = "Looking for servers…"
-        if (reset) { places.clear(); started.clear(); versions.clear(); mapFilter = null }
-        val s0 = sort
-        scope.launch {
-            try {
-                val (s, n) = sv.api.gameServers(p, s0, if (reset) "" else cursor)
-                servers = if (reset) s else servers + s.filter { x -> servers.none { it.id == x.id } }
-                cursor = n
-                srvNote = if (servers.isEmpty()) "No public servers are open right now." else "${servers.size} servers" + if (n.isNotEmpty()) "  (more available)" else ""
-            } catch (e: CancellationException) { throw e } catch (e: Exception) { srvNote = "The servers could not be loaded: ${errorText(e)}" } finally { srvBusy = false }
-        }
-    }
-
-    /** The game's community wiki from RoSeal's list of game links (only after the person allowed RoSeal's data service). */
-    fun openWiki() {
-        scope.launch {
-            try {
-                val links = sv.rosealLinks.linksFor(card.universeId)
-                if (links.isEmpty()) note = "RoSeal's list has no wiki for this game." else openUrl(ctx, links[0].url)
-            } catch (e: CancellationException) { throw e } catch (e: GeoException) { note = "The wiki could not be found: ${e.message}" } catch (e: Exception) { note = errorText(e) }
-        }
-    }
-
     /** The loaded servers that are not looked up yet (25 at a time): Roblox's join answer gives each one's data centre, address and start time; the place comes from RoSeal's list
      *  or ipwho.is, whichever the person allowed. */
-    fun locate() {
+    fun locate(auto: Boolean = false) {
         val p = place ?: return
-        if (locating) return
-        if (signedIn == null) { srvNote = "Sign in first: this needs your account."; return }
+        if (locating) { if (auto) autoAgain[0] = true; return }                      // (the look-up of the old list is ending: this one follows)
+        if (signedIn == null) { if (!auto) srvNote = "Sign in first: this needs your account."; return }
         val todo = servers.filter { it.id !in started }.take(25)
-        if (todo.isEmpty()) { srvNote = if (servers.isEmpty()) "Press Find servers first." else "Every loaded server is looked up already."; return }
+        if (todo.isEmpty()) { if (!auto) srvNote = if (servers.isEmpty()) "Press Find servers first." else "Every loaded server is looked up already."; return }
         val useRoseal = sv.prefs.bool("geo.roseal", false)
         val useIpwho = sv.prefs.bool("geo.allowed", false)
         locating = true; stopLocate[0] = false
@@ -466,6 +442,37 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 }
             } finally { locating = false }
             srvNote = "Looked up $looked of ${todo.size} server(s), $located located." + (problems.firstOrNull()?.let { " ${problems.size} could not be looked up: $it" } ?: "")
+            if (autoAgain[0]) {
+                autoAgain[0] = false
+                if (Geo.autoWanted(sv.prefs.bool("geo.auto", false), sv.prefs.bool("geo.roseal", false), sv.prefs.bool("geo.allowed", false), signedIn != null)) locate(true)
+            }
+        }
+    }
+
+    fun findServers(reset: Boolean) {
+        val p = place ?: return
+        if (srvBusy || (!reset && cursor.isEmpty())) return                         // one page at a time: pressing again meanwhile does nothing
+        srvBusy = true; srvNote = "Looking for servers…"
+        if (reset) { places.clear(); started.clear(); versions.clear(); mapFilter = null; stopLocate[0] = true }          // (a look-up of the old list ends)
+        val s0 = sort
+        scope.launch {
+            try {
+                val (s, n) = sv.api.gameServers(p, s0, if (reset) "" else cursor)
+                servers = if (reset) s else servers + s.filter { x -> servers.none { it.id == x.id } }
+                cursor = n
+                srvNote = if (servers.isEmpty()) "No public servers are open right now." else "${servers.size} servers" + if (n.isNotEmpty()) "  (more available)" else ""
+                if (Geo.autoWanted(sv.prefs.bool("geo.auto", false), sv.prefs.bool("geo.roseal", false), sv.prefs.bool("geo.allowed", false), signedIn != null)) locate(true)
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { srvNote = "The servers could not be loaded: ${errorText(e)}" } finally { srvBusy = false }
+        }
+    }
+
+    /** The game's community wiki from RoSeal's list of game links (only after the person allowed RoSeal's data service). */
+    fun openWiki() {
+        scope.launch {
+            try {
+                val links = sv.rosealLinks.linksFor(card.universeId)
+                if (links.isEmpty()) note = "RoSeal's list has no wiki for this game." else openUrl(ctx, links[0].url)
+            } catch (e: CancellationException) { throw e } catch (e: GeoException) { note = "The wiki could not be found: ${e.message}" } catch (e: Exception) { note = errorText(e) }
         }
     }
 

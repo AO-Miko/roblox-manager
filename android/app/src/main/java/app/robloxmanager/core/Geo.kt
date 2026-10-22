@@ -46,6 +46,9 @@ object Geo {
         return if (reserved) null else o.joinToString(".")
     }
 
+    /** Whether servers are looked up by themselves once they are listed: the person switched that on, allowed at least one service, and is signed in. */
+    fun autoWanted(autoOn: Boolean, rosealAllowed: Boolean, ipwhoAllowed: Boolean, signedIn: Boolean) = autoOn && (rosealAllowed || ipwhoAllowed) && signedIn
+
     /** '128.116.44.33' -> '128.116.44' */
     fun blockOf(ip: String) = ip.split(".").take(3).joinToString(".")
 

@@ -27,6 +27,11 @@ class GeoError(Exception):
     pass
 
 
+def auto_wanted(auto_on, roseal_allowed, ipwho_allowed, signed_in):
+    """Whether servers are looked up by themselves once they are listed: the person switched that on, allowed at least one service, and is signed in."""
+    return bool(auto_on and (roseal_allowed or ipwho_allowed) and signed_in)
+
+
 def public_ipv4(text):
     """The address as text when it is a public IPv4 address (the only kind that is ever looked up), else None."""
     try:

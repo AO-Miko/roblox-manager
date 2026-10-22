@@ -13,7 +13,7 @@ import settings
 FORMAT = 1
 MAX_BYTES = 5_000_000
 APP = "roblox-manager"
-PRIVATE = {"geo.allowed", "geo.roseal"}          # agreements are given on each device, so they are neither saved nor restored
+PRIVATE = {"geo.allowed", "geo.roseal", "geo.auto"}          # agreements are given on each device, so they are neither saved nor restored
 
 
 class BackupError(Exception):
