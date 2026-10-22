@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.9.0.0.0",
+    "date": "2026-10-22",
+    "changes": [
+      "New Beta channel in Settings (PC) and Info > Updates (phone): get every new version before it goes to everybody else; you can go back to Stable at any time and keep your version until Stable catches up",
+      "Beta versions are published on a beta branch and as GitHub pre-releases, and the same tested build is later made the stable one",
+      "Fixed: the Windows updater could not read release tags with five numbers"
+    ]
+  },
+  {
     "version": "1.8.0.0.0",
     "date": "2026-10-22",
     "changes": [

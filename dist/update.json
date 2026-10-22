@@ -1,7 +1,7 @@
 {
-  "versionName": "1.8.0.0.0",
-  "versionCode": 17,
+  "versionName": "1.9.0.0.0",
+  "versionCode": 18,
   "apk": "roblox-manager.apk",
-  "sha256": "2ae2678a440b0c6a90267ae2904ff86416e285d8b17c7069ef9c0a2563a6a447",
-  "notes": "Versions now have five numbers: R.B.S.F.D = complete rework . big feature change . small feature change . bug fix . design rework; every update raises exactly one by 1 and they never go down (only a rework resets the others)|Phone: the Staff List (everybody) and an Admin overview (admin role and higher) are under More, using the same signed role list as the PC|The updates are compared number by number (1.7.0 counts as 1.7.0.0.0)"
+  "sha256": "fec88ca269e8a7281ca50570dac0b97b52681d13c2716517812491030373b906",
+  "notes": "New Beta channel in Settings (PC) and Info > Updates (phone): get every new version before it goes to everybody else; you can go back to Stable at any time and keep your version until Stable catches up|Beta versions are published on a beta branch and as GitHub pre-releases, and the same tested build is later made the stable one|Fixed: the Windows updater could not read release tags with five numbers"
 }
