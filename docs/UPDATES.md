@@ -4,7 +4,7 @@ One GitHub repository is the update server for all three apps. Everything is pub
 
 | | Linux app | Windows app | Android app |
 |---|---|---|---|
-| Reads | the `linux/` folder of the newest commit (needs `git`) | the newest GitHub release: `roblox-manager-app-X.Y.Z.tar.gz` + `.sig` | `dist/update.json` and `dist/roblox-manager.apk` |
+| Reads | the `linux/` folder of the newest commit (needs `git`) | the newest GitHub release: `roblox-manager-app-X.Y.Z.F.D.tar.gz` + `.sig` | `dist/update.json` and `dist/roblox-manager.apk` |
 | When | every launch (`roblox-manager` launcher runs `updater.py --boot`) | every launch (`launcher.py` runs the same updater) | every start of the app |
 | Trust | the commit must be SSH-signed by the key in `tools/trust/allowed_signers`, and descend from the installed one (no rollbacks) | the package must be SSH-signed (`ssh-keygen -Y sign -n roblox-manager-release`) by that key, checked in plain Python (`sshsig.py`), must be newer, and its `VERSION` must match the release | APK SHA-256 must match `update.json`; Android only installs it if signed with the same key as the installed app |
 | Install | automatic, previous version kept for rollback (Info → Updates → Go back) | automatic, previous version kept for rollback | Android always asks the user to confirm the install (one-time "allow installs from this app") |
@@ -24,10 +24,10 @@ a Secret Service wallet) and `linux/updater.py` (release backend instead of git)
 ## Publishing a release
 
 ```
-tools/release.sh 1.2.0 "one change|another change" --push
+tools/release.sh small "one change|another change" --push        # KIND: rework | big | small | fix | design (see "Version numbers")
 ```
 
-It bumps the versions, adds the entry to the update log (`CHANGELOG.json`, shown in the apps under Info → Updates), runs the Android unit tests, builds the
+It works out the next version from KIND and bumps it, adds the entry to the update log (`CHANGELOG.json`, shown in the apps under Info → Updates), runs the Android unit tests, builds the
 signed APK, writes `dist/update.json`, makes a signed commit and tag, builds the signed app package and the Windows zip (`tools/build_windows.py`, no Windows
 machine needed), pushes, and publishes the GitHub Release with the APK, the Linux package, the Windows zip, the signed app package and `SHA256SUMS.txt`.
 The release starts as a draft and is published after all files are uploaded; publishing starts the `Windows` workflow, which tests the Windows package on a
@@ -49,7 +49,7 @@ No new version is needed. GitHub's cache can delay a change by a few minutes. Th
 
 ## The Windows installer
 
-`Roblox-Manager-Setup-X.Y.Z.exe` is a normal Windows setup program made with Inno Setup (`tools/windows/installer.iss`, built by `tools/build_installer.sh`, which runs
+`Roblox-Manager-Setup-X.Y.Z.F.D.exe` is a normal Windows setup program made with Inno Setup (`tools/windows/installer.iss`, built by `tools/build_installer.sh`, which runs
 Inno Setup under Wine so a release can be made on Linux; Wine's menu-builder is switched off so the build adds nothing to the build computer). It contains the same
 folder as the zip. The wizard and the uninstaller show live details (every folder created or deleted, every file with its size, totals), also written to the
 setup log (`/LOG=file`); the setup finds new files by looking at the install folder at every progress step, because Inno Setup has no per-file event. Per-user install (no administrator rights) into a folder the person chooses (default `%APPDATA%\RobloxManager\App`), optional Start menu entry and
@@ -59,7 +59,7 @@ the released file on a real Windows machine (defaults, custom folder, optional i
 
 ## The Windows package
 
-`roblox-manager-windows-X.Y.Z.zip` holds a folder with the official embeddable Python, PySide6 and requests (Windows builds from PyPI, with the Qt parts the
+`roblox-manager-windows-X.Y.Z.F.D.zip` holds a folder with the official embeddable Python, PySide6 and requests (Windows builds from PyPI, with the Qt parts the
 app does not use left out), the app (`app/`), the trusted public key (`trust/`) and `Install.cmd` / `Uninstall.cmd` / `Roblox Manager.cmd`.
 Updates only replace `app/`; Python and the libraries change only with a new zip, so a release that needs a new library must say so in its notes.
 The program is not signed with a paid code-signing certificate, so Windows SmartScreen asks for confirmation on the first run.

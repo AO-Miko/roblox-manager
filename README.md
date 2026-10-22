@@ -1,10 +1,26 @@
 # Roblox Manager
 
 Manage your Roblox accounts from a desktop app (Linux and Windows) or an Android phone app: friends and requests, followers, blocked users, groups,
-VIP servers, Robux and transactions, a request log, and several accounts side by side. Both apps follow Roblox's own rate limits and
-update themselves from this repository.
+VIP servers, Robux and transactions, a request log, and several accounts side by side. The apps follow Roblox's own rate limits and
+update themselves from this repository, on a **Stable** or an early-access **Beta** channel of your choice.
 
-Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/releases/latest).
+Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/releases/latest) (the files are named with the version, for example
+`Roblox-Manager-Setup-1.9.0.0.0.exe`; see [Versions](#versions)).
+
+## What is in it
+
+| Page | What it does |
+|---|---|
+| **Home** | sign in (password + 2-step, built-in browser, or cookie), your account at a glance, several accounts side by side |
+| **People** | friends, requests, followers, following, blocked users, find a user, all with bulk actions |
+| **Groups** | your groups: members and ranks, join requests, roles, audit log, bans, shout; leave several at once |
+| **VIP servers** | every private server you have: switch on/off, renew, duplicates, bulk actions |
+| **Money** | Robux balance, pending, totals per period, transaction history, CSV export |
+| **Request log** | every request the app sends to Roblox and how Roblox answered |
+| **API Explorer** (PC) | send any Roblox web API request and read the answer |
+| **Staff List** | who is on the staff, from the owner down, with their Roblox profiles (see [docs/ADMIN.md](docs/ADMIN.md)) |
+| **Admin** (PC; overview on the phone) | ban and unban Roblox user ids; only for accounts with the admin role or higher |
+| **Info** | settings, updates (with the Beta channel choice) and the update log: what changed in each version |
 
 ## About this project
 
@@ -40,7 +56,7 @@ cd roblox-manager
 tools/install-linux.sh
 ```
 
-or from the release package (`roblox-manager-linux-X.Y.Z.tar.gz`):
+or from the release package (`roblox-manager-linux-X.Y.Z.F.D.tar.gz`):
 
 ```sh
 tar xzf roblox-manager-linux-*.tar.gz
@@ -51,10 +67,8 @@ tools/install-linux.sh
 This puts the app in `~/.local/share/roblox-manager`, the `roblox-manager` command in `~/.local/bin` (make sure that folder is in your `PATH`), and a
 menu entry. Start it from the menu or with `roblox-manager`. Sign in on the **Home** page.
 
-**Finding your way around.** On the PC the pages are in a side bar (Home, People, Groups, VIP servers, Money, Request log, API Explorer, Info) with counts next to the names. The button at the top of the side bar collapses it to icons, and every group (Social, Roblox, Tools, Staff) has an arrow that folds it; both are remembered. **Ctrl+K** opens a search that jumps to any page, setting, account, and to any friend, group or VIP server that is loaded; **Ctrl+1 ... Ctrl+8** open the pages and **F5** reloads the page you are on. The **Staff List** page shows the people on the staff, from the owner down, with their Roblox profiles; accounts with the admin role or higher also get an **Admin** page (see [docs/ADMIN.md](docs/ADMIN.md)). On the phone the Staff List and the Admin overview are under **More**. The four main pages and **More** (Money, Request log, Info) are in a bottom bar, the magnifier at the top searches pages and settings, sections have arrows that fold them (More, Settings, Home), and the round button switches accounts from any page.
-
 **Updates:** every time you start it, the launcher checks this repository (a few seconds at most, never blocking) and installs a newer version if the
-commit is signed by the release key. *Settings → Updates* shows the version, lets you check now, and go back to the previous version.
+commit is signed by the release key. *Info → Updates* shows the version, lets you check now, choose the **Stable or Beta channel**, and go back to the previous version.
 Uninstall: delete `~/.local/share/roblox-manager`, `~/.local/bin/roblox-manager` and `~/.local/share/applications/roblox-manager.desktop`
 (your settings stay in `~/.config/roblox-manager` until you delete them).
 
@@ -62,7 +76,7 @@ Uninstall: delete `~/.local/share/roblox-manager`, `~/.local/bin/roblox-manager`
 
 Windows 10 or 11 (64-bit). Nothing else needs to be installed: it brings its own Python and libraries.
 
-1. Download **`Roblox-Manager-Setup-X.Y.Z.exe`** from the [latest release](https://github.com/AO-Miko/roblox-manager/releases/latest) (about 140 MB) and run it.
+1. Download **`Roblox-Manager-Setup-X.Y.Z.F.D.exe`** from the [latest release](https://github.com/AO-Miko/roblox-manager/releases/latest) (about 140 MB) and run it.
 2. Windows SmartScreen may say "Windows protected your PC", because the program is not signed with a paid certificate. Choose **More info → Run anyway**.
    You can check the download against `SHA256SUMS.txt` from the release (`Get-FileHash Roblox-Manager-Setup-*.exe` in PowerShell).
 3. The setup asks where to install (**any folder you can write to**; the default is `%APPDATA%\RobloxManager\App`) and offers, all optional:
@@ -73,29 +87,49 @@ Windows 10 or 11 (64-bit). Nothing else needs to be installed: it brings its own
    While it installs, the setup shows live details: every folder it creates and every file it puts in place with its size, the shortcuts, and the
    entry in the Apps list (nothing is downloaded: everything is inside the setup). The uninstaller shows every file and folder it deletes the same way.
 4. It appears in **Settings → Apps → Installed apps**, where you can uninstall it. The uninstaller asks whether to delete your settings and saved accounts too.
-   Silent install for scripts: `Roblox-Manager-Setup-X.Y.Z.exe /VERYSILENT /DIR="D:\Apps\RobloxManager" /TASKS="startmenu,desktopicon"`
+   Silent install for scripts: `Roblox-Manager-Setup-X.Y.Z.F.D.exe /VERYSILENT /DIR="D:\Apps\RobloxManager" /TASKS="startmenu,desktopicon"`
    (leave `/TASKS=` empty for no shortcuts); silent uninstall: `unins000.exe /VERYSILENT /REMOVEDATA=yes` (omit `/REMOVEDATA` to keep your data).
 
-**No installer?** `roblox-manager-windows-X.Y.Z.zip` is a portable copy: extract it and run `Roblox Manager.cmd` (or `Install.cmd` for a simple install).
+**No installer?** `roblox-manager-windows-X.Y.Z.F.D.zip` is a portable copy: extract it and run `Roblox Manager.cmd` (or `Install.cmd` for a simple install).
 
 **Updates:** every time you start it, the app asks GitHub for the newest release (a few seconds at most, never blocking). If there is one, it
 downloads the signed update package, checks that it is signed with the release key and is newer, and installs it; the next start uses it.
-*Info → Updates* shows the version, checks now, and goes back to the previous version. Re-running a newer setup also works.
+*Info → Updates* shows the version, checks now, lets you choose the **Stable or Beta channel**, and goes back to the previous version. Re-running a newer setup also works.
 
 ## Install on Android
 
 Android 8.0 or newer.
 
-1. On the phone, open the [latest release](https://github.com/AO-Miko/roblox-manager/releases/latest) and download `roblox-manager-X.Y.Z.apk`
+1. On the phone, open the [latest release](https://github.com/AO-Miko/roblox-manager/releases/latest) and download `roblox-manager-X.Y.Z.F.D.apk`
    (or copy it from your computer).
 2. Open the file. Android asks you to allow installing apps from this source (your browser or file manager): allow it, then press **Install**.
 3. Open **Roblox Manager** and sign in with your password (2-step codes supported), the built-in browser (handles CAPTCHA and passkeys), or a pasted cookie.
 
 **Updates:** at every start the app checks this repository for a newer build, downloads it, verifies its checksum and offers an **Install** button
 (Android always asks you to confirm an install; it only accepts an update signed with the same key as the installed app, so keep updating from this
-repository rather than from other copies). *Settings → Updates* shows the status and the update address.
+repository rather than from other copies). *Info → Updates* shows the status and the update address, and has the **Beta channel** switch.
 
 To verify a download, compare it with `SHA256SUMS.txt` from the same release (`sha256sum -c SHA256SUMS.txt`).
+
+## Finding your way around
+
+- **PC:** the pages are in a side bar with counts next to the names (a pending-requests count on People, the number of groups and servers). The button at the top of the side bar
+  collapses it to icons, and every group (Social, Roblox, Tools, Staff) has an arrow that folds it; both are remembered. A narrow window collapses it by itself and a page that
+  does not fit scrolls instead of forcing the window wide.
+- **Ctrl+K** opens a search that jumps to any page, setting or account, and to any friend, group, VIP server or staff member that is loaded. **Ctrl+1 ... Ctrl+9** open the
+  pages in order and **F5** (or the reload button in the page header) reloads the page you are on.
+- **Phone:** four main pages and **More** (Money, Request log, Staff List, Admin overview, Info) are in a bottom bar. The magnifier at the top searches pages and settings, the
+  round button switches accounts from any page, sections have arrows that fold them (More, Settings, Home), and pages you have opened keep what they loaded.
+
+## Versions
+
+The version has five numbers, `R.B.S.F.D` = **R**ework . **B**ig feature . **S**mall feature . bug **F**ix . **D**esign. An update raises exactly one of them by 1, and they never
+go down; only a complete rework (R) sets the other four back to 0. Details in [docs/UPDATES.md](docs/UPDATES.md).
+
+## Stable and Beta
+
+In *Info → Updates* (PC and phone) you can join the **Beta channel**: you get every new version before it goes to everybody else (less tested, may have bugs). Beta versions live on the
+`beta` branch and are published as GitHub pre-releases. You can go back to Stable at any time and keep your version until Stable catches up: nothing older is ever installed.
 
 ## How your data is handled
 
@@ -128,15 +162,21 @@ with me, no analytics, no telemetry and no ads.
 **What goes over the network**
 - To Roblox: the requests for the features you use (friends, groups, VIP servers, Robux ...), with your cookie. Pictures are downloaded from Roblox's
   image servers without any cookie.
-- To GitHub: the update check (`github.com` for Linux, `api.github.com` and the release download for Windows, `raw.githubusercontent.com` for Android).
-  It sends no account data; GitHub can of course see your IP address like for any download.
+- To Roblox, for the Staff List: the public profile, picture and counts of the people on the staff (the same pages anyone can open on roblox.com), without your cookie.
+- To GitHub: the update check (`github.com` for Linux, `api.github.com` and the release download for Windows, `raw.githubusercontent.com` for Android), and the ban
+  list and staff roles (`raw.githubusercontent.com`). It sends no account data; GitHub can of course see your IP address like for any download.
 - Nothing else. There is no crash reporting and no third-party service.
 
-**Ban list**: the maintainer can ban a Roblox user id from using the apps (for example for abusing them). The list is a small public file in this repository
-(`dist/bans.json`, with the user id and a short reason), signed with the release key so nobody else can add to it. The apps download it at start, at every sign-in and
+**Ban list**: the maintainer and the admins can ban a Roblox user id from using the apps (for example for abusing them). The list is a small public file in this repository
+(`dist/bans.json`, with the user id, the reason, who banned them and when), signed with the release key so nobody else can add to it. The apps download it at start, at every sign-in and
 every ten minutes; a banned account is signed out and forgotten at once, even in the middle of a session, and is told why. Nothing about you is sent (it is a plain
 download), the last good list is kept on your device, and if it cannot be downloaded nobody is locked out. It is a check in open-source code, so it stops casual misuse,
 not someone who modifies the program.
+
+**Staff roles**: a second small signed file, `dist/roles.json`, lists the Roblox user ids of the staff and their role (owner, co-owner, senior admin, admin, trusted friend). It is
+signed with the same release key and downloaded like the ban list. It drives the Staff List page that everybody can see, and the Admin page that only admin and up get. Bans can only
+be published by someone who holds the release key; the roles decide who may ban whom in the Admin page (a higher role acts on lower ones, nobody acts on themselves or on the same
+or a higher role, and a ban needs a reason). See [docs/ADMIN.md](docs/ADMIN.md).
 
 **Spending**: the apps never buy anything by themselves. The Android app has no purchase feature, and the Linux app always shows the price and asks first
 before anything that costs Robux.
@@ -148,18 +188,18 @@ installed app. See [docs/UPDATES.md](docs/UPDATES.md).
 ## Contributing and security
 
 Pull requests from forks are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). They go to the `main` branch and only the maintainer can merge them.
-The `release` branch is what the apps update from; it only receives signed release commits. To report a security problem privately, see
+The apps update from two other branches that only receive signed release commits: `release` (Stable) and `beta` (Beta). To report a security problem privately, see
 [SECURITY.md](SECURITY.md). Everyone is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## For maintainers
 
-`tools/release.sh 1.2.0 "one change|another change" --push` (the `|` splits the bullets of the update log shown in both apps under **Info → Updates**) builds and signs everything, updates `dist/update.json`, pushes the `release` branch and publishes a
-GitHub Release with the APK and the Linux package. See [docs/UPDATES.md](docs/UPDATES.md) for how updates and keys work.
+```
+tools/release.sh KIND "one change|another change" [--beta] [--push]     KIND: rework | big | small | fix | design
+tools/promote.sh --push                                                the tested beta build becomes the stable version
+tools/ban.sh ban|unban|list ...                                        the signed ban list (the Admin page runs this)
+tools/roles.sh set|remove|list ...                                     the signed staff roles
+```
 
-## Versions
-
-The version has five numbers, `R.B.S.F.D`: complete rework . big feature change . small feature change . bug fix . design rework. An update raises exactly one of them by 1; they never go down (only a complete rework sets the others back to 0). Details in [docs/UPDATES.md](docs/UPDATES.md).
-
-## Beta channel
-
-In Settings > Updates (PC) or Info > Updates (phone) you can join the **beta channel**: you get every new version before it goes to everybody else (less tested). You can go back to Stable at any time and keep your version until Stable catches up. Details in [docs/UPDATES.md](docs/UPDATES.md).
+`release.sh` works out the next version from the kind of change, builds and signs everything, updates `dist/update.json`, pushes the branch and publishes a GitHub release (a
+**pre-release** with `--beta`, from the `beta` branch). The `|` splits the bullets of the update log shown in the apps under **Info → Updates**. See
+[docs/UPDATES.md](docs/UPDATES.md) for how updates, channels and keys work, and [docs/ADMIN.md](docs/ADMIN.md) for roles and bans.

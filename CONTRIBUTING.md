@@ -6,16 +6,17 @@ ideas and pull requests are welcome.
 ## How it works
 
 - Everyone contributes through **pull requests from a fork**. Nobody else has write access, and **only the maintainer merges**.
-- Pull requests go to the **`main`** branch. `release` is the branch the apps update from: it only receives signed release commits made by the maintainer,
-  so please never target it.
+- Pull requests go to the **`main`** branch. `release` (Stable) and `beta` (Beta) are the branches the apps update from: they only receive signed release commits made by the
+  maintainer, so please never target them.
 - Checks must pass before a pull request can be merged (the tests on Linux, Windows and Android), and the maintainer reviews every change.
-- Releases (and the signing keys) are the maintainer's alone. A merged pull request is not released automatically; it ships with the next release.
+- Releases (and the signing keys) are the maintainer's alone. A merged pull request is not released automatically; it ships with the next release, first as a beta.
+- Version numbers have five numbers (`R.B.S.F.D`, see `docs/UPDATES.md`) and are set by the maintainer at release time: please don't change `VERSION` files.
 
 ## Before you start
 
 - For anything bigger than a small fix, open an issue first so we don't waste your time.
 - Changes to the **update code, signature checks, trusted keys, sign-in or cookie handling** (`linux/updater.py`, `linux/sshsig.py`, `linux/vault.py`,
-  `linux/auth.py`, `linux/rbx.py`, `tools/trust/`, `android/.../core/AppUpdate.kt`, `Accounts.kt`, `PasswordLogin.kt`, the workflows and the release scripts) get
+  `linux/auth.py`, `linux/rbx.py`, `linux/bans.py`, `linux/roles.py`, `linux/adminops.py`, `dist/`, `tools/trust/`, `android/.../core/AppUpdate.kt`, `Accounts.kt`, `PasswordLogin.kt`, the workflows and the release scripts) get
   extra scrutiny and are slower to review. Explain the security reasoning in the pull request.
 - Security problems: don't open a public issue, see [SECURITY.md](SECURITY.md).
 
@@ -23,7 +24,7 @@ ideas and pull requests are welcome.
 
 - `linux/` is the desktop app (Python and Qt/PySide6), used for **both Linux and Windows**. System differences are isolated in `linux/plat.py`,
   `linux/vault.py` and `linux/updater.py`.
-- `android/` is the Android app (Kotlin, Jetpack Compose). `tools/` holds the build and release scripts, `tests/` the tests, `docs/UPDATES.md` explains updates.
+- `android/` is the Android app (Kotlin, Jetpack Compose). `tools/` holds the build and release scripts, `tests/` the tests, `docs/UPDATES.md` explains updates and channels, `docs/ADMIN.md` roles and bans.
 
 ## Running the tests
 
