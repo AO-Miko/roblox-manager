@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.14.4.3.3",
+    "date": "2026-10-22",
+    "changes": [
+      "Android: the phone's own 'Allow notifications?' question now also appears when you press Test on the Alerts page, and at start when alerts are on but the phone was never asked (at most twice)"
+    ]
+  },
+  {
     "version": "1.14.4.2.3",
     "date": "2026-10-22",
     "changes": [
