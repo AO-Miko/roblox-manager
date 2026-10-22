@@ -37,7 +37,7 @@ class UpdateRequiredPage(QWidget):
         lay.addWidget(self.status)
         buttons = QHBoxLayout()
         buttons.addStretch()
-        self.b_page = button("Open the download page", lambda: open_url(policy.RELEASES_URL), "In case the update does not work: download the newest version yourself")
+        self.b_page = button("Open the download page", lambda: open_url(policy.releases_url()), "In case the update does not work: download the newest version yourself")
         self.b_update = button("Update now", self.update_now, "Download and install the newest version", primary=True)
         self.b_restart = button("Restart now", self.restart_now, primary=True)
         self.b_restart.hide()

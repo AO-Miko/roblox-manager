@@ -76,11 +76,13 @@ json.dump({"versionName": v, "versionCode": int(c), "apk": "roblox-manager.apk",
 open("dist/update.json", "a").write("\n")
 PY
 
-POLICY_FILES=""
+POLICY_FILES="dist/policy.json dist/policy.json.sig"
 if [[ -z "$BETA" ]]; then
   echo "== Update policy (which versions were released to everybody)"
   tools/policy.sh --with "$VERSION"
-  POLICY_FILES="dist/policy.json dist/policy.json.sig"
+else
+  echo "== Update policy for the Beta channel (every release, betas included)"
+  tools/policy.sh --all --with "$VERSION"
 fi
 
 echo "== Commit and tag (signed)"

@@ -24,15 +24,16 @@ object Versions {
     }
 }
 
-class PolicyList(val serial: Long, val limit: Int, val stable: List<String>)
+class PolicyList(val serial: Long, val limit: Int, val stable: List<String>, val beta: List<String>? = null)
 
 /** How far behind this app is: [blocked] when [behind] reaches the policy's [limit] (see linux/policy.py). */
 class PolicyStatus(val blocked: Boolean, val behind: Int, val limit: Int, val latest: String, val installed: String)
 
 /**
- * Forced updates. The maintainer publishes dist/policy.json (+ .sig, signed with the release key) listing every version released to everybody. An app that has
- * missed [limit] (2) of them cannot be used until it is updated: a page covers the whole app. Nobody is signed out and nothing is deleted. A beta (newer than the
- * list) is never behind. Only a valid signature is believed, a newer serial replaces an older one, the last good file is kept, and if none was ever downloaded
+ * Forced updates. The maintainer publishes dist/policy.json (+ .sig, signed with the release key) listing every version released to everybody ("stable") and, in the
+ * file on the beta branch, every release including the betas ("beta"). An app counts the list of its own channel (the Beta channel falls back to "stable" when there is no
+ * "beta" list; [useBeta]) and, having missed [limit] (2) of them, cannot be used until it is updated: a page covers the whole app. Nobody is signed out and nothing is deleted.
+ * A version newer than the list is never behind. Only a valid signature is believed, a newer serial replaces an older one, the last good file is kept, and if none was ever downloaded
  * (or the server cannot be reached) nobody is locked out.
  */
 class PolicyStore(
@@ -40,25 +41,33 @@ class PolicyStore(
     private val trusted: ByteArray = BanStore.RELEASE_KEY,
     private val http: OkHttpClient = RobloxClient.defaultHttp().newBuilder().followRedirects(true).followSslRedirects(true).build(),
     private val baseUrl: String = BanStore.BASE_URL,
+    private val useBeta: Boolean = false,
 ) {
     companion object {
         const val NAMESPACE = "roblox-manager-policy"
         const val DEFAULT_LIMIT = 2
         const val MAX_BYTES = 100_000L
         const val RELEASES_URL = "https://github.com/AO-Miko/roblox-manager/releases/latest"
+        const val RELEASES_ALL_URL = "https://github.com/AO-Miko/roblox-manager/releases"           // (the Beta channel: the newest version may be a pre-release)
+        /** The beta branch's copy of the policy (every beta release writes it there). */
+        val BETA_BASE_URL = BanStore.BASE_URL.replace("/release/dist/", "/beta/dist/")
 
         fun parse(data: ByteArray, sig: String, trusted: ByteArray = BanStore.RELEASE_KEY): PolicyList? {
             if (!SshSig.verify(data, sig, trusted, NAMESPACE)) return null
             val d = try { AppJson.parseToJsonElement(String(data, Charsets.UTF_8)).obj } catch (_: Exception) { null } ?: return null
             val serial = d.long("serial") ?: return null
             val limit = (d.long("limit") ?: DEFAULT_LIMIT.toLong()).toInt().coerceAtLeast(1)
-            val list = ArrayList<String>()
-            for (e: JsonElement in (d["stable"] as? JsonArray) ?: JsonArray(emptyList())) {
-                val v = (e as? JsonPrimitive)?.content ?: return null
-                if (!Versions.valid(v)) return null
-                list.add(v)
+            fun versions(key: String): List<String>? {
+                val arr = d[key] as? JsonArray ?: return null
+                val list = ArrayList<String>()
+                for (e: JsonElement in arr) {
+                    val v = (e as? JsonPrimitive)?.content ?: throw IllegalArgumentException("not a version")
+                    if (!Versions.valid(v)) throw IllegalArgumentException("not a version")
+                    list.add(v)
+                }
+                return list
             }
-            return PolicyList(serial, limit, list)
+            return try { PolicyList(serial, limit, versions("stable") ?: emptyList(), versions("beta")) } catch (_: IllegalArgumentException) { null }
         }
     }
 
@@ -75,7 +84,7 @@ class PolicyStore(
 
     fun status(installed: String): PolicyStatus = try {
         val p = load()
-        val newer = p.stable.filter { Versions.compare(it, installed) > 0 }.associateBy { Versions.key(it) }          // (1.9.0.0 and 1.9.0.0.0 count once)
+        val newer = (if (useBeta && p.beta != null) p.beta else p.stable).filter { Versions.compare(it, installed) > 0 }.associateBy { Versions.key(it) }          // (1.9.0.0 and 1.9.0.0.0 count once)
         val latest = newer.values.maxWithOrNull { a, b -> Versions.compare(a, b) } ?: installed
         PolicyStatus(newer.size >= p.limit, newer.size, p.limit, latest, installed)
     } catch (_: Throwable) { PolicyStatus(false, 0, DEFAULT_LIMIT, installed, installed) }
@@ -102,7 +111,7 @@ class PolicyStore(
         }
         val got = try { parse(data, sig, trusted) } catch (_: Throwable) { null } ?: return null
         val have = load()
-        if (got.serial < have.serial || (got.serial == have.serial && got.limit == have.limit && got.stable == have.stable)) return false
+        if (got.serial < have.serial || (got.serial == have.serial && got.limit == have.limit && got.stable == have.stable && got.beta == have.beta)) return false
         try {
             file.parentFile?.mkdirs()
             val tmp = File(file.path + ".tmp")

@@ -67,6 +67,40 @@ class PolicyTest {
         server.shutdown()
     }
 
+    @Test fun theBetaChannelCountsEveryReleaseAndTheStableChannelItsOwn() {
+        val dir = File("src/test/resources/policy-beta")
+        val bdata = File(dir, "policy.json").readBytes(); val bsig = File(dir, "policy.json.sig").readText(); val bkey = SshSig.keyOf(File(dir, "pub.txt").readText())
+        val p = PolicyStore.parse(bdata, bsig, bkey)!!
+        assertEquals(listOf("1.8.0.0.0", "1.9.0.0.0"), p.stable); assertEquals(5, p.beta!!.size)
+        assertNull(PolicyStore.parse(String(bdata).replace("1.9.3.0.0", "x").toByteArray(), bsig, bkey))                    // a tampered list is refused
+        assertNull(PolicyStore.parse(res("policy.json").readBytes(), sig, key)!!.beta)                                          // an old policy has no beta list
+        assertTrue(PolicyStore.BETA_BASE_URL.endsWith("/beta/dist/") && PolicyStore.BETA_BASE_URL.replace("/beta/", "/release/") == BanStore.BASE_URL)
+        for ((beta, want) in listOf(true to listOf(3, true), false to listOf(0, false))) {
+            val server = MockWebServer()
+            val http = okhttp3.OkHttpClient.Builder().addInterceptor { c ->
+                val r = c.request()
+                c.proceed(r.newBuilder().url(r.url.newBuilder().scheme("http").host(server.hostName).port(server.port).build()).build())
+            }.build()
+            val s = PolicyStore(File.createTempFile("policy", ".json").also { it.delete() }, bkey, http, "https://x.test/", useBeta = beta)
+            serve(server, String(bdata), bsig)
+            assertEquals(true, s.refresh())
+            val st = s.status("1.9.0.0.0")
+            assertEquals("beta=$beta", want[0], st.behind); assertEquals(want[1], st.blocked)
+            if (beta) {
+                assertEquals("1.9.3.0.0", st.latest); assertFalse(s.status("1.9.2.0.0").blocked); assertEquals(1, s.status("1.9.2.0.0").behind)
+                assertTrue(s.status("1.9.1.0.0").blocked); assertEquals(0, s.status("1.9.3.0.0").behind); assertEquals(0, s.status("1.9.9.0.0").behind)
+            }
+            server.shutdown()
+        }
+        val (old, server) = store()                                   // a beta store that gets a policy without a beta list counts the stable one
+        val s = PolicyStore(File.createTempFile("policy", ".json").also { it.delete() }, key, okhttp3.OkHttpClient.Builder().addInterceptor { c ->
+            val r = c.request(); c.proceed(r.newBuilder().url(r.url.newBuilder().scheme("http").host(server.hostName).port(server.port).build()).build())
+        }.build(), "https://x.test/", useBeta = true)
+        serve(server); assertEquals(true, s.refresh())
+        assertTrue(s.status("1.7.0").blocked); assertFalse(s.status("1.9.0.0.0").blocked)
+        server.shutdown()
+    }
+
     @Test fun nothingDownloadedMeansNobodyIsLockedOut() {
         val (s, server) = store()
         assertFalse(s.status("1.0.0").blocked)

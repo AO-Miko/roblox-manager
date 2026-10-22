@@ -121,6 +121,47 @@ check("the limit comes from the policy: with 3, two updates behind is fine", pub
 check("...and 1 locks even one update behind", publish(STABLE, 3, limit=1) is True and policy.status("1.8.0.0.0")["blocked"] and not policy.status("1.9.0.0.0")["blocked"])
 publish(STABLE, 4, limit=2)
 
+# ---------------------------------------------------------------- the channels count their own updates
+BETAS = STABLE + ["1.9.1.0.0", "1.9.2.0.0", "1.9.3.0.0"]
+
+
+def publish_beta(beta, serial, stable=STABLE):
+    obj = {"serial": serial, "limit": 2, "stable": stable}
+    if beta is not None:
+        obj["beta"] = beta
+    data, sig = sign(obj)
+    served.clear()
+    served.update({"policy.json": data, "policy.json.sig": sig.encode()})
+    return policy.refresh(get=fake_get, channel="beta")
+
+
+check("the Stable channel reads the release branch and the Beta channel the beta branch", policy.BASES["stable"].endswith("/release/dist/") and policy.BASES["beta"].endswith("/beta/dist/")
+      and policy.BASES["beta"].replace("/beta/", "/release/") == policy.BASES["stable"])
+check("a beta policy is stored on its own (serial 1 is accepted although the stable one is further on)", publish_beta(BETAS, 1) is True and policy.load("beta")[0] == 1 and policy.load("stable")[0] == 4)
+check("...in its own file", (tmp / "state" / "policy.cache.beta.json").exists() and (tmp / "state" / "policy.cache.json").exists())
+check("the Stable channel ignores the beta list: 1.9.0.0.0 is the newest stable, so nobody on stable is behind", policy.status("1.9.0.0.0", "stable")["behind"] == 0 and not policy.status("1.9.0.0.0", "stable")["blocked"])
+sb = policy.status("1.9.0.0.0", "beta")
+check("the Beta channel counts every release: 1.9.0.0.0 has three newer ones, so it is blocked and told the newest", sb["blocked"] and sb["behind"] == 3 and sb["latest"] == "1.9.3.0.0", sb)
+check("...one behind is fine, and the newest is not behind", not policy.status("1.9.2.0.0", "beta")["blocked"] and policy.status("1.9.2.0.0", "beta")["behind"] == 1 and policy.status("1.9.3.0.0", "beta")["behind"] == 0)
+check("...exactly two behind is blocked", policy.status("1.9.1.0.0", "beta")["blocked"] and policy.status("1.9.1.0.0", "beta")["behind"] == 2)
+check("a version newer than every release is never behind", policy.status("1.9.9.0.0", "beta")["behind"] == 0)
+check("a beta policy without a beta list counts the stable one", publish_beta(None, 2) is True and policy.status("1.7.0", "beta")["behind"] == 2 and policy.status("1.9.0.0.0", "beta")["behind"] == 0)
+publish_beta(BETAS, 3)
+def set_channel(name):
+    cfg = updater.load_config()
+    cfg["channel"] = name
+    updater.save_config(cfg)
+
+
+set_channel("beta")
+check("the channel is read from the app's settings: a beta app uses the beta list", policy.current_channel() == "beta" and policy.status("1.9.0.0.0")["blocked"] and policy.status("1.9.0.0.0")["behind"] == 3)
+set_channel("stable")
+check("...and back on stable it does not", policy.current_channel() == "stable" and not policy.status("1.9.0.0.0")["blocked"])
+bad = sign({"serial": 9, "stable": STABLE, "beta": ["x"]})
+served.clear(); served.update({"policy.json": bad[0], "policy.json.sig": bad[1].encode()})
+check("a beta list with something that is not a version is refused", policy.refresh(get=fake_get, channel="beta") is None and policy.load("beta")[0] == 3)
+publish(STABLE, 4, limit=2)
+
 # ---------------------------------------------------------------- the window
 w = MainWindow(rbx.Client(), auto_login=False)
 w.resize(1180, 760)

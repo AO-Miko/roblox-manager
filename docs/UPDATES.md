@@ -102,14 +102,19 @@ An app that has missed **two** updates cannot be used any more: a page covers th
 **Update now** button (and a link to the download page in case the update does not work). Nobody is signed out and nothing is deleted: after the update everything is as it was.
 It is checked at every start and every ten minutes.
 
-- `dist/policy.json` (signed with the release key as `policy.json.sig`) lists every version that was released to everybody, betas not included:
-  `{"serial": 12, "limit": 2, "stable": ["1.8.0.0.0", "1.9.0.0.0", ...]}`.
-- An app counts how many versions in that list are newer than itself (1.9.0.0 and 1.9.0.0.0 are one version). `limit` or more: locked. A beta that is newer than the list is never behind.
+- `dist/policy.json` (signed with the release key as `policy.json.sig`) lists the versions that were released: `"stable"` = every version released to everybody, betas not included, and, in
+  the file on the **beta branch**, also `"beta"` = every release including the betas: `{"serial": 12, "limit": 2, "stable": ["1.8.0.0.0", ...], "beta": ["1.8.0.0.0", ..., "1.14.4.3.3"]}`.
+- **Each channel counts the updates of its own channel.** An app on the Stable channel reads the file on the `release` branch and counts `"stable"`; an app on the Beta channel reads the file on
+  the `beta` branch and counts `"beta"` (without a `"beta"` list it counts `"stable"`). The two files have their own serial numbers and their own copy on the device.
+- An app counts how many versions in its list are newer than itself (1.9.0.0 and 1.9.0.0.0 are one version). `limit` or more: locked. A version that is newer than the list is never behind.
+  So a Beta app that missed two betas is locked and its **Update now** gets the newest beta; a Stable app is locked when two Stable versions came out without it. (The Stable list had only
+  three versions at the time this was written, so no Stable app could be two behind yet; the Beta list moves with every beta.)
 - Like the ban list: only a valid signature is believed, a newer `serial` replaces an older one, the last good file is kept for offline use, and if it was never downloaded or the server cannot be
   reached nobody is locked out.
-- `tools/policy.sh` writes and signs it from the stable GitHub releases. `release.sh` does that for every stable release and `promote.sh` after a promotion, so it needs no manual step;
-  `tools/policy.sh --limit 3 --commit --push` changes the limit (an emergency way to unlock or lock everybody).
-- Only versions that contain this feature enforce it; older apps ignore the file.
+- `tools/policy.sh` writes and signs it from the GitHub releases (`--all` also writes the `"beta"` list). `release.sh` does that for every stable release (on `release`) and for every beta
+  release (`policy.sh --all`, on `beta`), and `promote.sh` after a promotion, so it needs no manual step; `tools/policy.sh --limit 3 --commit --push` changes the limit (an emergency way
+  to unlock or lock everybody).
+- Only versions that contain this feature enforce it; older apps ignore the file. The per-channel counting is in 1.14.4.4.3 and newer: older Beta apps still read the Stable list.
 
 ## Beta channel
 

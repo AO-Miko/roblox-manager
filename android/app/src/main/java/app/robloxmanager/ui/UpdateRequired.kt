@@ -65,7 +65,7 @@ fun UpdateRequiredScreen(sv: Services, st: PolicyStatus) {
         if (upd.busy && upd.progress > 0f) { Spacer(Modifier.height(10.dp)); LinearProgressIndicator(progress = { upd.progress }, modifier = Modifier.fillMaxWidth()) }
         Spacer(Modifier.height(10.dp))
         QuietButton("Open the download page") {
-            try { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PolicyStore.RELEASES_URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { }
+            try { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(if (sv.prefs.str("channel", "stable") == "beta") PolicyStore.RELEASES_ALL_URL else PolicyStore.RELEASES_URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { }
         }
         val msg = note.ifEmpty { upd.message }
         if (msg.isNotEmpty()) { Spacer(Modifier.height(12.dp)); Text(msg, color = C.muted, fontSize = 12.sp, textAlign = TextAlign.Center) }

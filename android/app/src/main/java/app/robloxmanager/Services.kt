@@ -75,6 +75,10 @@ class Services(app: Application) {
     val bans = BanStore(File(dir, "bans.cache.json"))
     val roles = RoleStore(File(dir, "roles.cache.json"))
     val policy = PolicyStore(File(dir, "policy.cache.json"))
+    /** The Beta channel counts its own updates (every release, betas included), from the beta branch; its serial is independent of the stable one. */
+    val policyBeta = PolicyStore(File(dir, "policy.cache.beta.json"), baseUrl = PolicyStore.BETA_BASE_URL, useBeta = true)
+    /** The policy of the channel this phone follows (Settings > Updates). */
+    fun activePolicy(): PolicyStore = if (prefs.str("channel", "stable") == "beta") policyBeta else policy
     /** Not null while this version is too far behind (see PolicyStore): the whole app is covered by the update page. */
     val updateRequired = MutableStateFlow<PolicyStatus?>(null)
     /** Counts up when the role list changed, so the screens look at it again. */
@@ -107,7 +111,7 @@ class Services(app: Application) {
                     withContext(Dispatchers.IO) { bans.refresh() }
                     enforce()
                     if (withContext(Dispatchers.IO) { roles.refresh() } == true) rolesVersion.value++
-                    withContext(Dispatchers.IO) { policy.refresh() }
+                    withContext(Dispatchers.IO) { activePolicy().refresh() }
                     enforcePolicy()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
@@ -147,7 +151,7 @@ class Services(app: Application) {
 
     /** Covers the app with the update page when this version has missed too many updates, and uncovers it when it has not (an update, a new policy). */
     fun enforcePolicy() {
-        val st = try { policy.status(BuildConfig.VERSION_NAME) } catch (_: Throwable) { null }
+        val st = try { activePolicy().status(BuildConfig.VERSION_NAME) } catch (_: Throwable) { null }
         updateRequired.value = if (st != null && st.blocked) st else null
     }
 
