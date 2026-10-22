@@ -84,6 +84,7 @@ updater.save_config(dict(updater.load_config(), channel="beta"))
 check("the channel is saved", json.loads((cfgd / "update.json").read_text())["channel"] == "beta")
 
 # ---------------------------------------------------------------- git backend (Linux)
+updater.plat.update_backend = lambda: "git"            # (Windows would use the release backend; this part tests the git one)
 cfg = write_cfg(channel="stable")
 check("stable: the installed commit is the newest on release", updater.check(cfg)["status"] == "up-to-date")
 cfg = write_cfg(channel="beta")
@@ -103,6 +104,7 @@ sh("git", "merge", "-q", "--no-edit", "release", cwd=dev)
 check("(the stable branch catches up later: the same version is already installed)", updater.check(updater.load_config())["status"] in ("available", "up-to-date"))
 
 # ---------------------------------------------------------------- release backend (Windows): a fake GitHub
+updater.plat.update_backend = lambda: "release"
 sent = []
 
 
