@@ -27,6 +27,10 @@ COOKIE_FILE = CONFIG_DIR / "cookie"
 for _d in (CONFIG_DIR, STATE_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 CONFIG_DIR.chmod(0o700)   # holds the cookie: only you may even list this folder
+try:
+    STATE_DIR.chmod(0o700)    # logs and saved names: not for other users of this computer either
+except OSError:
+    pass
 
 log = logging.getLogger("roblox-manager")
 if not log.handlers:
@@ -1206,12 +1210,24 @@ def save_avatar(uid, data):
         pass
 
 
+_CODE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def safe_code(code):
+    """A private server link code or a server id, only if it looks like one (letters, digits, - and _): it goes into a link that starts the launcher."""
+    return code if isinstance(code, str) and _CODE.fullmatch(code) else None
+
+
 def launcher_url(place_id, link_code=None, job_id=None):
     """The address that makes the Roblox launcher start and join: a game (placeId), a private/VIP server (placeId + linkCode) or one running server (gameInstanceId)."""
     url = f"roblox://experiences/start?placeId={int(place_id)}"
     if link_code:
+        if not safe_code(link_code):
+            raise ValueError("the join code does not look like a join code")
         url += f"&linkCode={link_code}"
     elif job_id:
+        if not safe_code(job_id):
+            raise ValueError("the server id does not look like a server id")
         url += f"&gameInstanceId={job_id}"
     return url
 
@@ -1221,7 +1237,7 @@ def link_code_of(url):
     from urllib.parse import parse_qs, urlparse
     try:
         u = urlparse(url or "")
-        code = (parse_qs(u.query).get("privateServerLinkCode") or [None])[0]
+        code = safe_code((parse_qs(u.query).get("privateServerLinkCode") or [None])[0])
         m = re.search(r"/games/(\d+)", u.path)
         return (int(m.group(1)) if m else None), code
     except ValueError:

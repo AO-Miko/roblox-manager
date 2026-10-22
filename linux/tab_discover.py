@@ -14,7 +14,7 @@ import rbx
 import roblox_launcher
 from tab_staff import round_icon
 from theme import T
-from ui_common import FlowLayout, button, copy_text, hint, open_url, when
+from ui_common import FlowLayout, button, copy_text, esc, hint, open_url, when
 
 ICON_DIR = rbx.STATE_DIR / "gameicons"
 ROW_LIMIT = 16               # games shown per row of the home page
@@ -44,7 +44,11 @@ def launch_roblox(ctx, place_id, link_code=None, web_url=None):
     if not roblox_launcher.ensure(ctx.window):                  # no launcher on this computer: the install question was shown, nothing is opened
         ctx.status("Roblox is not installed, so nothing was opened.")
         return False
-    url = rbx.launcher_url(place_id, link_code)
+    try:
+        url = rbx.launcher_url(place_id, link_code)
+    except ValueError:                                           # a join code that does not look like one is never put into a launcher link
+        ctx.status("Roblox gave an unusual join code, so nothing was opened.", 12000)
+        return False
     if QDesktopServices.openUrl(QUrl(url)):
         ctx.status("Opening the Roblox launcher...")
         return True
@@ -162,9 +166,11 @@ class GameDetail(QWidget):
         head.addWidget(self.cover)
         info = QVBoxLayout()
         self.title = QLabel("")
+        self.title.setTextFormat(Qt.TextFormat.PlainText)
         self.title.setProperty("role", "title")
         self.title.setWordWrap(True)
         self.creator = hint("")
+        self.creator.setTextFormat(Qt.TextFormat.PlainText)
         self.creator.setWordWrap(True)
         info.addWidget(self.title)
         info.addWidget(self.creator)
@@ -598,13 +604,18 @@ class DiscoverTab(QWidget):
             pic.setPixmap(round_icon(None, 40))
             hl.addWidget(pic)
             names = QVBoxLayout()
-            names.addWidget(QLabel(f"<b>{u.get('displayName') or u.get('name')}</b>"))
-            names.addWidget(hint(f"@{u.get('name')}  -  id {u.get('id')}"))
+            names.addWidget(QLabel(f"<b>{esc(u.get('displayName') or u.get('name'))}</b>"))
+            names.addWidget(self._plain(hint(f"@{u.get('name')}  -  id {u.get('id')}")))
             hl.addLayout(names, 1)
             hl.addWidget(button("Open profile", lambda _=False, uid=u["id"]: open_url(f"https://www.roblox.com/users/{int(uid)}/profile")))
             self.body_lay.insertWidget(self.body_lay.count() - 1, row)
             if heads.get(u["id"]):
                 self.ctx.async_.run(lambda url=heads[u["id"]]: self.ctx.client.fetch_bytes(url), lambda data, pic=pic: self._set_pic(pic, data), lambda e: None)
+
+    @staticmethod
+    def _plain(label):
+        label.setTextFormat(Qt.TextFormat.PlainText)             # (a text from Roblox is never read as HTML)
+        return label
 
     @staticmethod
     def _set_pic(label, data):
@@ -623,9 +634,9 @@ class DiscoverTab(QWidget):
             row.setProperty("tile", True)
             hl = QHBoxLayout(row)
             names = QVBoxLayout()
-            names.addWidget(QLabel(f"<b>{g.get('name')}</b>"))
+            names.addWidget(QLabel(f"<b>{esc(g.get('name'))}</b>"))
             desc = (g.get("description") or "").strip().replace("\n", " ")
-            names.addWidget(hint(f"{int(g.get('memberCount') or 0):,} members" + (f"  -  {desc[:110]}" if desc else "")))
+            names.addWidget(self._plain(hint(f"{int(g.get('memberCount') or 0):,} members" + (f"  -  {desc[:110]}" if desc else ""))))
             hl.addLayout(names, 1)
             hl.addWidget(button("Open on roblox.com", lambda _=False, gid=g["id"]: open_url(f"https://www.roblox.com/communities/{int(gid)}")))
             self.body_lay.insertWidget(self.body_lay.count() - 1, row)

@@ -106,6 +106,18 @@ class GamesTest {
         assertEquals("https://www.roblox.com/discover", Games.pageUrl(null))
     }
 
+    @Test fun aJoinCodeCannotAddAnythingToTheLauncherLink() {
+        assertEquals("roblox://experiences/start?placeId=5&linkCode=AbC-123_x", Games.launcherUrl(5, "AbC-123_x"))
+        for (bad in listOf("AB&x=1", "AB CD", "AB;rm", "a".repeat(65), "é", "A/B", "A?B", "A%26B", "../x", "A\nB", "<x>")) {
+            try { Games.launcherUrl(5, bad); org.junit.Assert.fail("accepted: $bad") } catch (_: IllegalArgumentException) { }
+            assertFalse(Games.validCode(bad))
+        }
+        assertEquals(5L to null, Games.linkParts("https://www.roblox.com/games/5?privateServerLinkCode=A%26B"))       // an odd code gives no code
+        assertEquals(5L to "AB", Games.linkParts("https://www.roblox.com/games/5?privateServerLinkCode=AB&x=1"))
+        assertTrue(Games.validCode("AbC-123_x"))
+        assertFalse(Games.validCode(null)); assertFalse(Games.validCode(""))
+    }
+
     @Test fun numbersAndPercentages() {
         assertEquals(listOf("5", "999", "1K", "18.8K", "1.5M", "4.8B", "657K"), listOf(5L, 999, 1000, 18769, 1_500_000, 4_753_429_786, 657_353).map { Games.short(it) })
         assertEquals(90, Games.likePercent(90, 10)); assertNull(Games.likePercent(0, 0)); assertEquals(33, Games.likePercent(1, 2)); assertEquals(61, Games.likePercent(407269, 264202))

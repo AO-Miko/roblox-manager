@@ -9,7 +9,7 @@ import bans
 import rbx
 import roles
 import tab_staff
-from ui_common import button, fill_table, hint, make_table, row_key, selected_rows
+from ui_common import button, esc, fill_table, hint, make_table, row_key, selected_rows
 
 
 class BanDialog(QDialog):
@@ -35,9 +35,11 @@ class BanDialog(QDialog):
         top.addWidget(self.pic)
         names = QVBoxLayout()
         self.display = QLabel(info.get("displayName") or info.get("name") or f"User {uid}")
+        self.display.setTextFormat(Qt.TextFormat.PlainText)
         self.display.setProperty("role", "title")
         self.display.setWordWrap(True)
         self.user = hint(f"@{info['name']}" if info.get("name") else "")
+        self.user.setTextFormat(Qt.TextFormat.PlainText)
         names.addWidget(self.display)
         names.addWidget(self.user)
         names.addStretch()
@@ -56,7 +58,7 @@ class BanDialog(QDialog):
         self.about.setMaximumHeight(100)
         cl.addWidget(self.about)
         lay.addWidget(card)
-        self.reason = QLabel(f"<b>Reason:</b> {reason}")
+        self.reason = QLabel(f"<b>Reason:</b> {esc(reason)}")
         self.reason.setWordWrap(True)
         self.reason.setProperty("role", "notice")
         lay.addWidget(self.reason)
@@ -83,7 +85,7 @@ class UnbanDialog(BanDialog):
         who = f"{roles.label(int(entry.get('rank', 5))).lower()} {by}" if by else "the owner"
         since = entry.get("since") or "an unknown date"
         why = entry.get("reason") or "(no reason was given)"
-        self.reason.setText(f"<b>Banned</b> on {since} by {who}.<br><b>Ban reason:</b> {why}" + (f"<br><b>Your note:</b> {note}" if note else ""))
+        self.reason.setText(f"<b>Banned</b> on {esc(since)} by {esc(who)}.<br><b>Ban reason:</b> {esc(why)}" + (f"<br><b>Your note:</b> {esc(note)}" if note else ""))
         self.warn.setText("They can sign in again within about ten minutes.")
         self.b_yes.setText("Yes, unban")
         self.b_yes.setProperty("danger", False)

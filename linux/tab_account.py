@@ -17,7 +17,7 @@ import rbx
 import settings
 from signin import SignInDialog
 from ui_common import (
-    PRESENCE, PRESENCE_COLOUR, button, cell, copy_text, day_in_range, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
+    PRESENCE, PRESENCE_COLOUR, button, cell, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
 )
 
 
@@ -582,7 +582,7 @@ class AccountTab(QWidget):
         gl = self.fields["Groups' pending"]
         if g:
             g.sort(key=lambda x: -x["pending"])
-            gl.setText(f"<b>{sum(x['pending'] for x in g):,}</b>  <span style='color:#9a9da6'>({', '.join(f'{x['name']} {x['pending']:,}' for x in g[:5])})</span>")
+            gl.setText(f"<b>{sum(x['pending'] for x in g):,}</b>  <span style='color:#9a9da6'>({', '.join(f'{esc(x['name'])} {x['pending']:,}' for x in g[:5])})</span>")
         elif rep["groups_done"]:
             gl.setText("0" if rep.get("groups") else "none in groups you own")
         else:
@@ -991,15 +991,15 @@ class FriendsTab(QWidget):
                          lambda e: None)
 
     def _render_profile(self, r, d):
-        lines = [f"<b style='font-size:16px'>{r['name']}</b>" + (f"  <span style='color:#9a9da6'>@{r['username']}</span>" if r["username"] else "")
+        lines = [f"<b style='font-size:16px'>{esc(r['name'])}</b>" + (f"  <span style='color:#9a9da6'>@{esc(r['username'])}</span>" if r["username"] else "")
                  + ("  ✔ verified" if r["verified"] else ""), f"User id {r['id']}  |  {PRESENCE.get(r['type'], '?')}"
-                 + (f"  -  {r['game']}" if r["game"] else (f"  -  {r['location']}" if r["location"] and r["type"] else ""))]
+                 + (f"  -  {esc(r['game'])}" if r["game"] else (f"  -  {esc(r['location'])}" if r["location"] and r["type"] else ""))]
         if d:
             cnt = d.get("counts") or {}
             lines.append(f"Joined {when(d.get('created'))[:10]}  |  {cnt.get('friends', '?')} friends  |  {cnt.get('followers', '?')} followers  |  {cnt.get('following', '?')} following"
                          + ("  |  <span style='color:#e5534b'>banned</span>" if d.get("isBanned") else ""))
             if d.get("description"):
-                lines.append("<span style='color:#9a9da6'>" + d["description"].replace("<", "&lt;")[:240] + "</span>")
+                lines.append("<span style='color:#9a9da6'>" + esc(d["description"][:240]) + "</span>")
         else:
             lines.append("<span style='color:#9a9da6'>loading profile...</span>")
         self.profile.setText("<br>".join(lines))

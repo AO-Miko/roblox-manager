@@ -167,6 +167,12 @@ def day_in_range(iso, start, end):
     return start <= d.astimezone().date() <= end
 
 
+def esc(text):
+    """Text from Roblox (a name, a description ...) made safe for a rich-text label: '<', '>' and '&' are shown as they are, never read as HTML."""
+    import html
+    return html.escape(str(text if text is not None else ""), quote=True)
+
+
 def copy_text(text):
     QGuiApplication.clipboard().setText(text)
 

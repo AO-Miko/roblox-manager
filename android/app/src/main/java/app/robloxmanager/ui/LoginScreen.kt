@@ -147,7 +147,7 @@ private fun PasswordTab(sv: Services, toBrowser: () -> Unit) {
 @Composable
 private fun BrowserTab(sv: Services) {
     val scope = rememberCoroutineScope()
-    var msg by remember { mutableStateOf("Sign in on the Roblox page below. It handles every kind of check (CAPTCHA, passkey ...).") }
+    var msg by remember { mutableStateOf("Sign in on the Roblox page below. It handles every kind of check (CAPTCHA, passkey ...). Only Roblox pages open in this window.") }
     val ctx = LocalContext.current
     val cm = remember { CookieManager.getInstance() }
     var web by remember { mutableStateOf<WebView?>(null) }
@@ -178,9 +178,19 @@ private fun BrowserTab(sv: Services) {
         AndroidView(modifier = Modifier.fillMaxWidth().weight(1f), factory = {
             cm.removeAllCookies(null)
             WebView(ctx).apply {
-                settings.javaScriptEnabled = true
+                settings.javaScriptEnabled = true                      // (Roblox's login page needs it)
                 settings.domStorageEnabled = true
-                webViewClient = WebViewClient()
+                settings.allowFileAccess = false                       // nothing from the phone's files,
+                settings.allowContentAccess = false                    // nothing from other apps,
+                settings.setGeolocationEnabled(false)
+                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW                 // nothing over plain http
+                webViewClient = object : WebViewClient() {
+                    /** The page may only go to Roblox (https). A link anywhere else is not followed here: this window is where the password is typed. */
+                    override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
+                        val u = request.url
+                        return !(u.scheme == "https" && app.robloxmanager.core.RobloxClient.isRoblox(u.host ?: ""))
+                    }
+                }
                 loadUrl("https://www.roblox.com/login")
                 web = this
             }

@@ -1,7 +1,7 @@
 """The whole desktop app against a fake Roblox (316 checks): every tab, bulk actions, rate limits, accounts, settings.
 Run: QT_QPA_PLATFORM=offscreen python3 tests/test_gui_full.py   (RM_SRC = the app folder, default linux/)"""
 import json, os, re, sys, time
-import tempfile; here = tempfile.mkdtemp(prefix="guitest-")
+import os, tempfile; here = tempfile.mkdtemp(prefix="guitest-")
 os.environ["ROBLOX_MANAGER_CONFIG"] = os.path.join(here, "cfg4"); os.environ["ROBLOX_MANAGER_STATE"] = os.path.join(here, "state4")
 sys.path.insert(0, os.environ.get("RM_SRC") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "linux")); sys.argv = ["x"]
 from PySide6.QtWidgets import QApplication, QDialog, QInputDialog, QMessageBox
@@ -814,7 +814,7 @@ w.tabs.setCurrentIndex(4)
 check("Money shows the balance and the pending total", wait(lambda: w.money.balance.text() == "Robux: 1,234" and w.money.pending.text() == "Pending: 590"), (w.money.balance.text(), w.money.pending.text()))
 check("...the period totals (only non-zero rows)", wait(lambda: w.money.totals.rowCount() == 2) and {w.money.totals.item(r, 0).text() for r in range(2)} == {"Pending Robux", "Incoming"}, [w.money.totals.item(r, 0).text() for r in range(w.money.totals.rowCount())])
 check("...and a transaction list", wait(lambda: w.money.table.rowCount() > 0), w.money.info.text())
-tmp = tempfile.mktemp(suffix=".csv"); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmp, ""))
+_fd, tmp = tempfile.mkstemp(suffix=".csv"); os.close(_fd); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmp, ""))
 import ui_common as uc
 uc.export_csv(w.money.table, w, name="t")
 rows = list(_csv.reader(open(tmp, encoding="utf-8-sig")))
@@ -1035,7 +1035,7 @@ def vip_visual():
 check("the VIP list shows its columns as Game, Status, Expires, Cost, Server, VIP id, VIP link, Copies", vip_visual() == ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "VIP link", "Copies"], vip_visual())
 w.vip.mine = [dict(SV("alpha", 8101, 1, True, price=100), _state=""), dict(SV("beta", 8102, 2, False, discount=100), _state="")]; w.vip.names = {7001: "G1", 7002: "G2"}; w.vip.show_mine()
 check("the cells still line up with their headers (Status next to Game, Cost after Expires)", w.vip.mtable.item(0, 2).text() in ("ON", "OFF") and w.vip.mtable.item(0, 7).text() in ("Paid 100 R$", "Free (Roblox Plus)"))
-tmpv = tempfile.mktemp(suffix=".csv"); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmpv, ""))
+_fd, tmpv = tempfile.mkstemp(suffix=".csv"); os.close(_fd); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmpv, ""))
 uc.export_csv(w.vip.mtable, w, name="v")
 rowsv = list(_csv.reader(open(tmpv, encoding="utf-8-sig")))
 check("a CSV export follows the order on screen", rowsv[0] == ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "VIP link", "Copies"] and rowsv[1][0] in ("G1", "G2") and rowsv[1][1] in ("ON", "OFF") and rowsv[1][3] in ("Paid 100 R$", "Free (Roblox Plus)"), rowsv[:2])
@@ -1145,7 +1145,7 @@ check("Clear empties the list", rq.table.rowCount() == 0 and len(rq.entries) == 
 rbx.record_request("tester", "GET", "https://friends.roblox.com/v1/a", None, 200, 1, 0, False, "")
 rbx.record_request("tester", "GET", "https://friends.roblox.com/v1/b", None, 200, 1, 0, False, "")
 wait(lambda: rq.table.rowCount() == 2)
-tmpr = tempfile.mktemp(suffix=".csv"); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmpr, ""))
+_fd, tmpr = tempfile.mkstemp(suffix=".csv"); os.close(_fd); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmpr, ""))
 uc.export_csv(rq.table, rq, name="r")
 rowsr = list(_csv.reader(open(tmpr, encoding="utf-8-sig")))
 check("the list can be exported as CSV", rowsr[0] == ["Time", "Account", "Method", "Request", "Status", "ms", "Notes", "Rate limit (from Roblox)"] and len(rowsr) == 3, rowsr[:2])

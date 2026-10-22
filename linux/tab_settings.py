@@ -11,7 +11,7 @@ import cleanup
 import plat
 import rbx
 import settings
-from ui_common import FlowLayout, WrapCheck, button, hint, make_table
+from ui_common import esc, FlowLayout, WrapCheck, button, hint, make_table
 
 
 class SettingsTab(QWidget):
@@ -382,7 +382,7 @@ class SettingsTab(QWidget):
         else:
             launcher = Path.home() / ".local/bin/roblox-manager"
             if launcher.exists():
-                subprocess.Popen(["sh", "-c", f'sleep 1.5; exec "{launcher}"'], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.Popen(["sh", "-c", 'sleep 1.5; exec "$0"', str(launcher)], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)      # (the path is an argument, never part of the shell text)
         from PySide6.QtWidgets import QApplication
         QApplication.instance().quit()
 
@@ -404,8 +404,8 @@ class SettingsTab(QWidget):
         kind, plain = accounts.storage_status()
         where = {"encrypted": f"encrypted ({plat.WALLET})", "plain": f"in {plain} plain private file(s): NOT encrypted (the wallet was not available)",
                  "none": "not saved (no account is signed in)"}[kind]
-        self.about.setText(f"Sign-ins: {where}.<br>Settings, accounts list: <code>{self._breakable(rbx.CONFIG_DIR)}</code><br>Logs, records, saved pictures and names: "
-                           f"<code>{self._breakable(rbx.STATE_DIR)}</code>")
+        self.about.setText(f"Sign-ins: {where}.<br>Settings, accounts list: <code>{esc(self._breakable(rbx.CONFIG_DIR))}</code><br>Logs, records, saved pictures and names: "
+                           f"<code>{esc(self._breakable(rbx.STATE_DIR))}</code>")
         self.about.setTextFormat(Qt.TextFormat.RichText)
 
     def showEvent(self, ev):

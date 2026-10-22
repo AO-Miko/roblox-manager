@@ -110,8 +110,9 @@ fun openRobloxInStore(ctx: Context) {
 fun launchRoblox(ctx: Context, placeId: Long, linkCode: String? = null, web: String = Games.pageUrl(placeId), onMissing: () -> Unit = {}): Boolean {
     if (!robloxInstalled(ctx)) { onMissing(); return false }
     fun view(url: String) = ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    val link = try { Games.launcherUrl(placeId, linkCode) } catch (_: IllegalArgumentException) { return false }          // (a join code that does not look like one opens nothing)
     return try {
-        view(Games.launcherUrl(placeId, linkCode)); true
+        view(link); true
     } catch (_: ActivityNotFoundException) {
         try { view(web) } catch (_: Exception) { }
         false

@@ -394,6 +394,7 @@ def main():
         accounts.migrate()          # sign-ins still in plain files move into the encrypted wallet
     w = MainWindow(auto_login="--shot" not in sys.argv)
     server = QLocalServer()
+    server.setSocketOptions(QLocalServer.SocketOption.UserAccessOption)          # (only this user can ask the open window to come to the front)
     QLocalServer.removeServer(SERVER_NAME)
     server.listen(SERVER_NAME)
 

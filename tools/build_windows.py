@@ -59,10 +59,11 @@ def fetch_python():
 
 
 def fetch_wheels():
+    """Only the exact files in tools/windows/requirements.lock (versions and SHA-256 hashes): a changed or replaced file on PyPI is refused. Update it on purpose with tools/windows/update_lock.py."""
     wheels = CACHE / "wheels"
     wheels.mkdir(parents=True, exist_ok=True)
     subprocess.run([sys.executable, "-m", "pip", "download", "-q", "--dest", str(wheels), "--platform", "win_amd64", "--python-version", "3.12",
-                    "--implementation", "cp", "--only-binary=:all:", "-r", str(ROOT / "tools/windows/requirements.txt")], check=True)
+                    "--implementation", "cp", "--only-binary=:all:", "--require-hashes", "-r", str(ROOT / "tools/windows/requirements.lock")], check=True)
     return sorted(wheels.glob("*.whl"))
 
 

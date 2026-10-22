@@ -81,15 +81,22 @@ object Games {
     }
 
     /** The address that makes the Roblox app start and join: a game (place id) or a private/VIP server (place id + link code). */
-    fun launcherUrl(placeId: Long, linkCode: String? = null): String =
-        "roblox://experiences/start?placeId=$placeId" + if (!linkCode.isNullOrEmpty()) "&linkCode=$linkCode" else ""
+    fun launcherUrl(placeId: Long, linkCode: String? = null): String {
+        if (!linkCode.isNullOrEmpty() && !validCode(linkCode)) throw IllegalArgumentException("the join code does not look like a join code")
+        return "roblox://experiences/start?placeId=$placeId" + if (!linkCode.isNullOrEmpty()) "&linkCode=$linkCode" else ""
+    }
+
+    private val CODE = Regex("[A-Za-z0-9_-]{1,64}")
+
+    /** A private server link code only if it looks like one (letters, digits, - and _): it goes into a link that starts the Roblox app. */
+    fun validCode(code: String?): Boolean = code != null && CODE.matches(code)
 
     fun pageUrl(placeId: Long?): String = if (placeId != null) "https://www.roblox.com/games/$placeId" else "https://www.roblox.com/discover"
 
     /** (place id, private server link code) read from a roblox.com join link such as https://www.roblox.com/games/123?privateServerLinkCode=ABC. */
     fun linkParts(url: String?): Pair<Long?, String?> = try {
         val u = URI(url ?: "")
-        val code = (u.rawQuery ?: "").split("&").map { it.split("=", limit = 2) }.firstOrNull { it[0] == "privateServerLinkCode" && it.size == 2 }?.get(1)
+        val code = (u.rawQuery ?: "").split("&").map { it.split("=", limit = 2) }.firstOrNull { it[0] == "privateServerLinkCode" && it.size == 2 }?.get(1)?.takeIf { validCode(it) }
         val place = Regex("/games/(\\d+)").find(u.path ?: "")?.groupValues?.get(1)?.toLongOrNull()
         place to code
     } catch (_: Exception) {

@@ -62,6 +62,9 @@ jobs:
       - name: Discover (games, search, play)
         if: ${{ !cancelled() }}
         run: python tests/test_discover.py
+      - name: Security checks
+        if: ${{ !cancelled() }}
+        run: python tests/test_security.py
       - name: Version numbers
         if: ${{ !cancelled() }}
         run: python tests/test_versions.py
