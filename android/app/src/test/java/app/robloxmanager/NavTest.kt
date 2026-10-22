@@ -43,6 +43,13 @@ class NavTest {
         assertEquals("Admin", matchHits(adminHits, "unban").first().title)
     }
 
+    @Test fun discoverIsAPageInsideHomeAndTheSearchFindsIt() {
+        val hit = matchHits(hits, "games").first { it.title == "Discover" }
+        assertEquals("home", hit.jump.dest)
+        assertEquals(1, hit.jump.sub)
+        assertEquals("Discover", matchHits(hits, "discover").first().title)
+    }
+
     @Test fun emptyQueryShowsEverythingAndNonsenseShowsNothing() {
         assertEquals(hits.size, matchHits(hits, "  ").size)
         assertTrue(matchHits(hits, "zzzqq").isEmpty())

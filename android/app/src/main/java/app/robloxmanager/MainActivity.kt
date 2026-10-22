@@ -124,7 +124,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
     fun open(id: String, sub: Int = 0) {
         if (id !in visited) visited.add(id)
         dest = id
-        if (id == PEOPLE.id || id == INFO.id) jump = Jump(id, sub, (jump?.nonce ?: 0) + 1)
+        if (id == PEOPLE.id || id == INFO.id || id == HOME.id) jump = Jump(id, sub, (jump?.nonce ?: 0) + 1)
     }
     if (dest !in visited) visited.add(dest)
     if (dest == ADMIN.id && !isAdmin) dest = MORE.id                  // an account without the role (or one that lost it) cannot be on the Admin page
@@ -144,7 +144,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
             }
             Box(Modifier.weight(1f)) {
                 fun shown(id: String) = if (dest == id) Modifier.fillMaxSize() else Modifier.size(0.dp).clipToBounds()   // (clipped: a checkbox keeps its 48 dp touch size and would draw outside)
-                if (HOME.id in visited) Box(shown(HOME.id)) { HomeScreen(sv, addAccount) }
+                if (HOME.id in visited) Box(shown(HOME.id)) { HomeScreen(sv, addAccount, jump) }
                 if (PEOPLE.id in visited) Box(shown(PEOPLE.id)) { PeopleScreen(sv, bulk, counts, jump) }
                 if (GROUPS.id in visited) Box(shown(GROUPS.id)) { GroupsScreen(sv, bulk, counts) }
                 if (VIP.id in visited) Box(shown(VIP.id)) { VipScreen(sv, bulk, counts) }

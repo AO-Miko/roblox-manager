@@ -271,6 +271,20 @@ private fun VipDetails(sv: Services, s: Vip, places: Map<Long, String>, checks: 
                                 } catch (e: Exception) { msg = errorText(e) }
                             }
                         }) { Text("Copy link") }
+                        TextButton(onClick = {
+                            scope.launch {
+                                try {
+                                    if (link.isEmpty() || link == "-") {
+                                        val d = sv.api.vipServer(id)
+                                        link = d?.str("link") ?: d?.str("joinCode")?.let { c -> s.placeId?.let { p -> "https://www.roblox.com/games/$p?privateServerLinkCode=$c" } } ?: ""
+                                        s.link = link.ifEmpty { null }
+                                    }
+                                    val (place, code) = app.robloxmanager.core.Games.linkParts(link)
+                                    if (code == null) msg = "Roblox did not give a join link."
+                                    else app.robloxmanager.ui.launchRoblox(ctx, place ?: s.placeId ?: 0, code, link)
+                                } catch (e: Exception) { msg = errorText(e) }
+                            }
+                        }) { Text("Play") }
                         TextButton(onClick = { rename = s.name }) { Text("Rename") }
                     }
                 }

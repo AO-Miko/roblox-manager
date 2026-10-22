@@ -93,6 +93,7 @@ class Hit(val title: String, val where: String, val words: String, val icon: Ima
 private val PEOPLE_SUBS = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find a user")
 
 fun searchHits(admin: Boolean = false): List<Hit> = buildList {
+    add(Hit("Discover", "Home", "games search play browse trending roblox find", HOME.icon, Jump("home", 1)))
     ALL.filter { admin || it != ADMIN }.forEach { add(Hit(it.title, "page", it.words, it.icon, Jump(it.id))) }
     PEOPLE_SUBS.forEachIndexed { i, s -> add(Hit(s, "People", "", PEOPLE.icon, Jump("people", i))) }
     add(Hit("Settings", "Info", "preferences options rate limit log cache confirm", INFO.icon, Jump("info", 0)))

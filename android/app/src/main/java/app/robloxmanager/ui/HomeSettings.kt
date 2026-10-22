@@ -39,7 +39,7 @@ import java.text.NumberFormat
 import kotlinx.coroutines.launch
 
 @Composable
-fun HomeScreen(sv: Services, onAddAccount: () -> Unit) {
+fun AccountScreen(sv: Services, onAddAccount: () -> Unit) {
     val me = sv.current.collectAsState().value ?: return
     val accounts by sv.accountList.collectAsState()
     val scope = rememberCoroutineScope()
