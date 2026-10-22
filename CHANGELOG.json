@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.11.3.2.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Discover: server browser, favorites, recently viewed, friends in games",
+      "Play checks that a Roblox launcher is installed and offers to install it (Linux command, Windows download page, Android Play Store)",
+      "Security review: Roblox text is escaped, join codes are validated, hardened Android login view, pinned and hashed Windows libraries, private state folder",
+      "Fewer errors after an update on Windows: the app forgets old modules and the launcher asks to restart"
+    ]
+  },
+  {
     "version": "1.10.3.2.1",
     "date": "2026-10-22",
     "changes": [

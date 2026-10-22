@@ -1,7 +1,7 @@
 {
-  "versionName": "1.10.3.2.1",
-  "versionCode": 25,
+  "versionName": "1.11.3.2.1",
+  "versionCode": 26,
   "apk": "roblox-manager.apk",
-  "sha256": "a8d37e8f8ee96dd96906af74b5c2fc627297855e2cd0d26487b7ff18672e4d4c",
-  "notes": "Fixed the error \"Client object has no attribute group_search_members\" (and any like it) after an update on Windows: old and new files could be mixed in memory|After an update the launcher now says so and asks to restart to complete the update (Restart now / No)|The app clears any leftover old modules at start, and the member search falls back instead of failing|New checks make sure every call the app makes to its own parts exists"
+  "sha256": "ef10306ba98de238bfc4dc978e78fba4e1c89e4e19d1402f19ef7e4c985db248",
+  "notes": "Discover: server browser, favorites, recently viewed, friends in games|Play checks that a Roblox launcher is installed and offers to install it (Linux command, Windows download page, Android Play Store)|Security review: Roblox text is escaped, join codes are validated, hardened Android login view, pinned and hashed Windows libraries, private state folder|Fewer errors after an update on Windows: the app forgets old modules and the launcher asks to restart"
 }
