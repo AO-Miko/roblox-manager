@@ -43,12 +43,29 @@ asked.clear(); restarted.clear()
 check("...No just closes: it stops and starts nothing", launcher.after_update({"status": "updated", "version": "1.2.3.4.5"}, ask_no, rs) is True and restarted == [] and asked == ["1.2.3.4.5"])
 check("an installed update without a version still asks", launcher.after_update({"status": "updated"}, ask_yes, rs) is True)
 
-# the text of the popup
-err = io.StringIO()
-with redirect_stderr(err):
+# the text of the popup. On Windows it is a real message box, which would wait for a click on the test machine: it is replaced by a stand-in that answers Yes.
+boxes = []
+if sys.platform == "win32":
+    import ctypes
+
+    class FakeUser32:
+        @staticmethod
+        def MessageBoxW(hwnd, text, title, flags):
+            boxes.append((text, title, flags))
+            return 6                                       # IDYES
+    real_user32 = ctypes.windll.user32
+    ctypes.windll.user32 = FakeUser32
     answer = launcher.ask_restart("1.9.9.9.9")
-check("the popup says which version was installed and that a restart completes the update", "1.9.9.9.9" in err.getvalue() and "restart" in err.getvalue().lower() and "complete the update" in err.getvalue(), err.getvalue())
-check("...(without a screen it does not block)", answer is True)
+    ctypes.windll.user32 = real_user32
+    shown = boxes[0][0] if boxes else ""
+    check("(Windows) the message box asks Yes/No with the information icon", bool(boxes) and boxes[0][2] & 0x4 and boxes[0][2] & 0x40, boxes)
+else:
+    err = io.StringIO()
+    with redirect_stderr(err):
+        answer = launcher.ask_restart("1.9.9.9.9")
+    shown = err.getvalue()
+check("the popup says which version was installed and that a restart completes the update", "1.9.9.9.9" in shown and "restart" in shown.lower() and "complete the update" in shown, shown)
+check("...Yes means restart now", answer is True)
 
 # check_for_update hands the result over
 fake = types.ModuleType("updater")
@@ -74,6 +91,7 @@ ran, popups = [], []
 real_run = runpy.run_path
 runpy.run_path = lambda *a, **k: ran.append(a)
 launcher.first_run_setup = lambda: None
+launcher.crash_report = lambda text: (_ for _ in ()).throw(AssertionError(text))      # (on Windows this would be a real message box that waits for a click)
 launcher.app_is_open = lambda: False
 launcher.check_for_update = lambda seconds=40: {"status": "updated", "version": "3.0.0.0.0"}
 launcher.ask_restart = lambda v: popups.append(v) or False

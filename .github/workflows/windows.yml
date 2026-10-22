@@ -20,6 +20,7 @@ jobs:
   test:
     name: Tests on Windows
     runs-on: windows-latest
+    timeout-minutes: 30            # a test that waits for a click or a stuck download must not run for hours
     env:
       QT_QPA_PLATFORM: offscreen
       PYTHONIOENCODING: utf-8
@@ -83,6 +84,7 @@ jobs:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     needs: test
     runs-on: windows-latest
+    timeout-minutes: 30            # a test that waits for a click or a stuck download must not run for hours
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -123,6 +125,7 @@ jobs:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     needs: test
     runs-on: windows-latest
+    timeout-minutes: 30            # a test that waits for a click or a stuck download must not run for hours
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
