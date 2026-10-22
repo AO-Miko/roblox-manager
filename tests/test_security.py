@@ -115,28 +115,34 @@ roblox_launcher.status = lambda fresh=False: {"installed": True, "how": "t", "pl
 check("Play refuses an odd code: nothing is opened, the person is told", tab_discover.launch_roblox(w.ctx, 5, "AB&x=1") is False and not opened and "unusual" in w.statusBar().currentMessage(), (opened, w.statusBar().currentMessage()))
 
 # ---------------------------------------------------------------- no shell text built from a path
-import subprocess
-calls = []
-real_popen = subprocess.Popen
-subprocess.Popen = lambda args, *a, **k: calls.append(args) or type("P", (), {})()
-fake_home = tmp / 'h"; touch PWNED; "$(touch PWNED2)'
-(fake_home / ".local" / "bin").mkdir(parents=True)
-(fake_home / ".local" / "bin" / "roblox-manager").write_text("#!/bin/sh\n")
-real_home, real_quit = Path.home, QApplication.instance().quit
-Path.home = staticmethod(lambda: fake_home)
-QApplication.instance().quit = lambda: None
-import plat
-was_win = plat.IS_WIN
-plat.IS_WIN = False
-tab_settings.plat.IS_WIN = False
-w.settings_tab.restart_app()
-plat.IS_WIN = was_win
-subprocess.Popen = real_popen
-Path.home = real_home
-QApplication.instance().quit = real_quit
-launcher_call = next((c for c in calls if c and c[0] == "sh"), None)
-check("restarting runs a fixed shell text and gives the launcher's path as an argument (a path with quotes and $() in it cannot run anything)",
-      launcher_call is not None and launcher_call[2] == 'sleep 1.5; exec "$0"' and launcher_call[3] == str(fake_home / ".local" / "bin" / "roblox-manager") and "PWNED" not in launcher_call[2], launcher_call)
+if os.name == "posix":                                    # (the shell restart is the Linux one; a folder name with quotes cannot even be made on Windows)
+    import subprocess
+    calls = []
+    real_popen = subprocess.Popen
+    subprocess.Popen = lambda args, *a, **k: calls.append(args) or type("P", (), {})()
+    fake_home = tmp / 'h"; touch PWNED; "$(touch PWNED2)'
+    (fake_home / ".local" / "bin").mkdir(parents=True)
+    (fake_home / ".local" / "bin" / "roblox-manager").write_text("#!/bin/sh\n")
+    real_home, real_quit = Path.home, QApplication.instance().quit
+    Path.home = staticmethod(lambda: fake_home)
+    QApplication.instance().quit = lambda: None
+    import plat
+    was_win = plat.IS_WIN
+    plat.IS_WIN = False
+    tab_settings.plat.IS_WIN = False
+    w.settings_tab.restart_app()
+    plat.IS_WIN = was_win
+    subprocess.Popen = real_popen
+    Path.home = real_home
+    QApplication.instance().quit = real_quit
+    launcher_call = next((c for c in calls if c and c[0] == "sh"), None)
+    check("restarting runs a fixed shell text and gives the launcher's path as an argument (a path with quotes and $() in it cannot run anything)",
+          launcher_call is not None and launcher_call[2] == 'sleep 1.5; exec "$0"' and launcher_call[3] == str(fake_home / ".local" / "bin" / "roblox-manager") and "PWNED" not in launcher_call[2], launcher_call)
+
+
+else:
+    src = (ROOT / "linux" / "tab_settings.py").read_text()
+    check("restarting runs a fixed shell text and gives the launcher's path as an argument (checked in the source on Windows)", """["sh", "-c", 'sleep 1.5; exec "$0"', str(launcher)]""" in src)
 
 # ---------------------------------------------------------------- private folders
 if os.name == "posix":

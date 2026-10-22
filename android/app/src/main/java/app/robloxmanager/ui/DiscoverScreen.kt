@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -68,7 +69,15 @@ import androidx.compose.ui.unit.sp
 import app.robloxmanager.Services
 import app.robloxmanager.core.GameCard
 import app.robloxmanager.core.GameDetails
+import app.robloxmanager.core.FriendGame
 import app.robloxmanager.core.GameSort
+import app.robloxmanager.core.RecentGames
+import app.robloxmanager.core.ServerInfo
+import app.robloxmanager.core.favoriteGames
+import app.robloxmanager.core.favoriteState
+import app.robloxmanager.core.friendsInGames
+import app.robloxmanager.core.gameServers
+import app.robloxmanager.core.setFavorite
 import app.robloxmanager.core.Games
 import app.robloxmanager.core.GroupHit
 import app.robloxmanager.core.Person
@@ -107,10 +116,10 @@ fun openRobloxInStore(ctx: Context) {
 
 /** Open the Roblox app and join a game, or a private/VIP server (place id + link code). If the Roblox app is not installed nothing is opened and [onMissing] is called
  *  (the screen then offers to install it). Without a handler for the link the game's page opens instead. */
-fun launchRoblox(ctx: Context, placeId: Long, linkCode: String? = null, web: String = Games.pageUrl(placeId), onMissing: () -> Unit = {}): Boolean {
+fun launchRoblox(ctx: Context, placeId: Long, linkCode: String? = null, web: String = Games.pageUrl(placeId), jobId: String? = null, onMissing: () -> Unit = {}): Boolean {
     if (!robloxInstalled(ctx)) { onMissing(); return false }
     fun view(url: String) = ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    val link = try { Games.launcherUrl(placeId, linkCode) } catch (_: IllegalArgumentException) { return false }          // (a join code that does not look like one opens nothing)
+    val link = try { Games.launcherUrl(placeId, linkCode, jobId) } catch (_: IllegalArgumentException) { return false }          // (a join code that does not look like one opens nothing)
     return try {
         view(link); true
     } catch (_: ActivityNotFoundException) {
@@ -188,6 +197,20 @@ private fun GameCardView(g: GameCard, icons: IconBook, onClick: () -> Unit) {
 }
 
 @Composable
+private fun FriendCardView(f: FriendGame, icons: IconBook, onJoin: () -> Unit) {
+    Column(Modifier.width(140.dp).clip(RoundedCornerShape(12.dp)).background(C.surface).padding(8.dp)) {
+        Box(Modifier.size(124.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3)) {
+            f.universe?.let { u -> icons.urls[u]?.let { AsyncImage(model = it, contentDescription = f.game, modifier = Modifier.size(124.dp), contentScale = ContentScale.Crop) } }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(f.displayName.ifEmpty { f.name }, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(f.game.ifEmpty { "In a game" }, color = C.muted, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(30.dp))
+        Spacer(Modifier.height(4.dp))
+        PrimaryButton("Join", onClick = onJoin)
+    }
+}
+
+@Composable
 private fun GameRow(g: GameCard, icons: IconBook, onClick: () -> Unit) {
     val pct = Games.likePercent(g.up, g.down)
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -224,8 +247,23 @@ fun DiscoverScreen(sv: Services) {
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     val fmt = remember { NumberFormat.getInstance() }
+    val me by sv.current.collectAsState()
+    var friends by remember { mutableStateOf<List<FriendGame>>(emptyList()) }
+    var favorites by remember { mutableStateOf<List<GameCard>>(emptyList()) }
+    var recents by remember { mutableStateOf(RecentGames.load(sv.prefs)) }
+    var askInstall by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = selected != null) { selected = null }
+    LaunchedEffect(me?.id) {                                                       // your own rows: friends in games and favorites (signed in)
+        val m = me
+        if (m == null) { friends = emptyList(); favorites = emptyList(); return@LaunchedEffect }
+        try { friends = sv.api.friendsInGames(); icons.ensure(friends.mapNotNull { it.universe }) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+        try { favorites = sv.api.favoriteGames(m.id); icons.ensure(favorites.map { it.universeId }) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+    }
+    LaunchedEffect(recents) { icons.ensure(recents.map { it.universeId }) }
+    if (askInstall) InstallRobloxDialog { askInstall = false }
+    fun backFromGame() { selected = null; recents = RecentGames.load(sv.prefs) }
+
+    BackHandler(enabled = selected != null) { backFromGame() }
 
     suspend fun <T> guarded(what: String, block: suspend () -> T): T? = try {
         busy = true; message = ""; block()
@@ -254,7 +292,7 @@ fun DiscoverScreen(sv: Services) {
         }
     }
 
-    selected?.let { GameScreen(sv, it, icons) { selected = null }; return }
+    selected?.let { GameScreen(sv, it, icons) { backFromGame() }; return }
 
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(
@@ -275,6 +313,24 @@ fun DiscoverScreen(sv: Services) {
         }
         if (submitted.isEmpty()) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
+                if (friends.isNotEmpty()) item(key = "friends") {
+                    Text("Friends in games", fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 6.dp))
+                    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(friends.take(Games.ROW_LIMIT), key = { it.id }) { f -> FriendCardView(f, icons) { launchRoblox(ctx, f.place, jobId = f.job) { askInstall = true } } }
+                    }
+                }
+                if (favorites.isNotEmpty()) item(key = "favorites") {
+                    Text("Your favorites", fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 6.dp))
+                    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(favorites.take(Games.ROW_LIMIT), key = { it.universeId }) { g -> GameCardView(g, icons) { selected = g } }
+                    }
+                }
+                if (recents.isNotEmpty()) item(key = "recents") {
+                    Text("Recently viewed", fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 6.dp))
+                    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(recents.take(Games.ROW_LIMIT), key = { it.universeId }) { g -> GameCardView(g, icons) { selected = g } }
+                    }
+                }
                 items(sorts?.take(Games.ROWS_LIMIT) ?: emptyList(), key = { it.id }) { s ->
                     Text(s.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 6.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -326,11 +382,36 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     var menu by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
     var askInstall by remember { mutableStateOf(false) }
+    var fav by remember(card.universeId) { mutableStateOf<Boolean?>(null) }
+    var favBusy by remember { mutableStateOf(false) }
+    var sort by remember { mutableStateOf("Asc") }
+    var servers by remember(card.universeId) { mutableStateOf<List<ServerInfo>>(emptyList()) }
+    var cursor by remember(card.universeId) { mutableStateOf("") }
+    var srvBusy by remember(card.universeId) { mutableStateOf(false) }
+    var srvNote by remember(card.universeId) { mutableStateOf("") }
+    val signedIn by sv.current.collectAsState()
     val place = details?.placeId ?: card.placeId
     BackHandler { onBack() }
 
+    fun findServers(reset: Boolean) {
+        val p = place ?: return
+        if (srvBusy || (!reset && cursor.isEmpty())) return                         // one page at a time: pressing again meanwhile does nothing
+        srvBusy = true; srvNote = "Looking for servers…"
+        val s0 = sort
+        scope.launch {
+            try {
+                val (s, n) = sv.api.gameServers(p, s0, if (reset) "" else cursor)
+                servers = if (reset) s else servers + s.filter { x -> servers.none { it.id == x.id } }
+                cursor = n
+                srvNote = if (servers.isEmpty()) "No public servers are open right now." else "${servers.size} servers" + if (n.isNotEmpty()) "  (more available)" else ""
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { srvNote = "The servers could not be loaded: ${errorText(e)}" } finally { srvBusy = false }
+        }
+    }
+
     LaunchedEffect(card.universeId) {
+        RecentGames.add(sv.prefs, card)                                           // (the 'Recently viewed' row)
         suspend fun <T> quiet(b: suspend () -> T): T? = try { b() } catch (e: CancellationException) { throw e } catch (e: Exception) { null }
+        if (signedIn != null) fav = quiet { sv.api.favoriteState(card.universeId) }
         quiet { sv.api.gameDetails(card.universeId) }?.let { details = it }
         quiet { sv.api.gameVotes(card.universeId) }?.let { votes = it }
         favorites = details?.favorites ?: quiet { sv.api.gameFavorites(card.universeId) }
@@ -369,6 +450,14 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                     }
                 }
             }
+            if (fav != null) QuietButton(if (fav == true) "★ Favorited" else "☆ Favorite", enabled = !favBusy) {
+                val want = fav != true
+                favBusy = true
+                scope.launch {
+                    try { sv.api.setFavorite(card.universeId, want); fav = want; note = if (want) "Added to your favorites." else "Removed from your favorites." }
+                    catch (e: CancellationException) { throw e } catch (e: Exception) { note = errorText(e) } finally { favBusy = false }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuietButton("Open on roblox.com") { openUrl(ctx, Games.pageUrl(place)) }
                 QuietButton("Copy link") {
@@ -403,6 +492,37 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                     row("Age rating", card.age.ifEmpty { "-" })()
                 }
             }
+            Text("Servers", fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.FilterChip(selected = sort == "Asc", onClick = { sort = "Asc" }, label = { Text("Fewest first") })
+                androidx.compose.material3.FilterChip(selected = sort == "Desc", onClick = { sort = "Desc" }, label = { Text("Most first") })
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                QuietButton(if (srvBusy) "Looking…" else "Find servers", enabled = !srvBusy && place != null) { findServers(true) }
+                QuietButton("Join the emptiest", enabled = place != null) {
+                    val p = place ?: return@QuietButton
+                    scope.launch {
+                        try {
+                            val best = sv.api.gameServers(p, "Asc", "", 25).first.filter { it.playing < it.max }.minByOrNull { it.playing }
+                            if (best == null) srvNote = "No server with room was found right now." else { srvNote = "Joining a server with ${best.playing} of ${best.max} players."; launchRoblox(ctx, p, jobId = best.id) { askInstall = true } }
+                        } catch (e: CancellationException) { throw e } catch (e: Exception) { srvNote = "The servers could not be loaded: ${errorText(e)}" }
+                    }
+                }
+            }
+            if (srvNote.isNotEmpty()) Text(srvNote, color = C.muted, fontSize = 12.sp)
+            if (servers.isNotEmpty()) Card {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    servers.forEach { s ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${s.playing}/${s.max}", Modifier.width(64.dp), fontWeight = FontWeight.Medium)
+                            Text((s.ping?.let { "$it ms" } ?: "-") + "   " + (s.fps?.let { "$it fps" } ?: ""), Modifier.weight(1f), color = C.muted, fontSize = 12.sp)
+                            TextButton(onClick = { place?.let { launchRoblox(ctx, it, jobId = s.id) { askInstall = true } } }) { Text("Join") }
+                        }
+                    }
+                    if (cursor.isNotEmpty()) QuietButton(if (srvBusy) "Loading…" else "Load more", enabled = !srvBusy) { findServers(false) }
+                }
+            }
+
             val about = details?.description.orEmpty()
             if (about.isNotBlank()) {
                 Text("Description", fontWeight = FontWeight.Bold)

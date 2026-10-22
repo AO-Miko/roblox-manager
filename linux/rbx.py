@@ -893,6 +893,46 @@ class Client:
     def search_groups(self, text, limit=10):
         return self.get("https://groups.roblox.com/v1/groups/search", {"keyword": text, "limit": limit}, auth=False).get("data", [])
 
+    def game_servers(self, place_id, sort="Asc", cursor=None, limit=50, exclude_full=True):
+        """([servers], next cursor): the public servers of a game, fewest players first (Asc) or most (Desc). Public data."""
+        params = {"sortOrder": sort, "limit": limit, "excludeFullGames": "true" if exclude_full else "false"}
+        if cursor:
+            params["cursor"] = cursor
+        d = self.get(f"https://games.roblox.com/v1/games/{int(place_id)}/servers/Public", params, auth=False)
+        servers = [{"id": s["id"], "playing": int(s.get("playing") or 0), "max": int(s.get("maxPlayers") or 0), "ping": s.get("ping"), "fps": s.get("fps")}
+                   for s in d.get("data", []) if isinstance(s, dict) and safe_code(s.get("id"))]
+        return servers, d.get("nextPageCursor") or ""
+
+    def game_favorite_state(self, universe_id):
+        """True if the account in use has favorited the game (needs the sign-in)."""
+        return bool(self.get(f"https://games.roblox.com/v1/games/{int(universe_id)}/favorites").get("isFavorited"))
+
+    def set_game_favorite(self, universe_id, on):
+        return self.post(f"https://games.roblox.com/v1/games/{int(universe_id)}/favorites", {"isFavorited": bool(on)})
+
+    def favorite_games(self, user_id=None, limit=50):
+        """[game cards] the account's favorite games (as far as its privacy settings show them)."""
+        uid = user_id or self.user["id"]
+        d = self.get(f"https://games.roblox.com/v2/users/{int(uid)}/favorite/games", {"limit": limit, "sortOrder": "Desc"}, auth=False)
+        out = []
+        for g in d.get("data", []):
+            if isinstance(g, dict) and g.get("id"):
+                out.append({"universeId": int(g["id"]), "placeId": (g.get("rootPlace") or {}).get("id"), "name": str(g.get("name") or ""), "playing": 0, "up": 0, "down": 0,
+                            "creator": (g.get("creator") or {}).get("name", ""), "verified": False, "age": "", "genre": ""})
+        return out
+
+    def friends_in_games(self):
+        """[{'id', 'name', 'displayName', 'place', 'job', 'universe', 'game'}] the friends who are in a game right now (and which server they are in)."""
+        friends = {f["id"]: f for f in self.friends()}
+        out = []
+        for p in self.presence(list(friends)):
+            place = p.get("rootPlaceId") or p.get("placeId")
+            if p.get("userPresenceType") == 2 and place:
+                f = friends.get(p.get("userId"), {})
+                out.append({"id": p.get("userId"), "name": f.get("name", ""), "displayName": f.get("displayName", ""), "place": place, "job": p.get("gameId"),
+                            "universe": p.get("universeId"), "game": p.get("lastLocation") or ""})
+        return out
+
     def game_info(self, universe_id):
         d = self.get("https://games.roblox.com/v1/games", {"universeIds": int(universe_id)}, auth=False).get("data", [])
         return d[0] if d else None

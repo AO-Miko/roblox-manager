@@ -10,11 +10,12 @@ from PySide6.QtGui import QColor, QDesktopServices, QPainter, QPixmap
 from PySide6.QtWidgets import (QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu, QPlainTextEdit, QScrollArea, QStackedWidget, QVBoxLayout,
                                QWidget)
 
+import games_store
 import rbx
 import roblox_launcher
 from tab_staff import round_icon
 from theme import T
-from ui_common import FlowLayout, button, copy_text, esc, hint, open_url, when
+from ui_common import FlowLayout, button, copy_text, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when
 
 ICON_DIR = rbx.STATE_DIR / "gameicons"
 ROW_LIMIT = 16               # games shown per row of the home page
@@ -38,22 +39,22 @@ def like_percent(up, down):
     return None if total <= 0 else int(round(100 * int(up or 0) / total))
 
 
-def launch_roblox(ctx, place_id, link_code=None, web_url=None):
+def launch_roblox(ctx, place_id, link_code=None, web_url=None, job_id=None):
     """Open the Roblox launcher and join: the game (place id) or a private/VIP server (place id + link code). First it checks that a launcher is installed (and if not,
     offers to install one: see roblox_launcher.py). If the launcher cannot be opened, the game's page is."""
     if not roblox_launcher.ensure(ctx.window):                  # no launcher on this computer: the install question was shown, nothing is opened
         ctx.status("Roblox is not installed, so nothing was opened.")
         return False
     try:
-        url = rbx.launcher_url(place_id, link_code)
+        url = rbx.launcher_url(place_id, link_code, job_id)
     except ValueError:                                           # a join code that does not look like one is never put into a launcher link
-        ctx.status("Roblox gave an unusual join code, so nothing was opened.", 12000)
+        ctx.status("Roblox gave an unusual join code or server id, so nothing was opened.", 12000)
         return False
     if QDesktopServices.openUrl(QUrl(url)):
         ctx.status("Opening the Roblox launcher...")
         return True
     ctx.status("The Roblox launcher could not be opened (is Roblox installed?). Opening the game's page instead.", 12000)
-    open_url(web_url or rbx.join_link(place_id, link_code))
+    open_url(web_url or rbx.join_link(place_id, link_code, job_id))
     return False
 
 
@@ -132,6 +133,43 @@ class GameCard(QFrame):
             self.clicked.emit(self.card)
 
 
+class FriendCard(QFrame):
+    """A friend who is in a game: the game's picture, the friend's name, the game, and a Join button that opens the launcher on their server."""
+    join = Signal(dict)
+
+    def __init__(self, f):
+        super().__init__()
+        self.f = f
+        self.setProperty("tile", True)
+        self.setFixedWidth(168)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(8, 8, 8, 8)
+        lay.setSpacing(4)
+        self.icon = QLabel()
+        self.icon.setFixedSize(150, 150)
+        self.icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pm = QPixmap(150, 150)
+        pm.fill(QColor(T["surface3"]))
+        self.icon.setPixmap(pm)
+        lay.addWidget(self.icon)
+        who = QLabel(f"<b>{esc(f.get('displayName') or f.get('name'))}</b>")
+        who.setToolTip(f"@{f.get('name')}")
+        lay.addWidget(who)
+        game = QLabel(f.get("game") or "In a game")
+        game.setTextFormat(Qt.TextFormat.PlainText)
+        game.setProperty("role", "hint")
+        game.setWordWrap(True)
+        game.setFixedHeight(34)
+        lay.addWidget(game)
+        self.b_join = button("Join", lambda: self.join.emit(self.f), "Open the Roblox launcher on this friend's server", primary=True)
+        lay.addWidget(self.b_join)
+
+    def set_icon(self, data):
+        pm = QPixmap()
+        if data and pm.loadFromData(data):
+            self.icon.setPixmap(pm.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation).copy(0, 0, 150, 150))
+
+
 # ------------------------------------------------------------------ a game's page
 class GameDetail(QWidget):
     back = Signal()
@@ -180,7 +218,10 @@ class GameDetail(QWidget):
         self.b_vip.hide()
         self.b_open = button("Open on roblox.com", self.open_page)
         self.b_copy = button("Copy link", self.copy_link)
-        for b in (self.b_play, self.b_vip, self.b_open, self.b_copy):
+        self.b_fav = button("Favorite", self.toggle_favorite, "Add this game to (or remove it from) your Roblox favorites")
+        self.b_fav.hide()
+        self.favorited = None
+        for b in (self.b_play, self.b_vip, self.b_fav, self.b_open, self.b_copy):
             row.addWidget(b)
         info.addSpacing(8)
         info.addLayout(row)
@@ -220,6 +261,28 @@ class GameDetail(QWidget):
             self.values[key] = val
         lay.addLayout(grid)
 
+        # the public servers: pick one and join it
+        lay.addWidget(QLabel("<b>Servers</b>"))
+        srow = FlowLayout()
+        self.sort = QComboBox()
+        self.sort.addItem("Fewest players first", "Asc")
+        self.sort.addItem("Most players first", "Desc")
+        self.b_servers = button("Find servers", lambda: self.find_servers(True), "List the public servers of this game")
+        self.b_join_server = button("Join selected", self.join_selected, "Open the Roblox launcher on the selected server")
+        self.b_join_emptiest = button("Join the emptiest", self.join_emptiest, "Open the launcher on the server with the fewest players (not full)")
+        self.b_more_servers = button("Load more", lambda: self.find_servers(False))
+        for w_ in (self.sort, self.b_servers, self.b_join_server, self.b_join_emptiest, self.b_more_servers):
+            srow.addWidget(w_)
+        lay.addLayout(srow)
+        self.server_table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server"], [80, 60, 90, 60, 260], empty="Press Find servers.")
+        self.server_table.setMinimumHeight(150)
+        self.server_table.doubleClicked.connect(lambda _=None: self.join_selected())
+        lay.addWidget(self.server_table)
+        self.server_note = hint("")
+        self.server_note.setWordWrap(True)
+        lay.addWidget(self.server_note)
+        self.servers, self.server_cursor, self.server_gen, self.server_busy = [], "", 0, False
+
         lay.addWidget(QLabel("<b>Description</b>"))
         self.about = QPlainTextEdit()
         self.about.setReadOnly(True)
@@ -247,7 +310,18 @@ class GameDetail(QWidget):
         self._servers = []
         self.b_vip.hide()
         self._offer_vip()
+        games_store.add(card)                                 # (the 'Recently viewed' row)
+        self.servers, self.server_cursor, self.server_busy = [], "", False
+        self.server_gen += 1
+        fill_table(self.server_table, [])
+        self.server_note.setText("")
+        self.b_more_servers.setEnabled(False)
+        self.favorited = None
+        self.b_fav.setVisible(self.ctx.logged_in)
+        self.b_fav.setText("Favorite")
         uid, c = card["universeId"], self.ctx.client
+        if self.ctx.logged_in:
+            self.ctx.async_.run(lambda: c.game_favorite_state(uid), lambda on: self._favorite_state(uid, on), lambda e: self.b_fav.hide())
 
         def work():
             d = c.games_by_universe([uid]).get(uid, {})
@@ -306,6 +380,94 @@ class GameDetail(QWidget):
         pm = QPixmap()
         if cover and pm.loadFromData(cover):
             self.cover.setPixmap(pm.scaled(480, 270, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+
+    # ---- favorite (the account in use)
+    def _favorite_state(self, uid, on):
+        if self.card and self.card["universeId"] == uid:
+            self.favorited = bool(on)
+            self.b_fav.setText("Favorited" if on else "Favorite")
+
+    def toggle_favorite(self):
+        if not self.card or self.favorited is None:
+            return
+        uid, want, c = self.card["universeId"], not self.favorited, self.ctx.client
+        self.b_fav.setEnabled(False)
+
+        def done(_):
+            self.b_fav.setEnabled(True)
+            self._favorite_state(uid, want)
+            self.ctx.status("Added to your favorites." if want else "Removed from your favorites.")
+        self.ctx.async_.run(lambda: c.set_game_favorite(uid, want), done, lambda e: (self.b_fav.setEnabled(True), self.ctx.error(e)))
+
+    # ---- servers
+    def find_servers(self, reset=True):
+        """Ask Roblox for the public servers of this game, 50 at a time (one request at a time: pressing Load more again does not ask twice)."""
+        if not self.place_id:
+            return
+        if reset:
+            self.server_gen += 1
+            self.servers, self.server_cursor = [], ""
+        elif self.server_busy or not self.server_cursor:
+            return
+        self.server_busy = True
+        self.b_more_servers.setEnabled(False)
+        self.b_servers.setEnabled(False)
+        gen, place, cursor, sort, c = self.server_gen, self.place_id, self.server_cursor if not reset else None, self.sort.currentData(), self.ctx.client
+        self.server_note.setText("Looking for servers...")
+
+        def done(res):
+            if gen != self.server_gen:
+                return                                        # (another game, or a new search: this answer is old)
+            self.server_busy = False
+            self.b_servers.setEnabled(True)
+            servers, self.server_cursor = res
+            have = {s["id"] for s in self.servers}
+            self.servers += [s for s in servers if s["id"] not in have]
+            self._show_servers()
+
+        def failed(e):
+            if gen == self.server_gen:
+                self.server_busy = False
+                self.b_servers.setEnabled(True)
+                self.b_more_servers.setEnabled(bool(self.server_cursor))
+                self.server_note.setText(f"The servers could not be loaded: {e}")
+        self.ctx.async_.run(lambda: c.game_servers(place, sort, cursor), done, failed)
+
+    def _show_servers(self):
+        rows = [[s["playing"], s["max"], int(s["ping"]) if s.get("ping") is not None else "-", int(s["fps"]) if s.get("fps") is not None else "-", s["id"]] for s in self.servers]
+        self.server_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)         # (the order Roblox gave; click a header to sort by it)
+        fill_table(self.server_table, rows, keys=[s["id"] for s in self.servers])
+        self.b_more_servers.setEnabled(bool(self.server_cursor))
+        self.server_note.setText(f"{len(self.servers)} servers" + ("  (more available: Load more)" if self.server_cursor else "") if self.servers else "No public servers are open right now (or the game has none).")
+
+    def _join_server(self, server_id):
+        if self.place_id and server_id:
+            launch_roblox(self.ctx, self.place_id, job_id=server_id, web_url=self._page())
+
+    def join_selected(self):
+        rows = selected_rows(self.server_table)
+        if not rows:
+            self.ctx.status("Select a server first.")
+            return
+        self._join_server(row_key(self.server_table, rows[0]))
+
+    def join_emptiest(self):
+        """The server with the fewest players that is not full (asks Roblox for the emptiest ones first)."""
+        if not self.place_id:
+            return
+        place, c = self.place_id, self.ctx.client
+        self.server_note.setText("Looking for the emptiest server...")
+
+        def found(res):
+            servers, _ = res
+            open_ = [s for s in servers if s["playing"] < s["max"]]
+            if not open_:
+                self.server_note.setText("No server with room was found right now.")
+                return
+            best = min(open_, key=lambda s: s["playing"])
+            self.server_note.setText(f"Joining a server with {best['playing']} of {best['max']} players.")
+            self._join_server(best["id"])
+        self.ctx.async_.run(lambda: c.game_servers(place, "Asc", None, 25), found, lambda e: self.server_note.setText(f"The servers could not be loaded: {e}"))
 
     # ---- play
     def play(self):
@@ -389,7 +551,10 @@ class DiscoverTab(QWidget):
         self.scroll.setWidget(self.body)
         self.stack.addWidget(self.scroll)
         self.detail = GameDetail(ctx)
-        self.detail.back.connect(lambda: self.stack.setCurrentIndex(0))
+        self.detail.back.connect(self._back_from_game)
+        self.boxes = {}
+        ctx.signed_in.connect(lambda: self._load_extras() if self.mode == "feed" and self.boxes else None)
+        ctx.signed_out.connect(lambda: self._load_extras() if self.boxes else None)
         self.stack.addWidget(self.detail)
         self.state = hint("")
         self.state.setWordWrap(True)
@@ -461,25 +626,101 @@ class DiscoverTab(QWidget):
             self.state.setText("Roblox returned no home page rows right now. Try the search, or reload in a moment.")
             return
         self.state.hide()
+        self.boxes = {k: self._box() for k in ("friends", "favorites", "recent")}          # your own rows, above Roblox's
         ids = []
         for s in sorts[:ROWS_LIMIT]:
             title = QLabel(s["name"])
             title.setProperty("role", "title")
             self.body_lay.addWidget(title)
-            row = QScrollArea()
-            row.setWidgetResizable(True)
-            row.setFrameShape(QFrame.Shape.NoFrame)
-            row.setFixedHeight(300)
-            inner = QWidget()
-            hl = QHBoxLayout(inner)
-            hl.setContentsMargins(0, 0, 0, 0)
-            for card in s["games"][:ROW_LIMIT]:
-                hl.addWidget(self._card(card))
-                ids.append(card["universeId"])
-            hl.addStretch()
-            row.setWidget(inner)
-            self.body_lay.addWidget(row)
+            cards = [self._card(card) for card in s["games"][:ROW_LIMIT]]
+            ids += [c.card["universeId"] for c in cards]
+            self.body_lay.addWidget(self._scroll_row(cards))
         self._load_icons(ids)
+        self._load_extras()
+
+    @staticmethod
+    def _scroll_row(widgets):
+        row = QScrollArea()
+        row.setWidgetResizable(True)
+        row.setFrameShape(QFrame.Shape.NoFrame)
+        row.setFixedHeight(300)
+        inner = QWidget()
+        hl = QHBoxLayout(inner)
+        hl.setContentsMargins(0, 0, 0, 0)
+        for w_ in widgets:
+            hl.addWidget(w_)
+        hl.addStretch()
+        row.setWidget(inner)
+        return row
+
+    def _box(self):
+        box = QWidget()
+        lay = QVBoxLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        box.hide()
+        self.body_lay.addWidget(box)
+        return box
+
+    def _fill_box(self, key, title, widgets):
+        """Put a titled row into one of the boxes above Roblox's rows (an empty list hides it)."""
+        box = self.boxes.get(key)
+        if box is None:
+            return
+        lay = box.layout()
+        while lay.count():
+            it = lay.takeAt(0)
+            w_ = it.widget()
+            if w_:
+                w_.hide()
+                w_.setParent(None)
+                w_.deleteLater()
+        if not widgets:
+            box.hide()
+            return
+        head = QLabel(title)
+        head.setProperty("role", "title")
+        lay.addWidget(head)
+        lay.addWidget(self._scroll_row(widgets))
+        box.show()
+
+    def _load_extras(self):
+        """Friends in games and your favorites (signed in), and the games you looked at lately (always)."""
+        self.refresh_recent()
+        c = self.ctx.client
+        if not self.ctx.logged_in:
+            self._fill_box("friends", "", [])
+            self._fill_box("favorites", "", [])
+            return
+        self.ctx.async_.run(c.friends_in_games, self._friends_ready, lambda e: None)
+        self.ctx.async_.run(c.favorite_games, self._favorites_ready, lambda e: None)
+
+    def refresh_recent(self):
+        cards = [self._card(c) for c in games_store.recent()[:ROW_LIMIT]]
+        self._fill_box("recent", "Recently viewed", cards)
+        self._load_icons([c.card["universeId"] for c in cards])
+
+    def _favorites_ready(self, games):
+        if self.mode != "feed":
+            return
+        cards = [self._card(g) for g in games[:ROW_LIMIT]]
+        self._fill_box("favorites", "Your favorites", cards)
+        self._load_icons([c.card["universeId"] for c in cards])
+
+    def _friends_ready(self, friends):
+        if self.mode != "feed":
+            return
+        widgets = []
+        for f in friends[:ROW_LIMIT]:
+            w_ = FriendCard(f)
+            w_.join.connect(self._join_friend)
+            widgets.append(w_)
+            if f.get("universe"):
+                self.cards.setdefault(int(f["universe"]), []).append(w_)
+        self._fill_box("friends", "Friends in games", widgets)
+        self._load_icons([int(f["universe"]) for f in friends[:ROW_LIMIT] if f.get("universe")])
+
+    def _join_friend(self, f):
+        launch_roblox(self.ctx, f["place"], job_id=f.get("job"), web_url=f"https://www.roblox.com/games/{int(f['place'])}")
 
     def _card(self, card):
         w = GameCard(card)
@@ -642,6 +883,11 @@ class DiscoverTab(QWidget):
             self.body_lay.insertWidget(self.body_lay.count() - 1, row)
 
     # ---- a game
+    def _back_from_game(self):
+        self.stack.setCurrentIndex(0)
+        if self.mode == "feed" and self.boxes:
+            self.refresh_recent()                              # the game just viewed is first now
+
     def open_game(self, card):
         self.detail.show_game(card)
         self.stack.setCurrentIndex(1)

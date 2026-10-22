@@ -21,6 +21,12 @@ data class GameDetails(
 
 data class GroupHit(val id: Long, val name: String, val members: Long, val description: String)
 
+/** One public server of a game. */
+data class ServerInfo(val id: String, val playing: Int, val max: Int, val ping: Int?, val fps: Int?)
+
+/** A friend who is in a game right now, and which server they are in. */
+data class FriendGame(val id: Long, val name: String, val displayName: String, val place: Long, val job: String?, val universe: Long?, val game: String)
+
 object Games {
     const val ROW_LIMIT = 16
     const val ROWS_LIMIT = 8
@@ -66,6 +72,16 @@ object Games {
         )
     }
 
+    /** The friends who are in a game (presence type 2, with a place) out of Roblox's presence answer. */
+    fun friendGames(presence: JsonElement?, friends: Map<Long, Person>): List<FriendGame> = presence.obj?.arr("userPresences")?.mapNotNull { e ->
+        val p = e.obj ?: return@mapNotNull null
+        val place = p.long("rootPlaceId") ?: p.long("placeId") ?: return@mapNotNull null
+        if (p.int("userPresenceType") != 2) return@mapNotNull null
+        val id = p.long("userId") ?: return@mapNotNull null
+        val f = friends[id]
+        FriendGame(id, f?.name ?: "", f?.displayName ?: "", place, p.str("gameId")?.takeIf { validCode(it) }, p.long("universeId"), p.str("lastLocation") ?: "")
+    } ?: emptyList()
+
     /** Whole percent of the votes that are likes, or null when nobody voted. */
     fun likePercent(up: Long, down: Long): Int? = if (up + down <= 0) null else Math.round(100.0 * up / (up + down)).toInt()
 
@@ -81,9 +97,10 @@ object Games {
     }
 
     /** The address that makes the Roblox app start and join: a game (place id) or a private/VIP server (place id + link code). */
-    fun launcherUrl(placeId: Long, linkCode: String? = null): String {
+    fun launcherUrl(placeId: Long, linkCode: String? = null, jobId: String? = null): String {
         if (!linkCode.isNullOrEmpty() && !validCode(linkCode)) throw IllegalArgumentException("the join code does not look like a join code")
-        return "roblox://experiences/start?placeId=$placeId" + if (!linkCode.isNullOrEmpty()) "&linkCode=$linkCode" else ""
+        if (linkCode.isNullOrEmpty() && !jobId.isNullOrEmpty() && !validCode(jobId)) throw IllegalArgumentException("the server id does not look like a server id")
+        return "roblox://experiences/start?placeId=$placeId" + if (!linkCode.isNullOrEmpty()) "&linkCode=$linkCode" else if (!jobId.isNullOrEmpty()) "&gameInstanceId=$jobId" else ""
     }
 
     private val CODE = Regex("[A-Za-z0-9_-]{1,64}")
@@ -101,6 +118,31 @@ object Games {
         place to code
     } catch (_: Exception) {
         null to null
+    }
+}
+
+/** The games you looked at lately, kept on the phone (the 'Recently viewed' row). */
+object RecentGames {
+    const val KEY = "recentGames"
+    const val LIMIT = 20
+
+    fun load(prefs: Prefs): List<GameCard> = try {
+        (prefs.raw(KEY) as? kotlinx.serialization.json.JsonArray)?.mapNotNull { e ->
+            val o = e.obj ?: return@mapNotNull null
+            val uid = o.long("u") ?: return@mapNotNull null
+            GameCard(uid, o.long("p"), (o.str("n") ?: return@mapNotNull null).take(120), o.long("c") ?: 0, o.long("up") ?: 0, o.long("down") ?: 0, (o.str("by") ?: "").take(60), o.bool("v") ?: false, o.str("a") ?: "", o.str("g") ?: "")
+        }?.take(LIMIT) ?: emptyList()
+    } catch (_: Exception) { emptyList() }
+
+    /** Put a game first (it moves up if it was there already). Returns the new list. */
+    fun add(prefs: Prefs, card: GameCard): List<GameCard> {
+        val items = listOf(card) + load(prefs).filter { it.universeId != card.universeId }
+        try {
+            prefs.put(KEY, kotlinx.serialization.json.JsonArray(items.take(LIMIT).map { c ->
+                obj("u" to c.universeId, "p" to c.placeId, "n" to c.name, "c" to c.playing, "up" to c.up, "down" to c.down, "by" to c.creator, "v" to c.verified, "a" to c.age, "g" to c.genre)
+            }))
+        } catch (_: Exception) { }
+        return items.take(LIMIT)
     }
 }
 
@@ -143,3 +185,34 @@ suspend fun RobloxApi.gameIcons(ids: List<Long>, size: String = "150x150"): Map<
 suspend fun RobloxApi.gameCover(universeId: Long): String =
     client.get("https://thumbnails.roblox.com/v1/games/multiget/thumbnails", mapOf("universeIds" to universeId.toString(), "size" to "768x432", "format" to "Png", "count" to "1", "isCircular" to "false"), auth = false)
         .json.items().firstNotNullOfOrNull { g -> g.arr("thumbnails")?.firstNotNullOfOrNull { it.obj?.str("imageUrl")?.takeIf { u -> u.isNotEmpty() } } } ?: ""
+
+/** (the public servers, the next cursor): fewest players first ("Asc") or most ("Desc"); only servers with room. */
+suspend fun RobloxApi.gameServers(placeId: Long, sort: String = "Asc", cursor: String = "", limit: Int = 50): Pair<List<ServerInfo>, String> {
+    val q = hashMapOf("sortOrder" to sort, "limit" to limit.toString(), "excludeFullGames" to "true")
+    if (cursor.isNotEmpty()) q["cursor"] = cursor
+    val d = client.get("https://games.roblox.com/v1/games/$placeId/servers/Public", q, auth = false).json
+    val servers = d.items().mapNotNull { s ->
+        val id = s.str("id")?.takeIf { Games.validCode(it) } ?: return@mapNotNull null
+        ServerInfo(id, s.int("playing") ?: 0, s.int("maxPlayers") ?: 0, s.long("ping")?.toInt(), s.long("fps")?.toInt())
+    }
+    return servers to (d.obj?.str("nextPageCursor") ?: "")
+}
+
+suspend fun RobloxApi.favoriteState(universeId: Long): Boolean = client.get("https://games.roblox.com/v1/games/$universeId/favorites").json.obj?.bool("isFavorited") ?: false
+
+suspend fun RobloxApi.setFavorite(universeId: Long, on: Boolean) { client.post("https://games.roblox.com/v1/games/$universeId/favorites", obj("isFavorited" to on)) }
+
+/** The account's favorite games (as far as its privacy settings show them). */
+suspend fun RobloxApi.favoriteGames(userId: Long): List<GameCard> =
+    client.get("https://games.roblox.com/v2/users/$userId/favorite/games", mapOf("limit" to "50", "sortOrder" to "Desc"), auth = false).json.items().mapNotNull { g ->
+        val id = g.long("id") ?: return@mapNotNull null
+        GameCard(id, g.obj("rootPlace")?.long("id"), g.str("name") ?: "", 0, 0, 0, g.obj("creator")?.str("name") ?: "")
+    }
+
+/** The friends who are in a game right now (friends, then their presence, 100 at a time). */
+suspend fun RobloxApi.friendsInGames(): List<FriendGame> {
+    val friends = friends().associateBy { it.id }
+    val out = ArrayList<FriendGame>()
+    for (chunk in friends.keys.toList().chunked(100)) out += Games.friendGames(client.post("https://presence.roblox.com/v1/presence/users", obj("userIds" to chunk)).json, friends)
+    return out
+}

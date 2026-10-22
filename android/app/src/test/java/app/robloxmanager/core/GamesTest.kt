@@ -16,6 +16,7 @@ import org.junit.Test
 class GamesTest {
     private lateinit var server: MockWebServer
     private val paths = ArrayList<String>()
+    private val favoritePosts = ArrayList<String>()
 
     private fun game(uid: Long, place: Long, name: String, playing: Int = 100, up: Int = 90, down: Int = 10, sponsored: Boolean = false) =
         """{"universeId":$uid,"rootPlaceId":$place,"name":"$name","playerCount":$playing,"totalUpVotes":$up,"totalDownVotes":$down,"isSponsored":$sponsored,"creatorName":"Maker","creatorHasVerifiedBadge":true,"ageRecommendationDisplayName":"Maturity: Mild","genreL1":"Adventure"}"""
@@ -48,6 +49,11 @@ class GamesTest {
                     "favorites/count" in p -> """{"favoritesCount":105252027}"""
                     "thumbnails/icons" in p || "games/icons" in p -> """{"data":[{"targetId":1,"imageUrl":"https://tr.rbxcdn.com/i1.png"},{"targetId":2,"imageUrl":""}]}"""
                     "multiget/thumbnails" in p -> """{"data":[{"universeId":1,"thumbnails":[{"imageUrl":"https://tr.rbxcdn.com/cover.png"}]}]}"""
+                    "/servers/Public" in p && "cursor=s2" in p -> """{"data":[{"id":"aaaaaaaa-0000-0000-0000-000000000003","playing":3,"maxPlayers":12,"ping":53,"fps":59.5}],"nextPageCursor":null}"""
+                    "/servers/Public" in p -> """{"data":[{"id":"aaaaaaaa-0000-0000-0000-000000000001","playing":1,"maxPlayers":12,"ping":51,"fps":59.5},{"id":"x&y=1","playing":0,"maxPlayers":12,"ping":1,"fps":60},{"id":"aaaaaaaa-0000-0000-0000-000000000003","playing":3,"maxPlayers":12}],"nextPageCursor":"s2"}"""
+                    "/favorites" in p && request.method == "POST" -> { favoritePosts += request.body.readUtf8(); "{}" }
+                    "/favorites" in p -> """{"isFavorited":true}"""
+                    "favorite/games" in p -> """{"data":[{"id":1,"name":"Alpha","rootPlace":{"id":11},"creator":{"name":"Maker"}},{"name":"no id"}]}"""
                     "groups/search" in p -> """{"data":[{"id":7,"name":"Roblox","memberCount":13508413,"description":"The official group"}]}"""
                     "/v1/games?" in p -> """{"data":[{"id":1,"rootPlaceId":11,"name":"Alpha","description":"The best game.","creator":{"id":9,"name":"PlatinumFalls","hasVerifiedBadge":true},
                         "playing":18793,"visits":4753432465,"maxPlayers":12,"created":"2022-02-02T19:57:39.97Z","updated":"2026-10-14T09:24:58.905Z","genre":"Adventure","genre_l1":"Obby & Platformer","favoritedCount":105252027}]}"""
@@ -92,6 +98,58 @@ class GamesTest {
         assertEquals("https://tr.rbxcdn.com/cover.png", a.gameCover(1))
         val g = a.searchGroups("roblox").single()
         assertEquals(7L, g.id); assertEquals(13508413L, g.members)
+    }
+
+    @Test fun publicServersParsePageAndRefuseOddIds() = runBlocking {
+        val a = api()
+        val (s, next) = a.gameServers(11, "Asc")
+        assertEquals(listOf("aaaaaaaa-0000-0000-0000-000000000001", "aaaaaaaa-0000-0000-0000-000000000003"), s.map { it.id })          // the server with an odd id is left out
+        assertEquals(1, s[0].playing); assertEquals(12, s[0].max); assertEquals(51, s[0].ping); assertEquals(59, s[0].fps)
+        assertNull(s[1].ping)
+        assertEquals("s2", next)
+        assertTrue(paths.any { "sortOrder=Asc" in it && "excludeFullGames=true" in it && "/games/11/servers/Public" in it })
+        val (more, end) = a.gameServers(11, "Asc", "s2")
+        assertEquals(1, more.size); assertEquals("", end)
+    }
+
+    @Test fun favorites() = runBlocking {
+        val a = api()
+        assertTrue(a.favoriteState(1))
+        a.setFavorite(1, true)
+        assertEquals(1, favoritePosts.size)
+        assertTrue("\"isFavorited\":true" in favoritePosts[0])
+        assertEquals(listOf("Alpha"), a.favoriteGames(156).map { it.name })                    // an entry without an id is left out
+        assertEquals(11L, a.favoriteGames(156)[0].placeId)
+    }
+
+    @Test fun friendsInGamesAreThoseInAGameWithAServer() {
+        val friends = mapOf(201L to Person(201, "ann", "Ann"), 202L to Person(202, "bob", "Bob"))
+        val presence = AppJson.parseToJsonElement("""{"userPresences":[{"userId":201,"userPresenceType":2,"lastLocation":"Alpha","rootPlaceId":11,"gameId":"job-1","universeId":1},
+            {"userId":202,"userPresenceType":1,"lastLocation":"Website"},{"userId":203,"userPresenceType":2,"rootPlaceId":12,"gameId":"x&y"},{"userPresenceType":2,"rootPlaceId":13}]}""")
+        val out = Games.friendGames(presence, friends)
+        assertEquals(listOf(201L, 203L), out.map { it.id })
+        assertEquals("Ann", out[0].displayName); assertEquals("job-1", out[0].job); assertEquals("Alpha", out[0].game)
+        assertNull(out[1].job)                                                                  // a server id that could add something to the link is dropped
+        assertTrue(Games.friendGames(null, friends).isEmpty())
+    }
+
+    @Test fun recentGamesAreKeptNewestFirstOncePerGameAtMostTwenty() {
+        val f = java.io.File.createTempFile("prefs", ".json").also { it.delete() }
+        val prefs = Prefs(f)
+        assertTrue(RecentGames.load(prefs).isEmpty())
+        fun g(i: Long) = GameCard(i, 1, "G$i", 1, 2, 3, "by", true, "age", "genre")
+        RecentGames.add(prefs, g(1)); RecentGames.add(prefs, g(2)); RecentGames.add(prefs, g(1))
+        assertEquals(listOf(1L, 2L), RecentGames.load(Prefs(f)).map { it.universeId })          // read again from the file: it was saved
+        for (i in 10L..40L) RecentGames.add(prefs, g(i))
+        assertEquals(20, RecentGames.load(prefs).size); assertEquals(40L, RecentGames.load(prefs)[0].universeId)
+        f.writeText("{not json")
+        assertTrue(RecentGames.load(Prefs(f)).isEmpty())
+    }
+
+    @Test fun launcherLinkWithAServerId() {
+        assertEquals("roblox://experiences/start?placeId=5&gameInstanceId=aaaaaaaa-0000-0000-0000-000000000001", Games.launcherUrl(5, null, "aaaaaaaa-0000-0000-0000-000000000001"))
+        for (bad in listOf("x&y=1", "a b", "A/B", "é")) try { Games.launcherUrl(5, null, bad); org.junit.Assert.fail("accepted: $bad") } catch (_: IllegalArgumentException) { }
+        assertEquals("roblox://experiences/start?placeId=5&linkCode=AB", Games.launcherUrl(5, "AB", "ignored-when-a-code-is-given"))
     }
 
     @Test fun launcherLinksAndJoinLinks() {

@@ -1,6 +1,7 @@
 """Test of Discover (inside Home): the home page rows, the search, a game's page with its stats and the Play button (launcher links, VIP servers). The real client methods run
 against a fake Roblox that answers with the real response shapes. Run: QT_QPA_PLATFORM=offscreen python3 tests/test_discover.py"""
 import os
+import re
 import sys
 import tempfile
 import time
@@ -79,6 +80,9 @@ DETAILS = {1: {"id": 1, "rootPlaceId": 11, "name": "Alpha Game", "description": 
 VOTES = {1: (407269, 264202), 2: (0, 0)}
 log = []
 delays = {}
+FAVORITES = {"on": False}
+SERVERS_P1 = [{"id": f"aaaaaaaa-0000-0000-0000-00000000000{i}", "playing": i, "maxPlayers": 12, "ping": 50 + i, "fps": 59.5} for i in range(1, 6)] + [{"id": "x&y=1", "playing": 0, "maxPlayers": 12, "ping": 1, "fps": 60}]
+SERVERS_P2 = [{"id": "aaaaaaaa-0000-0000-0000-000000000003", "playing": 3, "maxPlayers": 12, "ping": 53, "fps": 59.5}, {"id": "bbbbbbbb-0000-0000-0000-000000000009", "playing": 9, "maxPlayers": 12, "ping": 90, "fps": 30}]
 
 
 class FakeRoblox(rbx.Client):
@@ -109,6 +113,21 @@ class FakeRoblox(rbx.Client):
             return {"data": [{"id": 156, "name": "builderman", "displayName": "builderman"}, {"id": 157, "name": "builder2", "displayName": "Builder Two"}]}
         if "groups.roblox.com/v1/groups/search" in url:
             return {"data": [{"id": 7, "name": "Roblox", "memberCount": 13508413, "description": "The official group"}]}
+        if "/servers/Public" in url:
+            if getattr(self, "servers_error", None):
+                raise rbx.RobloxError(self.servers_error, 500)
+            if (params or {}).get("cursor") == "s2":
+                return {"data": SERVERS_P2, "nextPageCursor": ""}
+            data = SERVERS_P1 if (params or {}).get("sortOrder", "Asc") == "Asc" else list(reversed(SERVERS_P1))
+            return {"data": data, "nextPageCursor": "s2"}
+        if re.search(r"/v1/games/\d+/favorites$", url) and not url.endswith("count"):
+            return {"isFavorited": bool(FAVORITES.get("on"))}
+        if "/favorite/games" in url:
+            return {"data": [{"id": 1, "name": "Alpha Game", "rootPlace": {"id": 11}, "creator": {"name": "Maker"}}, {"id": 8, "name": "Favorite Eight", "rootPlace": {"id": 88}}]}
+        if re.search(r"friends.roblox.com/v1/users/\d+/friends$", url):
+            return {"data": [{"id": 201, "name": "ann", "displayName": "Ann"}, {"id": 202, "name": "bob", "displayName": "Bob"}, {"id": 203, "name": "cy", "displayName": "Cy"}]}
+        if "/groups/roles" in url:
+            return {"data": []}
         if "/vip-servers/" in url:
             return {}                                       # (a server whose join link Roblox does not give)
         if "usernames/users" in url:
@@ -119,6 +138,16 @@ class FakeRoblox(rbx.Client):
 
     def post(self, url, body=None, **kw):
         log.append((url, dict(body or {})))
+        if re.search(r"/v1/games/\d+/favorites$", url):
+            if getattr(self, "favorite_error", None):
+                raise rbx.RobloxError(self.favorite_error, 500)
+            FAVORITES["on"] = body["isFavorited"]
+            return {}
+        if "presence.roblox.com" in url:
+            return {"userPresences": [{"userId": 201, "userPresenceType": 2, "lastLocation": "Alpha Game", "rootPlaceId": 11, "placeId": 11, "gameId": "job-aaaa-1111", "universeId": 1},
+                                      {"userId": 202, "userPresenceType": 1, "lastLocation": "Website"}, {"userId": 203, "userPresenceType": 0}]}
+        if "profiles" in url or url == self.PROFILES_URL:
+            return {"profileDetails": [{"userId": i, "names": {"username": n, "displayName": n.title()}, "isVerified": False} for i, n in ((201, "ann"), (202, "bob"), (203, "cy"))]}
         if "usernames/users" in url:
             return {"data": []}                                     # (no exact username match: only the search answers)
         raise rbx.RobloxError("not faked: " + url, 404)
@@ -394,6 +423,101 @@ del sys.modules["winreg"]
 roblox_launcher.shutil.which, roblox_launcher._run = real_which, real_run
 roblox_launcher.status = lambda fresh=False: INSTALLED
 roblox_launcher.forget()
+
+# ---------------------------------------------------------------- servers, favorites, recently viewed, friends in games
+det.back.emit()
+w.ctx.client.user = None
+det.show_game(alpha.card)
+check("without a sign-in the game page has no Favorite button", det.b_fav.isHidden())
+w.ctx.client.user = {"id": 156, "name": "me", "displayName": "Me"}
+det.show_game(alpha.card)
+check("signed in: the Favorite button asks Roblox whether the game is a favorite", wait(lambda: det.favorited is False and not det.b_fav.isHidden() and det.b_fav.text() == "Favorite"), det.b_fav.text())
+det.b_fav.click()
+check("pressing it favorites the game (POST with isFavorited true) and says so", wait(lambda: det.b_fav.text() == "Favorited" and det.favorited is True) and any(c[0].endswith("/favorites") and c[1] == {"isFavorited": True} for c in log), det.b_fav.text())
+det.b_fav.click()
+check("pressing again removes it", wait(lambda: det.b_fav.text() == "Favorite" and FAVORITES["on"] is False))
+client.favorite_error = "Roblox says no"
+det.b_fav.click()
+check("a refusal re-enables the button and says why (the state does not change)", wait(lambda: det.b_fav.isEnabled() and warnings and "Roblox says no" in warnings[-1]) and det.favorited is False, warnings[-1:])
+warnings.clear(); client.favorite_error = None
+FAVORITES["on"] = True
+det.show_game(alpha.card)
+check("a game that is already a favorite shows Favorited when its page opens", wait(lambda: det.b_fav.text() == "Favorited"))
+FAVORITES["on"] = False
+
+# servers
+check("the Servers section starts empty and asks to press Find servers", det.server_table.rowCount() == 0 and not det.b_more_servers.isEnabled())
+det.b_servers.click()
+check("Find servers lists the public servers: players, ping, fps (a server with an odd id is left out)", wait(lambda: det.server_table.rowCount() == 5) and det.server_table.item(0, 0).text() == "1"
+      and det.server_table.item(0, 1).text() == "12" and det.server_table.item(0, 2).text() == "51" and det.server_table.item(0, 3).text() == "59", [det.server_table.item(r, 0).text() for r in range(det.server_table.rowCount())])
+sq = [c for c in log if "/servers/Public" in c[0]]
+check("...asked for the right place, fewest players first, only servers with room", sq and sq[-1][0].endswith("/games/11/servers/Public") and sq[-1][1].get("sortOrder") == "Asc" and sq[-1][1].get("excludeFullGames") == "true", sq[-1:])
+delays["https://games.roblox.com/v1/games/11/servers/Public"] = 0.4
+for _ in range(5):
+    det.b_more_servers.click(); det.find_servers(False); spin(0.02)
+check("pressing Load more again and again asks for the next page once", len([c for c in log if "/servers/Public" in c[0] and c[1].get("cursor") == "s2"]) == 1)
+check("...the page arrives without duplicates (server 3 was on both pages)", wait(lambda: det.server_table.rowCount() == 6) and len({row_id for row_id in [det.server_table.item(r, 4).text() for r in range(6)]}) == 6)
+delays.clear()
+check("...and then there is no more", not det.b_more_servers.isEnabled() and "6 servers" in det.server_note.text(), det.server_note.text())
+n = len(launched)
+det.join_selected()
+check("Join selected without a selection asks to select one and opens nothing", len(launched) == n and "Select a server" in w.statusBar().currentMessage())
+det.server_table.selectRow(1)
+det.join_selected()
+check("Join selected opens the launcher on that server (place id + server id)", launched[-1] == "roblox://experiences/start?placeId=11&gameInstanceId=aaaaaaaa-0000-0000-0000-000000000002", launched[-1])
+det.sort.setCurrentIndex(1)
+det.b_servers.click()
+check("sorting by most players asks for Desc and starts the list again", wait(lambda: [c for c in log if "/servers/Public" in c[0]][-1][1].get("sortOrder") == "Desc" and det.server_table.rowCount() == 5), det.server_table.rowCount())
+det.sort.setCurrentIndex(0)
+det.join_emptiest()
+check("Join the emptiest opens the launcher on the server with the fewest players", wait(lambda: launched[-1] == "roblox://experiences/start?placeId=11&gameInstanceId=aaaaaaaa-0000-0000-0000-000000000001"), launched[-1])
+client.servers_error = "Roblox says no"
+det.b_servers.click()
+check("servers that cannot be loaded say so (no popup, the button works again)", wait(lambda: "could not be loaded" in det.server_note.text() and det.b_servers.isEnabled()) and not warnings, det.server_note.text())
+client.servers_error = None
+det.b_servers.click(); wait(lambda: det.server_table.rowCount() == 5)
+det.show_game(d.cards[2][0].card)
+check("opening another game empties the server list", det.server_table.rowCount() == 0 and det.servers == [] and det.server_note.text() == "")
+
+# recently viewed
+import games_store
+recent_names = [c["name"] for c in games_store.recent()]
+check("the games you looked at are remembered, newest first, each once", recent_names[:2] == ["Beta Game", "Alpha Game"] and len(recent_names) == len(set(recent_names)), recent_names)
+games_store.FILE.write_text("{not json")
+check("a damaged file is ignored (no crash)", games_store.recent() == [])
+games_store.FILE.write_text('[{"universeId": "x"}, 5, {"universeId": 3, "name": "ok"}]')
+check("entries that are not games are dropped", [c["universeId"] for c in games_store.recent()] == [3])
+games_store.clear()
+for i in range(25):
+    games_store.add({"universeId": 1000 + i, "placeId": 1, "name": f"G{i}", "playing": 1, "up": 1, "down": 1, "creator": "", "verified": False, "age": "", "genre": ""})
+check("at most 20 are kept", len(games_store.recent()) == 20 and games_store.recent()[0]["name"] == "G24")
+games_store.clear()
+det.back.emit()
+w.ctx.client.user = None
+d.show_feed()
+check("the home page rows come first when there is nothing of your own yet", wait(lambda: len(d.cards) >= 17) and all(b.isHidden() for b in d.boxes.values()))
+det.show_game(alpha.card); det.back.emit(); spin(0.3)
+check("after viewing a game a 'Recently viewed' row appears above Roblox's rows", not d.boxes["recent"].isHidden() and "Recently viewed" in [lab.text() for lab in d.boxes["recent"].findChildren(tab_discover.QLabel)])
+
+# friends in games and favorites (signed in)
+w.ctx.client.user = {"id": 156, "name": "me", "displayName": "Me"}
+w.ctx.signed_in.emit()
+check("signed in: a 'Friends in games' row shows only the friends who are in a game", wait(lambda: not d.boxes["friends"].isHidden()) and len(d.boxes["friends"].findChildren(tab_discover.FriendCard)) == 1, len(d.boxes["friends"].findChildren(tab_discover.FriendCard)))
+fc = d.boxes["friends"].findChildren(tab_discover.FriendCard)[0]
+check("...with the friend's name and the game", fc.f["displayName"] == "Ann" and fc.f["game"] == "Alpha Game" and fc.f["job"] == "job-aaaa-1111")
+fc.b_join.click()
+check("Join opens the launcher on the friend's server", launched[-1] == "roblox://experiences/start?placeId=11&gameInstanceId=job-aaaa-1111", launched[-1])
+check("a 'Your favorites' row shows the account's favorite games", wait(lambda: not d.boxes["favorites"].isHidden()) and {c.card["name"] for c in d.boxes["favorites"].findChildren(tab_discover.GameCard)} == {"Alpha Game", "Favorite Eight"})
+w.ctx.client.user = None
+w.ctx.signed_out.emit(); spin(0.2)
+check("signed out: both rows go away", d.boxes["friends"].isHidden() and d.boxes["favorites"].isHidden())
+bad_job = {"place": 11, "job": "x&y=1", "game": "g"}
+n = len(launched)
+d._join_friend(bad_job)
+check("a server id that could add something to the link opens nothing", len(launched) == n)
+servers, nxt = client.game_servers(11)
+check("game_servers (the real method): parsed servers and the next cursor, odd ids dropped", [s["playing"] for s in servers] == [1, 2, 3, 4, 5] and nxt == "s2" and servers[0]["max"] == 12 and servers[0]["fps"] == 59.5)
+check("favorite_games (the real method) gives game cards", [g["name"] for g in client.favorite_games(156)] == ["Alpha Game", "Favorite Eight"])
 
 # search entries and keyboard
 w.open_search(); w.palette_box.edit.setText("discover"); spin(0.05)
