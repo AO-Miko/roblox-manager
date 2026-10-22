@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.14.4.4.3",
+    "date": "2026-10-22",
+    "changes": [
+      "Forced updates now work for every channel: an app counts the updates of its own channel, so a Beta app that missed two betas gets the 'Please update' page (it was only counting Stable releases, so nothing could ever be blocked)"
+    ]
+  },
+  {
     "version": "1.14.4.3.3",
     "date": "2026-10-22",
     "changes": [

@@ -1,7 +1,7 @@
 {
-  "versionName": "1.14.4.3.3",
-  "versionCode": 33,
+  "versionName": "1.14.4.4.3",
+  "versionCode": 34,
   "apk": "roblox-manager.apk",
-  "sha256": "e00dd8055757310512b3113e40268292c19d0239d6ec13fbc8cd3faf27c07c74",
-  "notes": "Android: the phone's own 'Allow notifications?' question now also appears when you press Test on the Alerts page, and at start when alerts are on but the phone was never asked (at most twice)"
+  "sha256": "c0efd0fdf83c3faecfe4bd0259b686b633546e0fd1eacc75261607733fd16803",
+  "notes": "Forced updates now work for every channel: an app counts the updates of its own channel, so a Beta app that missed two betas gets the 'Please update' page (it was only counting Stable releases, so nothing could ever be blocked)"
 }
