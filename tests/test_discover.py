@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QApplication
 
 app = QApplication(sys.argv)
 import rbx
+import roblox_launcher
 import tab_discover
 from app import MainWindow
 
@@ -136,6 +137,9 @@ w.resize(1180, 760)
 w.show()
 spin(0.3)
 d = w.discover
+INSTALLED = {"installed": True, "how": "test", "platform": "linux", "command": None, "url": None, "can_install": False}
+real_status = roblox_launcher.status
+roblox_launcher.status = lambda fresh=False: INSTALLED
 opened_urls, launched = [], []
 tab_discover.open_url = lambda url: opened_urls.append(url)
 real_open = tab_discover.QDesktopServices.openUrl
@@ -270,6 +274,126 @@ check("link_code_of reads place and code from a join link (and survives nonsense
       and rbx.link_code_of("") == (None, None))
 check("short() and like_percent()", [tab_discover.short(n) for n in (5, 999, 1000, 18769, 1_500_000, 4_753_429_786)] == ["5", "999", "1K", "18.8K", "1.5M", "4.8B"]
       and tab_discover.like_percent(90, 10) == 90 and tab_discover.like_percent(0, 0) is None and tab_discover.like_percent(1, 2) == 33)
+
+# ---------------------------------------------------------------- is a launcher installed? (Play asks first)
+shown = []
+real_exec = roblox_launcher.InstallDialog.exec
+roblox_launcher.InstallDialog.exec = lambda self: shown.append(self) or 0
+MISSING_LINUX = {"installed": False, "how": "", "platform": "linux", "command": roblox_launcher.LINUX_COMMAND, "url": None, "can_install": True}
+roblox_launcher.status = lambda fresh=False: MISSING_LINUX
+n = len(launched)
+det.show_game(alpha.card)
+det.b_play.click()
+check("Play without a Roblox launcher does not open anything: it asks to install one", len(launched) == n and len(shown) == 1 and "not installed" in w.statusBar().currentMessage(), (len(launched), len(shown)))
+dlg = shown[0]
+check("(Linux) the question shows the exact command that would run", dlg.command == "flatpak install --user -y flathub org.vinegarhq.Sober" and dlg.cmd_box.toPlainText() == dlg.command and "no official Roblox for Linux" in dlg.text.text(), dlg.command)
+check("...with Install, Copy command and Cancel", dlg.b_go.text() == "Install" and dlg.b_copy.text() == "Copy command" and dlg.b_cancel.text() == "Cancel")
+launch_n = len(launched)
+det._join(vip1)
+w.vip.links = {5001: "https://www.roblox.com/games/11?privateServerLinkCode=XYZ"}
+det._join(vip1); spin(0.2)
+check("a VIP server join is stopped the same way (the launcher is checked for every launch)", len(launched) == launch_n and len(shown) >= 2, (len(launched), len(shown)))
+roblox_launcher.status = lambda fresh=False: INSTALLED
+det.b_play.click()
+check("once a launcher is there Play opens it", launched[-1] == "roblox://experiences/start?placeId=11" and len(launched) == launch_n + 1)
+
+# the dialogs for each platform
+WIN = {"installed": False, "how": "", "platform": "windows", "command": None, "url": roblox_launcher.DOWNLOAD_PAGE, "can_install": False}
+wd = roblox_launcher.InstallDialog(w, WIN)
+check("(Windows) the question offers the Roblox download page", wd.b_go.text() == "Open the download page" and wd.command is None and "download page" in wd.text.text())
+opened_urls.clear(); roblox_launcher.open_url = lambda url: opened_urls.append(url)
+wd.b_go.click()
+check("...and opens it", opened_urls == ["https://www.roblox.com/download"] and wd.result() == roblox_launcher.QDialog.DialogCode.Accepted, opened_urls)
+NOFP = {"installed": False, "how": "", "platform": "linux", "command": None, "url": roblox_launcher.FLATHUB_SETUP, "can_install": False}
+nd = roblox_launcher.InstallDialog(w, NOFP)
+check("(Linux without Flatpak) it says so and opens the Flatpak setup page instead of running anything", "Flatpak" in nd.text.text() and nd.command is None and nd.b_go.text() == "Open the Flatpak setup page")
+copied = []
+roblox_launcher.copy_text = lambda text: copied.append(text)
+import ui_common
+ui_common.copy_text = lambda text: copied.append(text)
+dlg.b_copy.click()
+check("Copy command copies exactly the command", copied == [dlg.command], copied)
+
+# Install runs the command and shows what it says
+RUN = dict(MISSING_LINUX, command=[sys.executable, "-c", "print('installing...'); print('done')"])
+roblox_launcher.status = lambda fresh=False: INSTALLED if fresh else MISSING_LINUX       # (after the command, a fresh look finds it)
+rd = roblox_launcher.InstallDialog(w, RUN)
+rd.b_go.click()
+check("Install runs the command and shows its output", wait(lambda: "installing..." in rd.log.toPlainText() and "done" in rd.log.toPlainText()), rd.log.toPlainText())
+check("...and says Installed, press Play again", wait(lambda: "Installed. Press Play again." in rd.status.text()), rd.status.text())
+BAD = dict(MISSING_LINUX, command=[sys.executable, "-c", "import sys; print('nope'); sys.exit(3)"])
+roblox_launcher.status = lambda fresh=False: MISSING_LINUX
+bd = roblox_launcher.InstallDialog(w, BAD)
+bd.b_go.click()
+check("a command that fails says so and offers the command to copy (no crash)", wait(lambda: "did not finish" in bd.status.text()) and bd.b_copy.isEnabled() and "nope" in bd.log.toPlainText(), bd.status.text())
+NOSUCH = dict(MISSING_LINUX, command=["/no/such/program-xyz"])
+nsd = roblox_launcher.InstallDialog(w, NOSUCH)
+nsd.b_go.click()
+check("a program that does not exist is reported, not raised", wait(lambda: "did not finish" in nsd.status.text()), nsd.status.text())
+roblox_launcher.InstallDialog.exec = real_exec
+
+# detection (the real functions, with a fake system)
+roblox_launcher.status = real_status
+roblox_launcher.forget()
+import shutil as _sh
+real_which, real_run = _sh.which, roblox_launcher._run
+roblox_launcher.shutil.which = lambda name: None
+roblox_launcher._run = lambda args, timeout=6: (1, "")
+roblox_launcher.plat.IS_WIN = False
+st = roblox_launcher.status(fresh=True)
+check("detection (Linux): nothing found means not installed, and without flatpak the setup page is offered", st["installed"] is False and st["command"] is None and st["url"] == roblox_launcher.FLATHUB_SETUP, st)
+roblox_launcher.shutil.which = lambda name: "/usr/bin/flatpak" if name == "flatpak" else None
+st = roblox_launcher.status(fresh=True)
+check("...with flatpak the install command is offered", st["installed"] is False and st["command"] == roblox_launcher.LINUX_COMMAND and st["can_install"])
+roblox_launcher._run = lambda args, timeout=6: (0, "org.vinegarhq.Sober.desktop") if args[0] == "xdg-mime" else (1, "")
+check("...a handler for roblox:// links means installed", roblox_launcher.status(fresh=True)["installed"] is True)
+roblox_launcher._run = lambda args, timeout=6: (0, "org.gnome.Calculator\norg.vinegarhq.Sober\n") if args[0] == "flatpak" else (1, "")
+check("...so does the Sober flatpak", roblox_launcher.status(fresh=True)["installed"] is True)
+roblox_launcher.shutil.which = lambda name: "/usr/bin/sober" if name == "sober" else None
+roblox_launcher._run = lambda args, timeout=6: (1, "")
+check("...and a sober program on the PATH", roblox_launcher.status(fresh=True)["installed"] is True)
+t0 = len(roblox_launcher._run.__code__.co_consts)
+first = roblox_launcher.status(fresh=True)
+roblox_launcher.shutil.which = lambda name: None
+check("the answer is remembered for a moment (no new questions to the system)", roblox_launcher.status() is first)
+roblox_launcher.forget()
+check("...and forgotten when asked", roblox_launcher.status()["installed"] is False)
+
+# Windows: the registry
+class FakeKey:
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+fake_winreg = type(sys)("winreg")
+fake_winreg.HKEY_CLASSES_ROOT = 1
+exe = tmp / "RobloxPlayerBeta.exe"
+exe.write_text("")
+handlers = {"roblox\\shell\\open\\command": f'"{exe}" %1'}
+
+
+def open_key(root, path):
+    if path not in handlers:
+        raise OSError("no key")
+    return FakeKey()
+
+
+fake_winreg.OpenKey = open_key
+fake_winreg.QueryValueEx = lambda key, name: (handlers["roblox\\shell\\open\\command"], 1)
+sys.modules["winreg"] = fake_winreg
+roblox_launcher.plat.IS_WIN = True
+roblox_launcher.forget()
+st = roblox_launcher.status(fresh=True)
+check("detection (Windows): the roblox:// handler in the registry, and the program exists", st["installed"] is True and st["platform"] == "windows" and st["how"] == str(exe), st)
+exe.unlink()
+roblox_launcher.forget()
+check("...a handler whose program is gone (uninstalled) counts as not installed, and the download page is offered", roblox_launcher.status(fresh=True)["installed"] is False and roblox_launcher.status()["url"] == roblox_launcher.DOWNLOAD_PAGE)
+handlers.clear()
+roblox_launcher.forget()
+check("...no handler at all: not installed", roblox_launcher.status(fresh=True)["installed"] is False)
+roblox_launcher.plat.IS_WIN = False
+del sys.modules["winreg"]
+roblox_launcher.shutil.which, roblox_launcher._run = real_which, real_run
+roblox_launcher.status = lambda fresh=False: INSTALLED
+roblox_launcher.forget()
 
 # search entries and keyboard
 w.open_search(); w.palette_box.edit.setText("discover"); spin(0.05)

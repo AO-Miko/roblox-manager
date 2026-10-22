@@ -89,8 +89,26 @@ import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
-/** Open the Roblox app and join a game, or a private/VIP server (place id + link code). Without the Roblox app the game's page opens instead. */
-fun launchRoblox(ctx: Context, placeId: Long, linkCode: String? = null, web: String = Games.pageUrl(placeId)): Boolean {
+const val ROBLOX_PACKAGE = "com.roblox.client"
+
+/** Is the Roblox app on this phone? (Play needs it.) */
+fun robloxInstalled(ctx: Context): Boolean = try {
+    ctx.packageManager.getPackageInfo(ROBLOX_PACKAGE, 0); true
+} catch (_: Exception) {
+    false
+}
+
+/** Open the Google Play page of Roblox (the Play Store app if there is one, else the web page). */
+fun openRobloxInStore(ctx: Context) {
+    for (url in listOf("market://details?id=$ROBLOX_PACKAGE", "https://play.google.com/store/apps/details?id=$ROBLOX_PACKAGE")) {
+        try { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return } catch (_: Exception) { }
+    }
+}
+
+/** Open the Roblox app and join a game, or a private/VIP server (place id + link code). If the Roblox app is not installed nothing is opened and [onMissing] is called
+ *  (the screen then offers to install it). Without a handler for the link the game's page opens instead. */
+fun launchRoblox(ctx: Context, placeId: Long, linkCode: String? = null, web: String = Games.pageUrl(placeId), onMissing: () -> Unit = {}): Boolean {
+    if (!robloxInstalled(ctx)) { onMissing(); return false }
     fun view(url: String) = ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     return try {
         view(Games.launcherUrl(placeId, linkCode)); true
@@ -98,6 +116,18 @@ fun launchRoblox(ctx: Context, placeId: Long, linkCode: String? = null, web: Str
         try { view(web) } catch (_: Exception) { }
         false
     }
+}
+
+/** "Roblox is not installed. Install it?": Yes opens Roblox in Google Play. */
+@Composable
+fun InstallRobloxDialog(onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss, title = { Text("Roblox is not installed") },
+        text = { Text("Play needs the Roblox app on this phone. Do you want to install it? Google Play opens on the Roblox page; install it there, then press Play again.", color = C.muted) },
+        confirmButton = { TextButton(onClick = { onDismiss(); openRobloxInStore(ctx) }) { Text("Open Google Play") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 fun openUrl(ctx: Context, url: String) {
@@ -294,6 +324,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     var vip by remember(card.universeId) { mutableStateOf<List<Vip>>(emptyList()) }
     var menu by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
+    var askInstall by remember { mutableStateOf(false) }
     val place = details?.placeId ?: card.placeId
     BackHandler { onBack() }
 
@@ -312,10 +343,11 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
             val d = sv.api.vipServer(v.id!!)
             val link = d?.str("link") ?: d?.str("joinCode")?.let { c -> v.placeId?.let { "https://www.roblox.com/games/$it?privateServerLinkCode=$c" } } ?: ""
             val (pl, code) = Games.linkParts(link)
-            if (code == null) note = "Roblox did not give a join link for this server." else launchRoblox(ctx, pl ?: v.placeId ?: place ?: 0, code, link)
+            if (code == null) note = "Roblox did not give a join link for this server." else launchRoblox(ctx, pl ?: v.placeId ?: place ?: 0, code, link) { askInstall = true }
         } catch (e: RobloxException) { note = errorText(e) }
     }
 
+    if (askInstall) InstallRobloxDialog { askInstall = false }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) { Text("‹ Back") }
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(C.surface3)) {
@@ -328,7 +360,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
             if (by.isNotEmpty()) Text("by $by" + if (details?.creatorVerified ?: card.verified) "  ✔" else "", color = C.muted)
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                PrimaryButton("Play", enabled = place != null) { place?.let { launchRoblox(ctx, it) } }
+                PrimaryButton("Play", enabled = place != null) { place?.let { launchRoblox(ctx, it) { askInstall = true } } }
                 if (vip.isNotEmpty()) Box {
                     QuietButton("Join my VIP server") { if (vip.size == 1) scope.launch { joinVip(vip[0]) } else menu = true }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

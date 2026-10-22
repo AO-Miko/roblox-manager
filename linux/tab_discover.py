@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QComboBox, QFrame, QGridLayout, QHBoxLayout, QLab
                                QWidget)
 
 import rbx
+import roblox_launcher
 from tab_staff import round_icon
 from theme import T
 from ui_common import FlowLayout, button, copy_text, hint, open_url, when
@@ -38,7 +39,11 @@ def like_percent(up, down):
 
 
 def launch_roblox(ctx, place_id, link_code=None, web_url=None):
-    """Open the Roblox launcher and join: the game (place id) or a private/VIP server (place id + link code). If the launcher cannot be opened, the game's page is."""
+    """Open the Roblox launcher and join: the game (place id) or a private/VIP server (place id + link code). First it checks that a launcher is installed (and if not,
+    offers to install one: see roblox_launcher.py). If the launcher cannot be opened, the game's page is."""
+    if not roblox_launcher.ensure(ctx.window):                  # no launcher on this computer: the install question was shown, nothing is opened
+        ctx.status("Roblox is not installed, so nothing was opened.")
+        return False
     url = rbx.launcher_url(place_id, link_code)
     if QDesktopServices.openUrl(QUrl(url)):
         ctx.status("Opening the Roblox launcher...")

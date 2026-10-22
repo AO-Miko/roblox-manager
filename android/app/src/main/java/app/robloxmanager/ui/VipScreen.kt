@@ -238,6 +238,7 @@ private fun VipDetails(sv: Services, s: Vip, places: Map<Long, String>, checks: 
     var link by remember { mutableStateOf(s.link ?: "") }
     var msg by remember { mutableStateOf("") }
     var rename by remember { mutableStateOf<String?>(null) }
+    var askInstall by remember { mutableStateOf(false) }
     val id = s.id
     val state = s.state(places)
     AlertDialog(
@@ -281,7 +282,7 @@ private fun VipDetails(sv: Services, s: Vip, places: Map<Long, String>, checks: 
                                     }
                                     val (place, code) = app.robloxmanager.core.Games.linkParts(link)
                                     if (code == null) msg = "Roblox did not give a join link."
-                                    else app.robloxmanager.ui.launchRoblox(ctx, place ?: s.placeId ?: 0, code, link)
+                                    else app.robloxmanager.ui.launchRoblox(ctx, place ?: s.placeId ?: 0, code, link) { askInstall = true }
                                 } catch (e: Exception) { msg = errorText(e) }
                             }
                         }) { Text("Play") }
@@ -292,6 +293,7 @@ private fun VipDetails(sv: Services, s: Vip, places: Map<Long, String>, checks: 
         },
         confirmButton = { TextButton(onClick = close) { Text("Close") } },
     )
+    if (askInstall) app.robloxmanager.ui.InstallRobloxDialog { askInstall = false }
     rename?.let { cur ->
         var t by remember { mutableStateOf(cur) }
         AlertDialog(onDismissRequest = { rename = null }, title = { Text("Rename") }, text = { OutlinedTextField(t, { t = it }, singleLine = true) },

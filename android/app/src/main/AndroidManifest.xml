@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- (Android 11 and newer only lets an app see the apps it names here) the Roblox app, to know whether Play has something to open -->
+    <queries>
+        <package android:name="com.roblox.client" />
+    </queries>
+
     <application
         android:name=".RobloxManagerApp"
         android:allowBackup="false"
