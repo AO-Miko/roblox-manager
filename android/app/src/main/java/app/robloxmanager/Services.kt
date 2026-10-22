@@ -13,6 +13,8 @@ import app.robloxmanager.core.Accounts
 import app.robloxmanager.core.BanStore
 import app.robloxmanager.core.KeystoreVault
 import app.robloxmanager.core.NameCache
+import app.robloxmanager.core.Geo
+import app.robloxmanager.core.GeoBook
 import app.robloxmanager.core.Prefs
 import app.robloxmanager.core.PolicyStatus
 import app.robloxmanager.core.PolicyStore
@@ -55,6 +57,8 @@ class Services(app: Application) {
     val accounts = Accounts(File(dir, "accounts.json"), KeystoreVault())
     val prefs = Prefs(File(dir, "prefs.json"))
     val alerts = AlertSettings(prefs)
+    /** Where servers are (the answers of ipwho.is, kept 30 days); only used when the person presses Locate servers. */
+    val geo = GeoBook(File(dir, "server_places.json"), Geo.httpFetch())
     /** Shows one piece of friend news (set by the activity, which has the Android context). */
     var notifier: (String) -> Unit = {}
     /** Whether friend alerts are on (shown by the switch in People > Alerts and in Settings). */

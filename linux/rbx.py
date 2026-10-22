@@ -902,6 +902,34 @@ class Client:
                    for s in d.get("data", []) if isinstance(s, dict) and safe_code(s.get("id"))]
         return servers, d.get("nextPageCursor") or ""
 
+    JOIN_WAIT = 1.5          # seconds between the asks of server_address when Roblox says 'not ready'
+
+    def server_address(self, place_id, job_id, tries=4):
+        """The public address of one public server, from Roblox's join answer (the call the website makes when Play is pressed; nothing is joined).
+        Only the address is taken out of the answer: its tickets are never kept or logged. Needs the sign-in. The first answers may say 'not ready', so it asks again a few times."""
+        import uuid
+        job = safe_code(job_id)
+        if not job:
+            raise ValueError("odd server id")
+        for k in range(tries):
+            d = self.post("https://gamejoin.roblox.com/v1/join-game-instance",
+                          {"placeId": int(place_id), "isTeleport": False, "gameId": job, "gameJoinAttemptId": str(uuid.uuid4())})
+            script = d.get("joinScript") if isinstance(d, dict) else None
+            if isinstance(script, str):
+                try:
+                    script = json.loads(script)
+                except ValueError:
+                    script = None
+            if isinstance(script, dict):
+                for e in script.get("UdmuxEndpoints") or []:
+                    addr = e.get("Address") if isinstance(e, dict) else None
+                    if isinstance(addr, str) and _public_ipv4(addr):
+                        return addr
+                raise RobloxError(0, "Roblox did not give a public address for this server")
+            if k + 1 < tries:
+                self._sleep(self.JOIN_WAIT)
+        raise RobloxError(0, "Roblox did not give this server's address (it may be full or just closed)")
+
     def game_favorite_state(self, universe_id):
         """True if the account in use has favorited the game (needs the sign-in)."""
         return bool(self.get(f"https://games.roblox.com/v1/games/{int(universe_id)}/favorites").get("isFavorited"))
@@ -1250,6 +1278,15 @@ def save_avatar(uid, data):
 
 
 _CODE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def _public_ipv4(text):
+    import ipaddress
+    try:
+        ip = ipaddress.ip_address(text.strip())
+    except ValueError:
+        return False
+    return ip.version == 4 and ip.is_global
 
 
 def safe_code(code):

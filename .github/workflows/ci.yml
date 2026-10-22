@@ -65,6 +65,8 @@ jobs:
         run: python tests/test_discover.py
       - name: Friend alerts, requests of all groups, backup
         run: python tests/test_extras.py
+      - name: Server locations and the world map
+        run: python tests/test_geo.py
       - name: Security checks
         run: python tests/test_security.py
       - name: Version numbers

@@ -71,6 +71,10 @@ import app.robloxmanager.Services
 import app.robloxmanager.core.GameCard
 import app.robloxmanager.core.GameDetails
 import app.robloxmanager.core.FriendGame
+import app.robloxmanager.core.GeoException
+import app.robloxmanager.core.Place
+import app.robloxmanager.core.WorldMap
+import app.robloxmanager.core.serverAddress
 import app.robloxmanager.core.GameSort
 import app.robloxmanager.core.RecentGames
 import app.robloxmanager.core.ServerInfo
@@ -387,6 +391,12 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     var favBusy by remember { mutableStateOf(false) }
     var sort by remember { mutableStateOf("Asc") }
     var order by remember { mutableStateOf("roblox") }
+    val places = remember(card.universeId) { mutableStateMapOf<String, Place>() }
+    var locating by remember { mutableStateOf(false) }
+    val stopLocate = remember { booleanArrayOf(false) }
+    var askGeo by remember { mutableStateOf(false) }
+    var showMap by remember { mutableStateOf(false) }
+    var mapFilter by remember(card.universeId) { mutableStateOf<List<String>?>(null) }
     var servers by remember(card.universeId) { mutableStateOf<List<ServerInfo>>(emptyList()) }
     var cursor by remember(card.universeId) { mutableStateOf("") }
     var srvBusy by remember(card.universeId) { mutableStateOf(false) }
@@ -399,6 +409,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         val p = place ?: return
         if (srvBusy || (!reset && cursor.isEmpty())) return                         // one page at a time: pressing again meanwhile does nothing
         srvBusy = true; srvNote = "Looking for servers…"
+        if (reset) { places.clear(); mapFilter = null }
         val s0 = sort
         scope.launch {
             try {
@@ -407,6 +418,32 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 cursor = n
                 srvNote = if (servers.isEmpty()) "No public servers are open right now." else "${servers.size} servers" + if (n.isNotEmpty()) "  (more available)" else ""
             } catch (e: CancellationException) { throw e } catch (e: Exception) { srvNote = "The servers could not be loaded: ${errorText(e)}" } finally { srvBusy = false }
+        }
+    }
+
+    /** The loaded servers that are not located yet (25 at a time): Roblox's join answer gives each one's address, ipwho.is says where it is. */
+    fun locate() {
+        val p = place ?: return
+        if (locating) return
+        if (signedIn == null) { srvNote = "Sign in first: locating servers needs your account."; return }
+        val todo = servers.filter { it.id !in places }.take(25)
+        if (todo.isEmpty()) { srvNote = if (servers.isEmpty()) "Press Find servers first." else "Every loaded server is located already."; return }
+        locating = true; stopLocate[0] = false
+        scope.launch {
+            var ok = 0
+            val problems = ArrayList<String>()
+            try {
+                for ((k, s) in todo.withIndex()) {
+                    if (stopLocate[0]) break
+                    srvNote = "Locating servers: $k/${todo.size}…"
+                    try { places[s.id] = sv.geo.lookup(sv.api.serverAddress(p, s.id)); ok++ }
+                    catch (e: CancellationException) { throw e }
+                    catch (e: RobloxException) { problems += errorText(e); if (e.status == 401) break }
+                    catch (e: GeoException) { problems += e.message ?: "unknown" }
+                    catch (e: IllegalArgumentException) { problems += "odd server id" }
+                }
+            } finally { locating = false }
+            srvNote = "Located $ok of ${todo.size} server(s)." + (problems.firstOrNull()?.let { " ${problems.size} could not be located: $it" } ?: "")
         }
     }
 
@@ -431,6 +468,9 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         } catch (e: RobloxException) { note = errorText(e) }
     }
 
+    if (askGeo) Confirm("Locate servers", "To find where a server is, the app asks Roblox for the server's address (the same request the website makes when you press Play, but nothing is joined), " +
+        "then looks that address up on ipwho.is, which says which city it is in. Only Roblox's server address is sent to ipwho.is.", "Locate", false,
+        { askGeo = false; sv.prefs.put("geo.allowed", true); locate() }, { askGeo = false })
     if (askInstall) InstallRobloxDialog { askInstall = false }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) { Text("‹ Back") }
@@ -504,6 +544,11 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 Games.SERVER_ORDERS.forEach { (key, label) -> androidx.compose.material3.FilterChip(selected = order == key, onClick = { order = key }, label = { Text(label) }) }
             }
             Text("Sorts the servers loaded so far. Roblox does not say how long a server has been running.", color = C.muted, fontSize = 11.sp)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                QuietButton(if (locating) "Locating…" else "Locate servers", enabled = !locating && servers.isNotEmpty()) { if (sv.prefs.bool("geo.allowed", false)) locate() else askGeo = true }
+                if (locating) QuietButton("Stop") { stopLocate[0] = true }
+                QuietButton(if (showMap) "Hide map" else "Show map") { showMap = !showMap }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuietButton(if (srvBusy) "Looking…" else "Find servers", enabled = !srvBusy && place != null) { findServers(true) }
                 QuietButton("Join the emptiest", enabled = place != null) {
@@ -517,12 +562,19 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 }
             }
             if (srvNote.isNotEmpty()) Text(srvNote, color = C.muted, fontSize = 12.sp)
+            if (showMap) {
+                val groups = WorldMap.groupPlaces(servers, places)
+                ServerMap(groups, mapFilter) { ids -> mapFilter = if (mapFilter == ids) null else ids }
+                Text(if (groups.isEmpty()) "No server is located yet. Press Locate servers." else "${places.size} of ${servers.size} loaded servers are located, in ${groups.size} place(s). Press a dot to list its servers.",
+                    color = C.muted, fontSize = 12.sp)
+            }
+            mapFilter?.let { f -> Row(verticalAlignment = Alignment.CenterVertically) { Text("Showing ${f.size} server(s) at one place", color = C.muted, fontSize = 12.sp, modifier = Modifier.weight(1f)); QuietButton("Show all") { mapFilter = null } } }
             if (servers.isNotEmpty()) Card {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Games.sortServers(servers, order).forEach { s ->
+                    Games.sortServers(servers, order).filter { s -> mapFilter?.let { s.id in it } ?: true }.forEach { s ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${s.playing}/${s.max}", Modifier.width(64.dp), fontWeight = FontWeight.Medium)
-                            Text((s.ping?.let { "$it ms" } ?: "-") + "   " + (s.fps?.let { "$it fps" } ?: ""), Modifier.weight(1f), color = C.muted, fontSize = 12.sp)
+                            Text(listOfNotNull(s.ping?.let { "$it ms" } ?: "-", s.fps?.let { "$it fps" }, places[s.id]?.label).joinToString("  ·  "), Modifier.weight(1f), color = C.muted, fontSize = 12.sp)
                             TextButton(onClick = { place?.let { launchRoblox(ctx, it, jobId = s.id) { askInstall = true } } }) { Text("Join") }
                         }
                     }

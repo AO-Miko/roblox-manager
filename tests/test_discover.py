@@ -80,6 +80,7 @@ DETAILS = {1: {"id": 1, "rootPlaceId": 11, "name": "Alpha Game", "description": 
 VOTES = {1: (407269, 264202), 2: (0, 0)}
 log = []
 delays = {}
+JOIN_CALLS, JOIN_FAIL = [], set()
 FAVORITES = {"on": False}
 SERVERS_P1 = [{"id": f"aaaaaaaa-0000-0000-0000-00000000000{i}", "playing": i, "maxPlayers": 12, "ping": 50 + i, "fps": 59.5} for i in range(1, 6)] + [{"id": "x&y=1", "playing": 0, "maxPlayers": 12, "ping": 1, "fps": 60}]
 SERVERS_P2 = [{"id": "aaaaaaaa-0000-0000-0000-000000000003", "playing": 3, "maxPlayers": 12, "ping": 53, "fps": 59.5}, {"id": "bbbbbbbb-0000-0000-0000-000000000009", "playing": 9, "maxPlayers": 12, "ping": 90, "fps": 30}]
@@ -143,6 +144,13 @@ class FakeRoblox(rbx.Client):
                 raise rbx.RobloxError(self.favorite_error, 500)
             FAVORITES["on"] = body["isFavorited"]
             return {}
+        if "join-game-instance" in url:
+            job = body["gameId"]
+            JOIN_CALLS.append(body)
+            if job in JOIN_FAIL:
+                return {"jobId": job, "status": 22, "joinScript": None, "joinTicket": "T"}
+            n = int(job[-1])
+            return {"jobId": job, "status": 2, "joinScript": {"UdmuxEndpoints": [{"Address": f"128.116.{44 if n % 2 else 97}.{n}", "Port": 1}], "MachineAddress": "10.0.0.1"}, "joinTicket": "T"}
         if "presence.roblox.com" in url:
             return {"userPresences": [{"userId": 201, "userPresenceType": 2, "lastLocation": "Alpha Game", "rootPlaceId": 11, "placeId": 11, "gameId": "job-aaaa-1111", "universeId": 1},
                                       {"userId": 202, "userPresenceType": 1, "lastLocation": "Website"}, {"userId": 203, "userPresenceType": 0}]}
@@ -475,6 +483,80 @@ for mode, expect in (("roblox", "abcd"), ("ping", "bdac"), ("fps", "dbac"), ("mo
     check(f"sorting the loaded servers by '{mode}'" + (" (a server without a value goes last, ties keep Roblox's order)" if mode == "ping" else ""), got == expect, got)
 check("an unknown mode keeps Roblox's order", [s["id"] for s in tab_discover.sort_servers(det.servers, "nonsense")] == list("abcd"))
 det.servers = real_servers
+det.order.setCurrentIndex(0)
+# ---------------------------------------------------------------- where the servers are
+import geo
+import settings
+import worldmap
+infos = []
+QMessageBox.information = staticmethod(lambda *a, **k: infos.append(str(a[2]) if len(a) > 2 else ""))          # ('sign in first' would wait for a click)
+rbx.Client.JOIN_WAIT = 0.01
+GEO = []
+GEO_PLACES = {"128.116.44": ("Frankfurt am Main", "Germany", "DE", 50.1155, 8.6842), "128.116.97": ("Singapore", "Singapore", "SG", 1.2897, 103.85)}
+
+
+def fake_geo(url):
+    GEO.append(url)
+    city, country, cc, lat, lon = GEO_PLACES[url.rsplit("/", 1)[1].rsplit(".", 1)[0]]
+    return {"success": True, "city": city, "country": country, "country_code": cc, "region": "", "latitude": lat, "longitude": lon}
+
+
+geo._fetch = fake_geo
+real_confirm, asked_geo = w.ctx.confirm, []
+w.ctx.confirm = lambda title, text, danger=False: asked_geo.append(text) or True
+check("the table has a Location column (after the server id, so the other columns keep their places)", det.server_table.columnCount() == 6 and det.server_table.horizontalHeaderItem(5).text() == "Location")
+check("the Locate and map buttons are there", det.b_locate.text() == "Locate servers" and det.b_map.text() == "Show map" and det.b_stop_locate.isHidden())
+w.ctx.client.user = None
+det.locate_servers()
+check("Locate needs the sign-in (nothing is asked of Roblox without it)", not JOIN_CALLS and not asked_geo and infos and "sign in" in infos[0].lower(), infos)
+w.ctx.client.user = {"id": 156, "name": "me", "displayName": "Me"}
+det.server_table.selectRow(0)
+first_id = det.server_table.item(0, 4).text()
+det.locate_servers()
+check("the first time, the person is told what happens (Roblox's address, ipwho.is) and agrees", wait(lambda: len(det.places) == 1) and len(asked_geo) == 1 and "ipwho.is" in asked_geo[0] and "nothing is joined" in asked_geo[0], asked_geo)
+check("...the join request was for that server only", len(JOIN_CALLS) == 1 and JOIN_CALLS[0]["gameId"] == first_id and JOIN_CALLS[0]["placeId"] == 11, JOIN_CALLS)
+check("...the table shows its place", wait(lambda: any(det.server_table.item(r, 5).text() == "Frankfurt am Main, Germany" for r in range(det.server_table.rowCount()))), [det.server_table.item(r, 5).text() for r in range(det.server_table.rowCount())])
+check("...and the agreement is remembered", settings.get("geo.allowed") is True)
+det.server_table.clearSelection()
+det.locate_servers()
+check("with nothing selected, all the others are located", wait(lambda: len(det.places) == 6 and not det._locating), len(det.places))
+check("...each server was asked for once (6 in all)", len(JOIN_CALLS) == 6 and len({c["gameId"] for c in JOIN_CALLS}) == 6, len(JOIN_CALLS))
+check("...and the person was not asked again", len(asked_geo) == 1)
+check("...the lookup service was asked once per block of addresses (2), not once per server", len(GEO) == 2, GEO)
+check("...the note says how many were located", "Located 5 of 5" in det.server_note.text(), det.server_note.text())
+locs = {det.server_table.item(r, 4).text()[-1]: det.server_table.item(r, 5).text() for r in range(det.server_table.rowCount())}
+check("the odd servers are in Frankfurt and the even ones in Singapore", locs["1"] == locs["3"] == locs["5"] == locs["9"] == "Frankfurt am Main, Germany" and locs["2"] == "Singapore, Singapore", locs)
+n = len(JOIN_CALLS)
+det.locate_servers()
+check("when every server is located, pressing Locate again does nothing but say so", len(JOIN_CALLS) == n and "located already" in w.statusBar().currentMessage(), w.statusBar().currentMessage())
+dlg = tab_discover.ServerMapDialog(det, det.servers, det.places, det._join_server)
+check("the map window shows two dots: Frankfurt (4 servers) and Singapore (2)", sorted(len(d["ids"]) for d in dlg.map.dots) == [2, 4] and "6 of 6" in dlg.note.text(), (dlg.map.dots, dlg.note.text()))
+dlg.map.picked.emit(next(d["ids"] for d in dlg.map.dots if len(d["ids"]) == 2))
+check("pressing a dot lists its servers", dlg.table.rowCount() == 2 and {dlg.table.item(r, 4).text()[-1] for r in range(2)} == {"2", "4"}, dlg.table.rowCount())
+dlg.table.selectRow(0)
+launched_before = len(launched)
+dlg.join_selected()
+check("Join selected in the map window opens the launcher on that server", len(launched) == launched_before + 1 and "gameInstanceId=aaaaaaaa-0000-0000-0000-00000000000" in launched[-1], launched[-1:])
+dlg.close()
+det.show_map_note = None
+# a server that Roblox will not give an address for, and a lookup service that is down
+det.places.clear(); det._show_servers()
+JOIN_FAIL.add("aaaaaaaa-0000-0000-0000-000000000002")
+det.server_table.selectRow(next(r for r in range(det.server_table.rowCount()) if det.server_table.item(r, 4).text().endswith("2")))
+det.locate_servers()
+check("a server Roblox gives no address for is reported without a popup, and the button works again", wait(lambda: "could not be located" in det.server_note.text() and det.b_locate.isEnabled())
+      and "did not give this server's address" in det.server_note.text() and not warnings, det.server_note.text())
+JOIN_FAIL.clear()
+geo_real = geo._fetch
+geo._fetch = lambda url: (_ for _ in ()).throw(geo.requests.ConnectionError("down"))
+geo.CACHE_FILE.unlink()
+det.server_table.selectRow(0)
+det.locate_servers()
+check("a lookup service that is down is reported in plain words", wait(lambda: "could not be reached" in det.server_note.text()) and not det.places, det.server_note.text())
+geo._fetch = geo_real
+det.find_servers(True); wait(lambda: det.server_table.rowCount() == 6 and not det.server_busy)
+check("a new list of servers starts without places", det.places == {} and all(det.server_table.item(r, 5).text() == "" for r in range(det.server_table.rowCount())))
+w.ctx.confirm = real_confirm
 det.order.setCurrentIndex(0)
 det.sort.setCurrentIndex(1)
 det.b_servers.click()

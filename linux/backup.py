@@ -13,6 +13,7 @@ import settings
 FORMAT = 1
 MAX_BYTES = 5_000_000
 APP = "roblox-manager"
+PRIVATE = {"geo.allowed"}          # agreements are given on each device, so they are neither saved nor restored
 
 
 class BackupError(Exception):
@@ -27,7 +28,7 @@ def build(version="", account=None, friends=None, followers=None, following=None
     """The backup as a dictionary. The lists are only included when they are given (they need a sign-in)."""
     data = {
         "app": APP, "format": FORMAT, "version": version, "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "settings": {k: settings.get(k) for k in settings.DEFAULTS},
+        "settings": {k: settings.get(k) for k in settings.DEFAULTS if k not in PRIVATE},
         "alerts": alerts.load(),
         "recent_games": games_store.recent(),
     }
@@ -78,7 +79,7 @@ def restore(data):
     s = data.get("settings")
     if isinstance(s, dict):
         for key in settings.DEFAULTS:
-            if key in s and (isinstance(s[key], (bool, int)) or isinstance(s[key], float)):
+            if key not in PRIVATE and key in s and (isinstance(s[key], (bool, int)) or isinstance(s[key], float)):
                 settings.set(key, s[key])
                 done["settings"] += 1
     if "alerts" in data:

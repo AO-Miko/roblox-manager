@@ -15,6 +15,7 @@ DEFAULTS = {
     "cache.names_days": (30, 1, 365),        # how long saved names are reused
     "confirm.typed_from": (5, 2, 100),       # changing at least this many people/groups at once asks you to type the number
     "ui.remember_window": (True, None, None),
+    "geo.allowed": (False, None, None),      # the person agreed to looking up server locations (Roblox's address of a server, then ipwho.is)
     "ui.rate_notes": (True, None, None),     # the orange 'waiting for Roblox's limit' notes
 }
 

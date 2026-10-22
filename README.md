@@ -195,6 +195,15 @@ Pull requests from forks are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Th
 The apps update from two other branches that only receive signed release commits: `release` (Stable) and `beta` (Beta). To report a security problem privately, see
 [SECURITY.md](SECURITY.md). Everyone is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Server locations on a world map
+
+On a game's page, **Locate servers** finds where its public servers are (the selected ones, or up to 25 loaded ones at a time) and **Show map** draws them on a world map,
+one dot per city, bigger for more servers; press a dot to list its servers and join one. It needs a sign-in. How it works: Roblox's join answer for a server (the request the
+website makes when you press Play, nothing is joined) contains the server's address, and that address is looked up on [ipwho.is](https://ipwho.is), which says which city it is in.
+**Only Roblox's server address is sent to ipwho.is**, never a name, cookie or account, and only after you press Locate servers (the app asks the first time). Answers are kept
+on your device for 30 days by block of addresses, so most lookups need no request. Roblox does not say how long a server has been running, so servers cannot be sorted by that;
+the loaded servers can be sorted by ping, FPS or players. The map is drawn from Natural Earth data (public domain).
+
 ## Friend alerts, join requests of all groups, backup
 
 - **Alerts** (People → Alerts): tick the friends you want news about and switch alerts on. While the app is running it asks Roblox where they are every 90 seconds

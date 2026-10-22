@@ -65,6 +65,9 @@ jobs:
       - name: Friend alerts, requests of all groups, backup
         if: ${{ !cancelled() }}
         run: python tests/test_extras.py
+      - name: Server locations and the world map
+        if: ${{ !cancelled() }}
+        run: python tests/test_geo.py
       - name: Security checks
         if: ${{ !cancelled() }}
         run: python tests/test_security.py

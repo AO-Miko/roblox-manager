@@ -46,6 +46,7 @@ python tests/test_launcher_update.py       # the restart popup after an update, 
 python tests/test_api_surface.py          # every module/client call the app makes exists
 python tests/test_discover.py             # Discover: games, search, the game page, Play
 python tests/test_extras.py               # friend alerts, join requests of all groups, backup
+python tests/test_geo.py                  # server locations and the world map
 python tests/test_security.py             # text from Roblox shown as text, join codes, locked-down Android, pinned Windows libraries
 python tests/test_settings_updates.py
 python tests/test_text_fit.py             # no cut-off text on any tab

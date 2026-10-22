@@ -11,6 +11,7 @@ keeps every fix in place.
   (the log lines about it only say how long it is and where it is kept).
 - **Updates:** signed; archives are unpacked without links, outside paths or oversized files; an older version is never installed.
 - **Dangerous calls:** no `shell=True`, `os.system`, `eval`, `pickle`, `verify=False` or `yaml.load` anywhere (a test scans for them).
+- **Server locations:** the only other service the apps contact is ipwho.is, and only when the person presses Locate servers (and agreed once): it gets one public IPv4 address of a Roblox server and nothing else (no cookie, no account, no redirects, small answers, answers checked and kept 30 days). Private and odd addresses are never sent, and the tickets in Roblox's join answer are never kept or logged (a test checks both).
 - **Android:** one exported component (the main screen), no backups, no plain http, only the internet, install and (for the friend alerts) notification permissions, no JavaScript bridge.
 
 ## Found and fixed
