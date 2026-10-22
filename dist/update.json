@@ -1,7 +1,7 @@
 {
-  "versionName": "1.11.3.2.2",
-  "versionCode": 27,
+  "versionName": "1.11.3.2.3",
+  "versionCode": 28,
   "apk": "roblox-manager.apk",
-  "sha256": "9f6514f3686257d0700862e0e4a792bd157d33ac26c5058c2aa8216c824dd452",
-  "notes": "The Info page is now called Settings (Preferences and Updates) on PC and phone, so it is easier to find|Cleaner code: unused imports removed"
+  "sha256": "125f9a46cc5cf473b6c82621c7a72ef56ac03ac37a74d8686fcdd36138ac6d1a",
+  "notes": "The app is now free software under the GNU GPL v3 (LICENSE added, shown in Settings on PC and phone)"
 }

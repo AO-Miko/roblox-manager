@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.11.3.2.3",
+    "date": "2026-10-22",
+    "changes": [
+      "The app is now free software under the GNU GPL v3 (LICENSE added, shown in Settings on PC and phone)"
+    ]
+  },
+  {
     "version": "1.11.3.2.2",
     "date": "2026-10-22",
     "changes": [
