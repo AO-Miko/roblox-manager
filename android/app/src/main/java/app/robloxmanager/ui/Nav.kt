@@ -90,12 +90,14 @@ class Jump(val dest: String, val sub: Int = 0, val nonce: Int = 0)
 /** What the search can open: pages, and the sub pages of People and Settings. */
 class Hit(val title: String, val where: String, val words: String, val icon: ImageVector, val jump: Jump)
 
-private val PEOPLE_SUBS = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find a user")
+private val PEOPLE_SUBS = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find a user", "Alerts")
 
 fun searchHits(admin: Boolean = false): List<Hit> = buildList {
     add(Hit("Discover", "Home", "games search play browse trending roblox find", HOME.icon, Jump("home", 1)))
     ALL.filter { admin || it != ADMIN }.forEach { add(Hit(it.title, "page", it.words, it.icon, Jump(it.id))) }
-    PEOPLE_SUBS.forEachIndexed { i, s -> add(Hit(s, "People", "", PEOPLE.icon, Jump("people", i))) }
+    PEOPLE_SUBS.forEachIndexed { i, s -> add(Hit(s, "People", if (s == "Alerts") "notifications notify online watch friends news" else "", PEOPLE.icon, Jump("people", i))) }
+    add(Hit("Join requests", "Groups", "requests accept decline all groups to-do", GROUPS.icon, Jump("groups", 1)))
+    add(Hit("Backup", "Settings", "backup export restore save file", INFO.icon, Jump("info", 0)))
     add(Hit("Preferences", "Settings", "preferences options rate limit log cache confirm", INFO.icon, Jump("info", 0)))
     add(Hit("Updates", "Settings", "update version changes log install", INFO.icon, Jump("info", 1)))
 }

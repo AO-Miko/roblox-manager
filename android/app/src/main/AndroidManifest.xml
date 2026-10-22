@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- (Android 13 and newer) to show the friend alerts the person switched on -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- (Android 11 and newer only lets an app see the apps it names here) the Roblox app, to know whether Play has something to open -->
     <queries>

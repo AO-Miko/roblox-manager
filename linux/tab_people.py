@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 import rbx
 import settings
 from tab_account import FriendsTab
+from tab_alerts import AlertsTab
 from ui_common import BulkBar, button, copy_text, fill_table, hint, make_table, open_url, row_key, selected_rows, when
 
 
@@ -514,8 +515,9 @@ class PeopleTab(QWidget):
         self.following = _following_tab(ctx)
         self.blocked = _blocked_tab(ctx)
         self.find = FindTab(ctx)
+        self.alerts = AlertsTab(ctx)
         self.pages = [(self.friends, "Friends"), (self.requests, "Requests"), (self.followers, "Followers"), (self.following, "Following"),
-                      (self.blocked, "Blocked"), (self.find, "Find a user")]
+                      (self.blocked, "Blocked"), (self.find, "Find a user"), (self.alerts, "Alerts")]
         for w, name in self.pages:
             self.tabs.addTab(w, name)
         self.requests.on_changed = lambda n: ctx.set_count("requests", n)

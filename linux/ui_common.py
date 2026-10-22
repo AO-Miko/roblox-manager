@@ -66,6 +66,7 @@ class Context(QObject):
     """What every tab needs: the API client, background runner, and ways to talk to the user."""
     signed_in = Signal()
     signed_out = Signal()
+    data_restored = Signal()          # a backup was restored: tabs that keep their own saved data read it again
     accounts_changed = Signal()       # an account was added, removed or switched
     counts = Signal(str, object)      # (what, how many or None): shown in the tab titles (friends, requests, followers, following, blocked, groups, vip)
 
@@ -75,6 +76,7 @@ class Context(QObject):
         self.async_ = Async(self.error)
         self.client_factory = rbx.Client      # makes a client for another account's cookie (balances of the accounts you are not using)
         self.busy_checks = []                 # callables that say whether a long batch is running (accounts cannot be switched meanwhile)
+        self._tray = None
         self.stoppers = []                    # callables that stop a running batch (called when the window closes)
 
     def busy(self):
@@ -126,6 +128,19 @@ class Context(QObject):
                           QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, self.window)
         box.setDefaultButton(QMessageBox.StandardButton.No)
         return box.exec() == QMessageBox.StandardButton.Yes
+
+    def notify(self, title, text):
+        """A desktop notification (from the system tray); where the desktop has none, the line at the bottom of the window shows it."""
+        from PySide6.QtWidgets import QSystemTrayIcon
+        self.status(text, 10000)
+        try:
+            if self._tray is None and QSystemTrayIcon.isSystemTrayAvailable():
+                self._tray = QSystemTrayIcon(self.window.windowIcon(), self.window)
+                self._tray.show()
+            if self._tray is not None and self._tray.supportsMessages():
+                self._tray.showMessage(title, text, QSystemTrayIcon.MessageIcon.Information, 8000)
+        except Exception:       # noqa: BLE001 - a notification must never break the app
+            pass
 
     def need_login(self):
         if not self.logged_in:

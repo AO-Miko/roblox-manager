@@ -88,6 +88,7 @@ class GroupsTab(QWidget):
         row = FlowLayout()
         row.addWidget(button("Refresh", self.load_groups))
         row.addWidget(button("Open another group...", self.open_other, "Look at any group by id or link"))
+        row.addWidget(button("Join requests in all groups...", self.all_requests, "Every join request of the groups where you may answer them, in one list"))
         ll.addLayout(row)
         split.addWidget(left)
 
@@ -328,6 +329,14 @@ class GroupsTab(QWidget):
             return
         c.status("Loading your groups...")
         c.async_.run(c.client.my_groups, self._groups)
+
+    def all_requests(self):
+        if self.ctx.need_login():
+            return
+        from tab_group_requests import AllRequestsDialog
+        self.requests_dialog = AllRequestsDialog(self.ctx, getattr(self, "group_rows", []))
+        self.requests_dialog.show()
+        self.requests_dialog.scan()
 
     def _groups(self, data):
         self.group_rows = data

@@ -11,7 +11,7 @@ keeps every fix in place.
   (the log lines about it only say how long it is and where it is kept).
 - **Updates:** signed; archives are unpacked without links, outside paths or oversized files; an older version is never installed.
 - **Dangerous calls:** no `shell=True`, `os.system`, `eval`, `pickle`, `verify=False` or `yaml.load` anywhere (a test scans for them).
-- **Android:** one exported component (the main screen), no backups, no plain http, only the internet and install permissions, no JavaScript bridge.
+- **Android:** one exported component (the main screen), no backups, no plain http, only the internet, install and (for the friend alerts) notification permissions, no JavaScript bridge.
 
 ## Found and fixed
 

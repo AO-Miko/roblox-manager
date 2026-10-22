@@ -52,7 +52,7 @@ class AvatarBook(private val sv: Services) {
 
 @Composable
 fun PeopleScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>, jump: Jump? = null) {
-    val kinds = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find")
+    val kinds = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find", "Alerts")
     var tab by remember { mutableStateOf(0) }
     LaunchedEffect(jump) { if (jump != null && jump.dest == "people") tab = jump.sub.coerceIn(0, kinds.size - 1) }
     val api = sv.api
@@ -83,6 +83,7 @@ fun PeopleScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>, jump
             "Blocked" -> PeopleList(sv, bulk, kind, counts, { api.blocked() }, listOf(
                 PeopleAction("Unblock", "Unblocking") { api.unblock(it.id) },
             ))
+            "Alerts" -> AlertsScreen(sv)
             else -> FindPeople(sv, bulk)
         }
     }

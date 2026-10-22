@@ -184,7 +184,7 @@ class RobloxClient(
     suspend fun get(url: String, params: Map<String, String>? = null, auth: Boolean = true, retries: Int = 3) = request("GET", url, params, null, auth, retries)
     suspend fun post(url: String, body: JsonElement? = null, retries: Int = 3) = request("POST", url, null, body, true, retries)
     suspend fun patch(url: String, body: JsonElement? = null) = request("PATCH", url, null, body, true, 3)
-    suspend fun delete(url: String) = request("DELETE", url, null, null, true, 3)
+    suspend fun delete(url: String, body: JsonElement? = null) = request("DELETE", url, null, body, true, 3)
 
     private suspend fun requestOnce(
         m: String, url: String, params: Map<String, String>?, body: JsonElement?, auth: Boolean, retries: Int,

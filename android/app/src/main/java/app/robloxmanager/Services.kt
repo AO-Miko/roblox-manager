@@ -5,6 +5,10 @@ import android.content.Context
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 import app.robloxmanager.core.Account
+import app.robloxmanager.core.AlertRules
+import app.robloxmanager.core.AlertSettings
+import app.robloxmanager.core.Seen
+import app.robloxmanager.core.presence
 import app.robloxmanager.core.Accounts
 import app.robloxmanager.core.BanStore
 import app.robloxmanager.core.KeystoreVault
@@ -50,6 +54,11 @@ class Services(app: Application) {
     val api = RobloxApi(client, names)
     val accounts = Accounts(File(dir, "accounts.json"), KeystoreVault())
     val prefs = Prefs(File(dir, "prefs.json"))
+    val alerts = AlertSettings(prefs)
+    /** Shows one piece of friend news (set by the activity, which has the Android context). */
+    var notifier: (String) -> Unit = {}
+    private var seen: Map<Long, Seen> = emptyMap()
+    private var seenFor: Long? = null
     val bans = BanStore(File(dir, "bans.cache.json"))
     val roles = RoleStore(File(dir, "roles.cache.json"))
     val policy = PolicyStore(File(dir, "policy.cache.json"))
@@ -72,6 +81,12 @@ class Services(app: Application) {
         log.writeFile = prefs.bool("logToFile", true)
         enforcePolicy()                       // from the last policy kept on the phone: a version that is too far behind is covered before anything is sent
         scope.launch { restore() }
+        scope.launch {                         // friend alerts: a look every 90 seconds while the app is running (a problem here must never stop the app)
+            while (true) {
+                delay(AlertRules.INTERVAL_MS)
+                try { pollAlerts() } catch (e: CancellationException) { throw e } catch (_: Throwable) { }
+            }
+        }
         scope.launch {                         // the ban list: at the start and every ten minutes while the app is open
             while (true) {
                 try {                              // (a problem with the ban list must never stop or crash the app)
@@ -89,6 +104,23 @@ class Services(app: Application) {
             }
         }
     }
+
+    /** One look at the watched friends: news goes to [notifier]. The first look of an account only learns who is where. */
+    suspend fun pollAlerts() {
+        val me = current.value
+        if (me == null || !alerts.enabled || updateRequired.value != null) { seen = emptyMap(); seenFor = null; return }
+        val watched = alerts.watched(me.id)
+        if (watched.isEmpty()) { seen = emptyMap(); return }
+        if (seenFor != me.id) { seen = emptyMap(); seenFor = me.id }
+        val now = AlertRules.snapshot(api.presence(watched.keys.toList()))
+        val found = AlertRules.news(seen, now, watched, alerts.online, alerts.ingame)
+        seen = now
+        found.take(5).forEach { notifier(it.second) }
+        if (found.size > 5) notifier("...and ${found.size - 5} more friends")
+    }
+
+    /** Forget where everybody was (alerts were switched on, or the watch list changed), so the next look starts fresh. */
+    fun resetAlerts() { seen = emptyMap() }
 
     private fun refreshList() { accountList.value = accounts.all() }
 

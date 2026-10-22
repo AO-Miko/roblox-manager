@@ -2,11 +2,12 @@
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
+    QCheckBox, QComboBox, QFileDialog, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
 import accounts
+import backup
 import cleanup
 import plat
 import rbx
@@ -29,6 +30,7 @@ class SettingsTab(QWidget):
         scroll.setWidget(body)
         lay = QVBoxLayout(body)
         lay.addWidget(self._data_box())
+        lay.addWidget(self._backup_box())
         lay.addWidget(self._rate_box())
         lay.addWidget(self._log_box())
         lay.addWidget(self._cache_box())
@@ -81,6 +83,78 @@ class SettingsTab(QWidget):
         self.data_note = hint("")
         lay.addWidget(self.data_note)
         return box
+
+    # ------------------------------------------------------------ backup
+    def _backup_box(self):
+        box = QGroupBox("Backup")
+        lay = QVBoxLayout(box)
+        lay.addWidget(hint("Save your settings, friend alerts and recently viewed games to a file, and bring them back later or on another computer. "
+                           "Your sign-ins are never in the file."))
+        self.c_lists = QCheckBox("Also keep a copy of my friends, followers, following and groups (needs sign-in)")
+        self.c_lists.setChecked(True)
+        lay.addWidget(self.c_lists)
+        row = FlowLayout()
+        self.b_backup = button("Save a backup...", self.save_backup, "Writes the backup file")
+        row.addWidget(self.b_backup)
+        row.addWidget(button("Restore from a backup...", self.restore_backup, "Brings back the settings, friend alerts and recently viewed games from a backup file"))
+        row.addStretch()
+        lay.addLayout(row)
+        self.backup_note = hint("")
+        lay.addWidget(self.backup_note)
+        return box
+
+    def save_backup(self, path=None):
+        """Collect what is to be saved (the lists need requests to Roblox, so they are fetched in the background), then write the file."""
+        c = self.ctx
+        if path is None:
+            from datetime import date
+            path, _ = QFileDialog.getSaveFileName(self, "Save a backup", f"roblox-manager-backup-{date.today():%Y-%m-%d}.json", "Backup (*.json)")
+            if not path:
+                return
+        import updater
+        version = updater.version()
+        want_lists = self.c_lists.isChecked() and c.logged_in
+        client = c.client
+        self.b_backup.setEnabled(False)
+        self.backup_note.setText("Collecting..." if want_lists else "Saving...")
+
+        def work():
+            lists = {}
+            if want_lists:
+                lists = {"account": dict(client.user), "friends": client.friends(), "followers": client.followers(), "following": client.followings(),
+                         "groups": client.my_groups()}
+            return backup.save(path, backup.build(version, **lists))
+
+        def done(size):
+            self.b_backup.setEnabled(True)
+            self.backup_note.setText(f"Saved {path} ({size // 1024 + 1} KB).")
+            c.status("Backup saved.")
+
+        def failed(e):
+            self.b_backup.setEnabled(True)
+            self.backup_note.setText(f"The backup was not saved: {e}")
+            c.error(e) if isinstance(e, rbx.RobloxError) else None
+
+        c.async_.run(work, done, failed)
+
+    def restore_backup(self, path=None):
+        if path is None:
+            path, _ = QFileDialog.getOpenFileName(self, "Restore from a backup", "", "Backup (*.json)")
+            if not path:
+                return
+        try:
+            data = backup.read(path)
+        except backup.BackupError as e:
+            self.backup_note.setText(str(e))
+            QMessageBox.warning(self, "Backup", str(e))
+            return
+        if not self.ctx.confirm("Restore backup", "Replace your settings, friend alerts and recently viewed games with those in this backup?\n"
+                                "Nothing on Roblox is changed and your sign-ins stay as they are."):
+            return
+        done = backup.restore(data)
+        self.backup_note.setText(f"Restored {done['settings']} setting(s), {done['alerts']} watched friend(s) and {done['games']} recent game(s).")
+        self.load_values()
+        self.ctx.data_restored.emit()
 
     def refresh(self):
         total = 0

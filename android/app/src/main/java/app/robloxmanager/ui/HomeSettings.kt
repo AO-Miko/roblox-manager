@@ -168,6 +168,7 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
                 Text("The log never contains your cookie, passwords, codes or request bodies.", color = C.muted, fontSize = 12.sp)
             }
         }
+        if (part == "settings") BackupSection(sv) { msg = it }
         if (part == "settings") Section("ACCOUNT", collapsible = true) { DangerButton("Sign out") { confirmSignOut = true } }
         if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)
     }

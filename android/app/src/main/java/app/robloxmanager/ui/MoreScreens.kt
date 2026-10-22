@@ -45,7 +45,19 @@ import java.util.Locale
 
 // ======================================================================== Groups
 @Composable
-fun GroupsScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>) {
+fun GroupsScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>, jump: Jump? = null) {
+    var tab by remember { mutableStateOf(0) }
+    LaunchedEffect(jump) { if (jump != null && jump.dest == "groups") tab = jump.sub.coerceIn(0, 1) }
+    Column(Modifier.fillMaxSize()) {
+        androidx.compose.material3.TabRow(selectedTabIndex = tab, containerColor = C.bg) {
+            listOf("My groups", "Join requests").forEachIndexed { i, t -> androidx.compose.material3.Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) }) }
+        }
+        if (tab == 0) MyGroupsScreen(sv, bulk, counts) else JoinRequestsScreen(sv, bulk)
+    }
+}
+
+@Composable
+private fun MyGroupsScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>) {
     val me = sv.current.collectAsState().value ?: return
     val groups = remember(me.id) { mutableStateListOf<RobloxApi.Group>() }
     val created = remember(me.id) { mutableStateMapOf<Long, String>() }

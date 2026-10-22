@@ -11,7 +11,7 @@ from theme import T
 # page title -> (group, one line that says what the page is for)
 PAGES = {
     "Home": ("", "Your account at a glance, and Discover: find games, see their stats and play them."),
-    "People": ("Social", "Friends, requests, followers, following, blocked users and a search for any user."),
+    "People": ("Social", "Friends, requests, followers, following, blocked users, a search for any user, and alerts when friends come online."),
     "Groups": ("Social", "Your groups: members and ranks, join requests, roles, audit log, bans and the shout."),
     "VIP servers": ("Roblox", "Every private server you have: switch on or off, renew, duplicates and bulk actions."),
     "Money": ("Roblox", "Robux balance, pending, totals per period and the transaction history."),
@@ -23,13 +23,13 @@ PAGES = {
 }
 KEYWORDS = {                      # extra words the search also understands, so "robux" finds Money and "private server" finds VIP servers
     "Home": "account login sign in cookie profile avatar switch discover games search play browse trending",
-    "People": "friends friend requests followers following blocked block unfriend find user",
-    "Groups": "group members ranks roles audit log join requests shout leave",
+    "People": "friends friend requests followers following blocked block unfriend find user alerts notifications notify online watch",
+    "Groups": "group members ranks roles audit log join requests all groups to-do shout leave",
     "VIP servers": "vip private servers renew expire duplicates link",
     "Money": "robux balance pending transactions history csv export revenue",
     "Request log": "log requests http rate limit errors",
     "API Explorer": "api endpoint http get post developer",
-    "Settings": "settings info updates update log version changes about preferences theme confirm cache",
+    "Settings": "settings info updates update log version changes about preferences theme confirm cache backup export restore license",
     "Admin": "ban unban banned reason roles moderator",
     "Staff List": "staff team owner co-owner senior admin trusted friends roles hierarchy members profile",
 }

@@ -12,15 +12,15 @@ Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/r
 | Page | What it does |
 |---|---|
 | **Home** | two pages. **Account**: sign in (password + 2-step, built-in browser, or cookie), your account at a glance, several accounts side by side. **Discover**: Roblox's own home page rows (Top Trending ...), a search for games, people and groups, and a page for every game with its players, likes and dislikes (amount, percentage and bar), favorites, visits and more, and a **Play** button that opens the Roblox launcher and joins the game (or one of your own VIP servers of it). The game page also has a **server browser** (the public servers with players, ping and fps: join a specific one or the emptiest) and, signed in, a **Favorite** button. Discover shows rows of your own above Roblox's: **Friends in games** (with a Join button that opens the launcher on their server), **Your favorites** and **Recently viewed** (kept only on your device). Play first checks that a Roblox launcher is installed, and if not offers to install one: the Roblox download page on Windows, the community runtime Sober with the exact command shown on Linux (it runs only if you press Install), and Roblox's page in Google Play on the phone |
-| **People** | friends, requests, followers, following, blocked users, find a user, all with bulk actions |
-| **Groups** | your groups: members and ranks, join requests, roles, audit log, bans, shout; leave several at once. Only what your role in a group allows is shown, and it is checked again when you act: you can only change, remove or ban members ranked below you, and only give roles below your own |
+| **People** | friends, requests, followers, following, blocked users, find a user, all with bulk actions; **Alerts**: a notification when friends you pick come online or join a game |
+| **Groups** | your groups: members and ranks, join requests (also **all groups in one list**, to accept or decline in bulk), roles, audit log, bans, shout; leave several at once. Only what your role in a group allows is shown, and it is checked again when you act: you can only change, remove or ban members ranked below you, and only give roles below your own |
 | **VIP servers** | every private server you have: switch on/off, renew, duplicates, bulk actions, **Play** (opens the Roblox launcher on that server); a second page, **Look up a game**, shows any game's VIP servers and which are your friends' |
 | **Money** | Robux balance, pending, totals per period, transaction history, CSV export |
 | **Request log** | every request the app sends to Roblox and how Roblox answered |
 | **API Explorer** (PC) | send any Roblox web API request and read the answer |
 | **Staff List** | who is on the staff, from the owner down, with their Roblox profiles (see [docs/ADMIN.md](docs/ADMIN.md)) |
 | **Admin** (PC; overview on the phone) | ban and unban Roblox user ids; only for accounts with the admin role or higher |
-| **Settings** | preferences, updates (with the Beta channel choice) and the update log: what changed in each version |
+| **Settings** | preferences, **backup and restore**, updates (with the Beta channel choice) and the update log: what changed in each version |
 
 ## About this project
 
@@ -194,6 +194,16 @@ installed app. See [docs/UPDATES.md](docs/UPDATES.md).
 Pull requests from forks are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). They go to the `main` branch and only the maintainer can merge them.
 The apps update from two other branches that only receive signed release commits: `release` (Stable) and `beta` (Beta). To report a security problem privately, see
 [SECURITY.md](SECURITY.md). Everyone is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Friend alerts, join requests of all groups, backup
+
+- **Alerts** (People → Alerts): tick the friends you want news about and switch alerts on. While the app is running it asks Roblox where they are every 90 seconds
+  (one request for up to 100 friends, so it stays far below Roblox's limits) and shows a notification when one comes online or joins a game. On the phone, Android 13 and
+  newer asks for permission to show notifications, and Android may pause the app when it has been in the background for long.
+- **Join requests in all groups** (Groups → *Join requests in all groups* on PC, Groups → Join requests on the phone): checks the groups where your role may accept requests
+  and lists everybody waiting, so you can accept or decline them in one go. It only offers what your role allows, and large batches ask you to confirm.
+- **Backup** (Settings): saves your settings, friend alerts, recently viewed games and, if you want, a copy of your friends, followers, following and groups to a JSON file, and
+  restores them later or on another device. Sign-ins are never in the file, and restoring never changes anything on Roblox.
 
 ## License
 

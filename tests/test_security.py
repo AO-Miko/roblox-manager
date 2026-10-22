@@ -161,8 +161,8 @@ check("the build installs only from the lock, and demands the hashes", '"--requi
 # ---------------------------------------------------------------- Android
 manifest = (ROOT / "android/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
 check("Android: only the main screen is reachable from other apps (one exported component)", manifest.count('android:exported="true"') == 1 and 'android:name=".MainActivity"' in manifest.split('android:exported="true"')[0][-200:], manifest.count('android:exported="true"'))
-check("Android: no backups, no plain http, no extra permissions beyond internet and installing updates", 'android:allowBackup="false"' in manifest and 'usesCleartextTraffic="false"' in manifest
-      and sorted(re.findall(r'uses-permission android:name="([^"]+)"', manifest)) == ["android.permission.INTERNET", "android.permission.REQUEST_INSTALL_PACKAGES"])
+check("Android: no backups, no plain http, no extra permissions beyond internet, installing updates and showing the friend alerts", 'android:allowBackup="false"' in manifest and 'usesCleartextTraffic="false"' in manifest
+      and sorted(re.findall(r'uses-permission android:name="([^"]+)"', manifest)) == ["android.permission.INTERNET", "android.permission.POST_NOTIFICATIONS", "android.permission.REQUEST_INSTALL_PACKAGES"])
 check("Android: the only package the app asks about is Roblox", re.findall(r'<package android:name="([^"]+)"', manifest) == ["com.roblox.client"])
 login = (ROOT / "android/app/src/main/java/app/robloxmanager/ui/LoginScreen.kt").read_text(encoding="utf-8")
 check("Android: the login web view reads no files or other apps' content, and only follows https links to Roblox", "allowFileAccess = false" in login and "allowContentAccess = false" in login
