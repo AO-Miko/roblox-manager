@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.10.3.2.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Fixed the error \"Client object has no attribute group_search_members\" (and any like it) after an update on Windows: old and new files could be mixed in memory",
+      "After an update the launcher now says so and asks to restart to complete the update (Restart now / No)",
+      "The app clears any leftover old modules at start, and the member search falls back instead of failing",
+      "New checks make sure every call the app makes to its own parts exists"
+    ]
+  },
+  {
     "version": "1.10.3.1.1",
     "date": "2026-10-22",
     "changes": [

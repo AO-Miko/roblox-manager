@@ -1,7 +1,7 @@
 {
-  "versionName": "1.10.3.1.1",
-  "versionCode": 24,
+  "versionName": "1.10.3.2.1",
+  "versionCode": 25,
   "apk": "roblox-manager.apk",
-  "sha256": "90ceb3103db7c9fe21fcfe3af3e3e90caf8968cf3d843e8adb99a1820132e6be",
-  "notes": "Groups: only what your role allows is shown (buttons and pages you have no permission for are not there) and it is checked again when you act; you can only give roles below your own and only change, remove or ban members below your rank|Groups: pressing Load more again and again no longer lists people several times; searching a username also finds members that Load more has not reached|VIP servers: the game look-up is a page of its own instead of a bar across the bottom|The update check says which channel it is about, and when Beta has nothing newer than Stable"
+  "sha256": "a8d37e8f8ee96dd96906af74b5c2fc627297855e2cd0d26487b7ff18672e4d4c",
+  "notes": "Fixed the error \"Client object has no attribute group_search_members\" (and any like it) after an update on Windows: old and new files could be mixed in memory|After an update the launcher now says so and asks to restart to complete the update (Restart now / No)|The app clears any leftover old modules at start, and the member search falls back instead of failing|New checks make sure every call the app makes to its own parts exists"
 }
