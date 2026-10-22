@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.10.3.1.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Groups: only what your role allows is shown (buttons and pages you have no permission for are not there) and it is checked again when you act; you can only give roles below your own and only change, remove or ban members below your rank",
+      "Groups: pressing Load more again and again no longer lists people several times; searching a username also finds members that Load more has not reached",
+      "VIP servers: the game look-up is a page of its own instead of a bar across the bottom",
+      "The update check says which channel it is about, and when Beta has nothing newer than Stable"
+    ]
+  },
+  {
     "version": "1.10.2.1.1",
     "date": "2026-10-22",
     "changes": [

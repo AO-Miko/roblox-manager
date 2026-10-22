@@ -1,7 +1,7 @@
 {
-  "versionName": "1.10.2.1.1",
-  "versionCode": 23,
+  "versionName": "1.10.3.1.1",
+  "versionCode": 24,
   "apk": "roblox-manager.apk",
-  "sha256": "3be982b3e4a35e7bb50ff0f4740d7ffe66275f189013f0649c269a44f3774a1f",
-  "notes": "Admin: unban works like ban: select someone in the list or type an id or username, see their profile and what the ban says (when, by whom, why), add an optional note and answer an Are you sure question; only Yes, unban lets them back in|A ban can only be lifted by someone with at least the role of whoever placed it, and nobody unbans themselves"
+  "sha256": "90ceb3103db7c9fe21fcfe3af3e3e90caf8968cf3d843e8adb99a1820132e6be",
+  "notes": "Groups: only what your role allows is shown (buttons and pages you have no permission for are not there) and it is checked again when you act; you can only give roles below your own and only change, remove or ban members below your rank|Groups: pressing Load more again and again no longer lists people several times; searching a username also finds members that Load more has not reached|VIP servers: the game look-up is a page of its own instead of a bar across the bottom|The update check says which channel it is about, and when Beta has nothing newer than Stable"
 }
