@@ -1,7 +1,7 @@
 {
-  "versionName": "1.9.0.1.0",
-  "versionCode": 19,
+  "versionName": "1.9.0.1.1",
+  "versionCode": 20,
   "apk": "roblox-manager.apk",
-  "sha256": "0aabeda978f5bccf058b6e363c9838e9f4aeb31daa39420a714dec172fd9984c",
-  "notes": "Fixed text that was cut off on the Admin page with wider fonts"
+  "sha256": "251b600476af1f9084360cdd5bcafef3e960bc731d0b1f6e6e79f15f01ee4166",
+  "notes": "PC: a button collapses the side bar to icons, and every group (Social, Roblox, Tools, Staff) folds with an arrow; both are remembered|PC: a reload button in the page header, the beta label in the side bar, a stray line under the sub tabs is gone|Phone: sections fold with an arrow (More, Settings, Home accounts), More is grouped, the top bar says what the page is for, the Robux tile stands out"
 }
