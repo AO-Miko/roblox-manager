@@ -825,6 +825,70 @@ class Client:
     def place_universe(self, place_id):
         return self.get(f"https://apis.roblox.com/universes/v1/places/{int(place_id)}/universe", auth=False).get("universeId")
 
+    # ---- the home page / search of games (public data: no sign-in needed)
+    def omni_search_games(self, text, session_id, token=""):
+        """([game cards], next page token) for a search of games."""
+        params = {"searchQuery": text, "sessionId": session_id, "pageType": "all"}
+        if token:
+            params["pageToken"] = token
+        d = self.get("https://apis.roblox.com/search-api/omni-search", params, auth=False)
+        cards = []
+        for g in d.get("searchResults", []):
+            if g.get("contentGroupType") == "Game":
+                cards += [c for c in (game_card(x) for x in g.get("contents", [])) if c]
+        return cards, d.get("nextPageToken") or ""
+
+    def discover_sorts(self, session_id):
+        """[{'id', 'name', 'games': [cards]}] the rows of Roblox's own Discover page (Top Trending, Up-and-Coming ...)."""
+        d = self.get("https://apis.roblox.com/explore-api/v1/get-sorts", {"sessionId": session_id, "device": "computer", "country": "all"}, auth=False)
+        out = []
+        for s in d.get("sorts", []):
+            if s.get("contentType") != "Games":
+                continue
+            cards = [c for c in (game_card(x) for x in s.get("games", [])) if c]
+            if cards:
+                out.append({"id": s.get("sortId") or "", "name": s.get("sortDisplayName") or s.get("sortId") or "", "games": cards})
+        return out
+
+    def game_votes(self, universe_ids):
+        """{universe id: (likes, dislikes)}"""
+        ids = [int(i) for i in dict.fromkeys(universe_ids) if i]
+        out = {}
+        for i in range(0, len(ids), 100):
+            for v in self.get("https://games.roblox.com/v1/games/votes", {"universeIds": ",".join(map(str, ids[i:i + 100]))}, auth=False).get("data", []):
+                out[int(v["id"])] = (int(v.get("upVotes") or 0), int(v.get("downVotes") or 0))
+        return out
+
+    def game_favorites(self, universe_id):
+        return int(self.get(f"https://games.roblox.com/v1/games/{int(universe_id)}/favorites/count", auth=False).get("favoritesCount") or 0)
+
+    def game_icons(self, universe_ids, size="150x150"):
+        """{universe id: image url}"""
+        ids = [int(i) for i in dict.fromkeys(universe_ids) if i]
+        out = {}
+        for i in range(0, len(ids), 100):
+            try:
+                d = self.get("https://thumbnails.roblox.com/v1/games/icons", {"universeIds": ",".join(map(str, ids[i:i + 100])), "size": size, "format": "Png", "isCircular": "false"}, auth=False)
+            except RobloxError:
+                continue
+            for x in d.get("data", []):
+                if x.get("imageUrl"):
+                    out[int(x["targetId"])] = x["imageUrl"]
+        return out
+
+    def game_cover(self, universe_id):
+        """The game's first picture (768 x 432) as an image url, or ''."""
+        d = self.get("https://thumbnails.roblox.com/v1/games/multiget/thumbnails",
+                     {"universeIds": int(universe_id), "size": "768x432", "format": "Png", "count": 1, "isCircular": "false"}, auth=False)
+        for g in d.get("data", []):
+            for th in g.get("thumbnails", []):
+                if th.get("imageUrl"):
+                    return th["imageUrl"]
+        return ""
+
+    def search_groups(self, text, limit=10):
+        return self.get("https://groups.roblox.com/v1/groups/search", {"keyword": text, "limit": limit}, auth=False).get("data", [])
+
     def game_info(self, universe_id):
         d = self.get("https://games.roblox.com/v1/games", {"universeIds": int(universe_id)}, auth=False).get("data", [])
         return d[0] if d else None
@@ -1140,6 +1204,38 @@ def save_avatar(uid, data):
         (AVATAR_DIR / f"{int(uid)}.png").write_bytes(data)
     except OSError:
         pass
+
+
+def launcher_url(place_id, link_code=None, job_id=None):
+    """The address that makes the Roblox launcher start and join: a game (placeId), a private/VIP server (placeId + linkCode) or one running server (gameInstanceId)."""
+    url = f"roblox://experiences/start?placeId={int(place_id)}"
+    if link_code:
+        url += f"&linkCode={link_code}"
+    elif job_id:
+        url += f"&gameInstanceId={job_id}"
+    return url
+
+
+def link_code_of(url):
+    """(place id or None, private server link code or None) from a roblox.com join link such as https://www.roblox.com/games/123?privateServerLinkCode=ABC."""
+    from urllib.parse import parse_qs, urlparse
+    try:
+        u = urlparse(url or "")
+        code = (parse_qs(u.query).get("privateServerLinkCode") or [None])[0]
+        m = re.search(r"/games/(\d+)", u.path)
+        return (int(m.group(1)) if m else None), code
+    except ValueError:
+        return None, None
+
+
+def game_card(c):
+    """One game as the home page and the search describe it (the fields differ a little), in one shape. Sponsored entries (ads) are not games: None."""
+    if not isinstance(c, dict) or c.get("isSponsored") or not (c.get("universeId") or c.get("id")):
+        return None
+    return {"universeId": int(c.get("universeId") or c.get("id")), "placeId": c.get("rootPlaceId") or c.get("placeId"), "name": str(c.get("name") or ""),
+            "playing": int(c.get("playerCount") or c.get("playing") or 0), "up": int(c.get("totalUpVotes") or 0), "down": int(c.get("totalDownVotes") or 0),
+            "creator": c.get("creatorName") or "", "verified": bool(c.get("creatorHasVerifiedBadge")), "age": c.get("ageRecommendationDisplayName") or "",
+            "genre": c.get("genreL1") or ""}
 
 
 def join_link(place_id, link_code=None, job_id=None):

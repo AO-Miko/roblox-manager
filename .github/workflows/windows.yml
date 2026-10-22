@@ -59,6 +59,9 @@ jobs:
       - name: Every call the app makes exists
         if: ${{ !cancelled() }}
         run: python tests/test_api_surface.py
+      - name: Discover (games, search, play)
+        if: ${{ !cancelled() }}
+        run: python tests/test_discover.py
       - name: Version numbers
         if: ${{ !cancelled() }}
         run: python tests/test_versions.py

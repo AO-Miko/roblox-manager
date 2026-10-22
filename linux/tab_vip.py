@@ -342,13 +342,14 @@ class VipTab(QWidget):
         self.b_allow = button("Allow people...", self.allow_people, "Choose who can join: your friends and specific people")
         self.b_copy = button("Copy join link", self.copy_join)
         self.b_open = button("Open join link", self.open_join)
+        self.b_play = button("Play", self.play, "Open the Roblox launcher and join this VIP server")
         self.b_rename = button("Rename...", self.rename)
         self.b_link = button("New join link", self.new_link, "Makes a new link; the old link stops working")
         self.b_cancel = button("Cancel renewal", self.cancel_renewal)
         self.b_renew = button("Renew...", self.renew, "Renew an expired server (may cost Robux; free servers with Roblox Plus cost 0)")
         self.b_game = button("Open game", self.open_game, "Open the game's page on roblox.com")
         self.b_details = button("Details", self.details, "Everything Roblox knows about this server")
-        for b in (self.b_active, self.b_allow, self.b_copy, self.b_open, self.b_rename, self.b_link, self.b_cancel, self.b_renew, self.b_game, self.b_details):
+        for b in (self.b_play, self.b_active, self.b_allow, self.b_copy, self.b_open, self.b_rename, self.b_link, self.b_cancel, self.b_renew, self.b_game, self.b_details):
             row.addWidget(b)
         row.addStretch()
         tl.addLayout(row)
@@ -460,7 +461,7 @@ class VipTab(QWidget):
 
     def update_buttons(self):
         sel = self._sel() is not None
-        for b in (self.b_active, self.b_allow, self.b_copy, self.b_open, self.b_rename, self.b_link, self.b_cancel, self.b_renew, self.b_game,
+        for b in (self.b_play, self.b_active, self.b_allow, self.b_copy, self.b_open, self.b_rename, self.b_link, self.b_cancel, self.b_renew, self.b_game,
                   self.b_details):
             b.setEnabled(sel)
         n = len(self._sels())
@@ -836,6 +837,31 @@ class VipTab(QWidget):
     def open_join(self):
         s = self._need()
         s and self._link(s, open_url)
+
+    def play(self):
+        """Open the Roblox launcher and join this VIP server."""
+        s = self._need()
+        s and self._link(s, lambda link: self._launch(s, link))
+
+    def _launch(self, s, link):
+        import tab_discover
+        place, code = rbx.link_code_of(link)
+        if not code:
+            self.ctx.status("Roblox did not give a join link for this server yet.")
+            return
+        tab_discover.launch_roblox(self.ctx, place or s.get("placeId") or 0, code, link)
+
+    def servers_for_game(self, universe_id, place_id):
+        """Your working VIP servers of one game (used by the game page in Discover: 'Join my VIP server')."""
+        out = []
+        for s in self.mine:
+            same = (place_id and s.get("placeId") and int(s["placeId"]) == int(place_id)) or (universe_id and s.get("universeId") and int(s["universeId"]) == int(universe_id))
+            if same and not server_state(s, self.names) and s.get("_vid") is not None and s.get("active") is not False:
+                out.append(s)
+        return out
+
+    def link_for(self, server, done):
+        self._link(server, done)
 
     def open_game(self):
         s = self._need()

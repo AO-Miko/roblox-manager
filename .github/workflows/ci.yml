@@ -61,6 +61,8 @@ jobs:
         run: python tests/test_launcher_update.py
       - name: Every call the app makes exists
         run: python tests/test_api_surface.py
+      - name: Discover (games, search, play)
+        run: python tests/test_discover.py
       - name: Version numbers
         run: python tests/test_versions.py
       - name: Updates box

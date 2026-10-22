@@ -44,6 +44,7 @@ python tests/test_channels.py             # stable / beta update channels
 python tests/test_policy.py               # forced updates (the 'update required' page)
 python tests/test_launcher_update.py       # the restart popup after an update, no old modules left in memory
 python tests/test_api_surface.py          # every module/client call the app makes exists
+python tests/test_discover.py             # Discover: games, search, the game page, Play
 python tests/test_settings_updates.py
 python tests/test_text_fit.py             # no cut-off text on any tab
 python tests/test_gui_full.py             # the whole app against a fake Roblox

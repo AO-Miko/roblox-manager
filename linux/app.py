@@ -45,6 +45,8 @@ import rbx
 import settings
 import theme
 from tab_account import AccountTab
+from tab_discover import DiscoverTab
+from tab_home import HomePage
 from tab_admin import AdminTab
 from tab_staff import StaffTab
 from update_required import UpdateRequiredPage
@@ -71,10 +73,14 @@ class MainWindow(QMainWindow):
         self.tabs.tabBar().hide()               # the side bar is the way around now (the tab widget still holds the pages, their titles and the counts)
         self.tabs.setDocumentMode(True)
         self.account = AccountTab(self.ctx)
+        self.discover = DiscoverTab(self.ctx)
+        self.home = HomePage(self.account, self.discover)            # Home: your account, and Discover (games) inside it
         self.people = PeopleTab(self.ctx)
         self.friends = self.people.friends
         self.groups = GroupsTab(self.ctx)
         self.vip = VipTab(self.ctx)
+        self.discover.detail.vip_servers_for = self.vip.servers_for_game
+        self.discover.detail.vip_link_for = self.vip.link_for
         self.money = MoneyTab(self.ctx, show_pending=self.account.pending_details)
         self.requests = RequestsTab(self.ctx)
         self.explorer = ExplorerTab(self.ctx)
@@ -83,7 +89,7 @@ class MainWindow(QMainWindow):
         self.info_tab = InfoTab(self.ctx, on_cleared=self._cleared)
         self.holders = {}
         self.settings_tab = self.info_tab.settings_tab
-        for w, name in ((self.account, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
+        for w, name in ((self.home, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
                         (self.money, "Money"), (self.requests, "Request log"), (self.explorer, "API Explorer"),
                         (self.staff, "Staff List"), (self.admin, "Admin"), (self.info_tab, "Info")):
             holder = nav.PageHolder(w)
@@ -178,6 +184,10 @@ class MainWindow(QMainWindow):
             name = nav.base_title(self.tabs.tabText(i))[0]
             page = self.tabs.widget(i).page
             out.append((name, "page", nav.KEYWORDS.get(name, ""), lambda page=page: self._go(page)))
+            if page is self.home:
+                for j in range(page.tabs.count()):
+                    sub = page.tabs.tabText(j)
+                    out.append((sub, "Home", "games search discover play roblox browse trending" if j else "account sign in switch", lambda page=page, j=j: self._go(page, j)))
             if page is self.people:
                 for j in range(page.tabs.count()):
                     sub = nav.base_title(page.tabs.tabText(j))[0]
@@ -215,12 +225,12 @@ class MainWindow(QMainWindow):
     RELOADERS = ("load", "load_groups", "load_mine")
 
     def _reloadable(self, page):
-        inner = page.tabs.currentWidget() if page is self.people else page
+        inner = page.tabs.currentWidget() if page in (self.people, self.home) else page
         return any(callable(getattr(inner, name, None)) for name in self.RELOADERS)
 
     def reload_page(self):
         page = self.current_page()
-        inner = page.tabs.currentWidget() if page is self.people else page
+        inner = page.tabs.currentWidget() if page in (self.people, self.home) else page
         for name in self.RELOADERS:
             fn = getattr(inner, name, None)
             if callable(fn) and self.ctx.client.has_cookie:

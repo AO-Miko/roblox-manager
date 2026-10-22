@@ -10,7 +10,7 @@ from theme import T
 
 # page title -> (group, one line that says what the page is for)
 PAGES = {
-    "Home": ("", "Your account at a glance: sign in, switch accounts, Robux and pending."),
+    "Home": ("", "Your account at a glance, and Discover: find games, see their stats and play them."),
     "People": ("Social", "Friends, requests, followers, following, blocked users and a search for any user."),
     "Groups": ("Social", "Your groups: members and ranks, join requests, roles, audit log, bans and the shout."),
     "VIP servers": ("Roblox", "Every private server you have: switch on or off, renew, duplicates and bulk actions."),
@@ -22,7 +22,7 @@ PAGES = {
     "Info": ("", "Settings, updates and what changed in each version."),
 }
 KEYWORDS = {                      # extra words the search also understands, so "robux" finds Money and "private server" finds VIP servers
-    "Home": "account login sign in cookie profile avatar switch",
+    "Home": "account login sign in cookie profile avatar switch discover games search play browse trending",
     "People": "friends friend requests followers following blocked block unfriend find user",
     "Groups": "group members ranks roles audit log join requests shout leave",
     "VIP servers": "vip private servers renew expire duplicates link",
