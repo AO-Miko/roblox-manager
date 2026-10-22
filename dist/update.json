@@ -1,7 +1,7 @@
 {
-  "versionName": "1.11.3.2.1",
-  "versionCode": 26,
+  "versionName": "1.11.3.2.2",
+  "versionCode": 27,
   "apk": "roblox-manager.apk",
-  "sha256": "ef10306ba98de238bfc4dc978e78fba4e1c89e4e19d1402f19ef7e4c985db248",
-  "notes": "Discover: server browser, favorites, recently viewed, friends in games|Play checks that a Roblox launcher is installed and offers to install it (Linux command, Windows download page, Android Play Store)|Security review: Roblox text is escaped, join codes are validated, hardened Android login view, pinned and hashed Windows libraries, private state folder|Fewer errors after an update on Windows: the app forgets old modules and the launcher asks to restart"
+  "sha256": "9f6514f3686257d0700862e0e4a792bd157d33ac26c5058c2aa8216c824dd452",
+  "notes": "The Info page is now called Settings (Preferences and Updates) on PC and phone, so it is easier to find|Cleaner code: unused imports removed"
 }

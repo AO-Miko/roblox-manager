@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.11.3.2.2",
+    "date": "2026-10-22",
+    "changes": [
+      "The Info page is now called Settings (Preferences and Updates) on PC and phone, so it is easier to find",
+      "Cleaner code: unused imports removed"
+    ]
+  },
+  {
     "version": "1.11.3.2.1",
     "date": "2026-10-22",
     "changes": [
