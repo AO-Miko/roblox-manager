@@ -69,9 +69,16 @@ import app.robloxmanager.ui.InfoScreen
 import app.robloxmanager.ui.VipScreen
 
 class MainActivity : ComponentActivity() {
+    /** Android 13 and newer: the phone's own question "Allow Roblox Manager to send you notifications?". */
+    private val askNotifications = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted -> if (granted) services.resetAlerts() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val sv = services
+        if (sv.alerts.enabled && android.os.Build.VERSION.SDK_INT >= 33 && !Notifier.allowed(this)) {          // alerts are on but the phone has not been asked (or said no once): ask, at most twice
+            val asked = sv.prefs.str("notifAsks", "0").toIntOrNull() ?: 0
+            if (asked < 2) { sv.prefs.put("notifAsks", (asked + 1).toString()); askNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+        }
         sv.notifier = { text -> Notifier.show(applicationContext, text) }
         // At every start: look for a newer build on the update server and have it ready (never blocks the app).
         if (sv.prefs.bool("autoUpdate", true) && Updates.url(sv).isNotBlank()) Updates.check(sv, applicationContext, quiet = true)

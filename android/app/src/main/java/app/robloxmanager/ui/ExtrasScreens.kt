@@ -117,6 +117,10 @@ fun AlertsScreen(sv: Services) {
     var note by remember { mutableStateOf("") }
 
     fun save() { sv.alerts.setWatched(me.id, watched.toMap()); sv.resetAlerts() }
+    val testPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) { sv.notifier("This is how a friend alert looks."); note = "Test notification sent." }
+        else note = "Notifications are blocked for this app, so alerts cannot be shown. Allow them in the phone's settings."
+    }
     LaunchedEffect(loader.value) { loader.value?.let { avatars.ensure(it.map { p -> p.id }) } }
 
     Column(Modifier.fillMaxSize()) {
@@ -137,7 +141,10 @@ fun AlertsScreen(sv: Services) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             QuietButton("Watch all shown (${shown.size})") { shown.forEach { if (watched.size < AlertRules.MAX_WATCHED) watched[it.id] = it.title }; save() }
             QuietButton("Watch none") { shown.forEach { watched.remove(it.id) }; save() }
-            QuietButton("Test") { sv.notifier("This is how a friend alert looks.") }
+            QuietButton("Test") {
+                if (Build.VERSION.SDK_INT >= 33 && !Notifier.allowed(ctx)) testPermission.launch(Manifest.permission.POST_NOTIFICATIONS)       // (the phone asks, instead of nothing happening)
+                else { sv.notifier("This is how a friend alert looks."); note = Notifier.problem(ctx) ?: "Test notification sent. If you did not see it, check the phone's notification settings." }
+            }
             Text("${watched.size} watched", color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp))
         }
         LoadView(loader) {
