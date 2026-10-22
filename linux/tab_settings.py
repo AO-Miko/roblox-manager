@@ -237,7 +237,7 @@ class SettingsTab(QWidget):
         self.upd_version = QLabel("")
         self.upd_version.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         lay.addWidget(self.upd_version)
-        lic = QLabel('Free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>. Copyright (C) 2026 AO-Miko. No warranty.')
+        lic = QLabel('Free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>. Copyright (C) 2026 Miko. No warranty.')
         lic.setOpenExternalLinks(True)
         lic.setWordWrap(True)
         lay.addWidget(lic)

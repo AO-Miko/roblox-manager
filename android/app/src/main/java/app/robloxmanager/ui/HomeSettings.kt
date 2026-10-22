@@ -130,7 +130,7 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
         if (part == "updates") Section("UPDATES", collapsible = true) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})", fontWeight = FontWeight.Medium)
-                Text("Free software under the GNU GPL v3. Copyright (C) 2026 AO-Miko. No warranty.", color = C.muted, fontSize = 12.sp)
+                Text("Free software under the GNU GPL v3. Copyright (C) 2026 Miko. No warranty.", color = C.muted, fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(beta, { on -> if (on) askBeta = true else { beta = false; sv.prefs.put("channel", "stable"); msg = "Back on Stable. You keep this version until Stable catches up."; Updates.check(sv, ctx) } })
                     Spacer(Modifier.width(8.dp))

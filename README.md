@@ -197,7 +197,7 @@ The apps update from two other branches that only receive signed release commits
 
 ## License
 
-Roblox Manager is free software under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)). Copyright (C) 2026 AO-Miko.
+Roblox Manager is free software under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)). Copyright (C) 2026 Miko.
 You may use, study, share and change it. If you share a changed version, you must keep the copyright notices and publish its source under the same license.
 It comes with **no warranty**. The license covers the code, not the name or Roblox's own trademarks.
 
