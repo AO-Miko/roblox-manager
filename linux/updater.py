@@ -310,16 +310,21 @@ def check(cfg=None):
             rel = release_latest(cfg)
         except UpdateError as e:
             return dict(out, status="error", message=str(e))
+        channel = "Beta" if cfg.get("channel") == "beta" else "Stable"
         if version_key(rel["version"]) <= version_key(out["version"]):
-            return dict(out, status="up-to-date", remote=rel["tag"], message="You have the newest version.")
-        return dict(out, status="available", remote=rel["tag"], release=rel, message="A newer version is available.")
+            note = " No beta is newer than the stable version at the moment." if channel == "Beta" and not rel.get("prerelease") else ""
+            return dict(out, status="up-to-date", remote=rel["tag"], channel=channel.lower(),
+                        message=f"You have the newest version ({out['version']}) on the {channel} channel.{note}")
+        return dict(out, status="available", remote=rel["tag"], release=rel, channel=channel.lower(),
+                    message=f"A newer version ({rel['version']}) is available on the {channel} channel.")
     try:
         head = remote_head(cfg)
     except UpdateError as e:
         return dict(out, status="error", message=str(e))
+    channel = "Beta" if cfg.get("channel") == "beta" else "Stable"
     if head == out["installed"]:
-        return dict(out, status="up-to-date", remote=head, message="You have the newest version.")
-    return dict(out, status="available", remote=head, message="A newer version is available.")
+        return dict(out, status="up-to-date", remote=head, channel=channel.lower(), message=f"You have the newest version ({out['version']}) on the {channel} channel.")
+    return dict(out, status="available", remote=head, channel=channel.lower(), message=f"A newer version is available on the {channel} channel.")
 
 
 def apply(cfg=None):

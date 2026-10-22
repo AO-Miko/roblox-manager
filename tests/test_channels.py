@@ -155,5 +155,22 @@ for tag, usable in (("v1.8.0.0.0", True), ("v1.8.0.0", True), ("v1.8.0", True), 
     check(f"release tag {tag}: {'usable' if usable else 'not usable'} (up to five numbers)", (updater._release_info(release_json(tag)) is not None) == usable)
 check("the update bridge for older Windows installs: 1.9.0.0 is the same version as 1.9.0.0.0", updater.version_key("1.9.0.0") == updater.version_key("1.9.0.0.0"))
 
+
+# ---- the messages say which channel they are about (so "nothing newer on Beta" is not mistaken for a broken check)
+github["latest"] = release_json("v1.8.0.0.0")
+github["list"] = [release_json("v1.8.0.0.0"), release_json("v1.7.0")]
+(app / "VERSION").write_text("1.8.0.0.0\n")
+write_cfg(repo="https://github.com/AO-Miko/roblox-manager", channel="stable")
+r = updater.check()
+check("stable, up to date: the message names the version and the channel", r["status"] == "up-to-date" and "(1.8.0.0.0)" in r["message"] and "Stable channel" in r["message"], r["message"])
+write_cfg(repo="https://github.com/AO-Miko/roblox-manager", channel="beta")
+r = updater.check()
+check("beta with nothing newer than stable says so instead of just 'newest'", r["status"] == "up-to-date" and "Beta channel" in r["message"] and "No beta is newer than the stable version" in r["message"], r["message"])
+github["list"] = [release_json("v1.9.0.0.0", prerelease=True), release_json("v1.8.0.0.0")]
+r = updater.check()
+check("beta with a newer pre-release: available, and the message names the version and the channel", r["status"] == "available" and "1.9.0.0.0" in r["message"] and "Beta channel" in r["message"] and r["release"]["prerelease"], r)
+write_cfg(repo="https://github.com/AO-Miko/roblox-manager", channel="stable")
+r = updater.check()
+check("the same list on stable: the pre-release is not offered", r["status"] == "up-to-date" and "Stable channel" in r["message"], r["message"])
 print(f"{sum(res)}/{len(res)} checks passed")
 sys.exit(0 if all(res) else 1)
