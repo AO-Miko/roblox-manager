@@ -138,6 +138,21 @@ class ExtrasTest {
         assertTrue(seen.any { it.startsWith("DELETE /v1/groups/4/join-requests") && it.contains("\"UserIds\":[401]") })
     }
 
+    // ---------------------------------------------------------------- the phone's own notification settings
+    @Test fun theSystemsNotificationSettingsAreExplained() {
+        val none = android.app.NotificationManager.IMPORTANCE_NONE; val def = android.app.NotificationManager.IMPORTANCE_DEFAULT
+        val all = android.app.NotificationManager.INTERRUPTION_FILTER_ALL
+        assertNull(app.robloxmanager.Notifier.explain(true, true, def, all))
+        assertNull(app.robloxmanager.Notifier.explain(true, true, null, all))                                      // the channel is not made yet: fine
+        assertTrue(app.robloxmanager.Notifier.explain(false, true, def, all)!!.contains("not allowed"))
+        assertTrue(app.robloxmanager.Notifier.explain(true, false, def, all)!!.contains("switched off for this app"))
+        assertTrue(app.robloxmanager.Notifier.explain(true, true, none, all)!!.contains("Friend alerts"))
+        assertTrue(app.robloxmanager.Notifier.explain(true, true, def, android.app.NotificationManager.INTERRUPTION_FILTER_NONE)!!.contains("Do Not Disturb"))
+        assertTrue(app.robloxmanager.Notifier.explain(true, true, def, android.app.NotificationManager.INTERRUPTION_FILTER_ALARMS)!!.contains("Do Not Disturb"))
+        assertNull(app.robloxmanager.Notifier.explain(true, true, def, android.app.NotificationManager.INTERRUPTION_FILTER_PRIORITY))      // priority-only still lets alerts through
+        assertTrue(app.robloxmanager.Notifier.explain(false, false, none, all)!!.contains("not allowed"))        // the first problem is the one to fix first
+    }
+
     // ---------------------------------------------------------------- backup
     @Test fun aBackupHoldsSettingsAlertsAndGamesButNothingElse() {
         val p = prefs()

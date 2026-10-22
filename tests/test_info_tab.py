@@ -46,8 +46,15 @@ check("another version is not marked", "installed" not in changelog.html(e2, "1.
 check("an empty log says so", "No update log" in changelog.html([], "1"))
 
 
-class Ctx:
+from PySide6.QtCore import QObject, Signal
+
+
+class Ctx(QObject):
+    alerts_changed = Signal()
+    data_restored = Signal()
+
     def __init__(self):
+        super().__init__()
         self.async_ = ui_common.Async(print)
 
     def status(self, *a, **k):

@@ -48,8 +48,15 @@ def wait(cond, t=5):
     return False
 
 
-class Ctx:
+from PySide6.QtCore import QObject, Signal
+
+
+class Ctx(QObject):
+    alerts_changed = Signal()
+    data_restored = Signal()
+
     def __init__(self):
+        super().__init__()
         self.async_ = ui_common.Async(print)
         self.answers, self.asked = True, []
 

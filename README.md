@@ -200,6 +200,8 @@ The apps update from two other branches that only receive signed release commits
 - **Alerts** (People → Alerts): tick the friends you want news about and switch alerts on. While the app is running it asks Roblox where they are every 90 seconds
   (one request for up to 100 friends, so it stays far below Roblox's limits) and shows a notification when one comes online or joins a game. On the phone, Android 13 and
   newer asks for permission to show notifications, and Android may pause the app when it has been in the background for long.
+  Alerts can be switched off in Settings or on the Alerts page. The app also checks the system's own notification settings (the phone's app and channel settings and
+  Do Not Disturb, Windows' notification switch, a notification service on Linux) and says so when they would stop the alerts from showing.
 - **Join requests in all groups** (Groups → *Join requests in all groups* on PC, Groups → Join requests on the phone): checks the groups where your role may accept requests
   and lists everybody waiting, so you can accept or decline them in one go. It only offers what your role allows, and large batches ask you to confirm.
 - **Backup** (Settings): saves your settings, friend alerts, recently viewed games and, if you want, a copy of your friends, followers, following and groups to a JSON file, and

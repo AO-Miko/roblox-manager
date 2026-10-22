@@ -22,6 +22,7 @@ app = QApplication(sys.argv)
 import alerts
 import backup
 import games_store
+import notify_status
 import rbx
 import settings
 import tab_group_requests
@@ -215,6 +216,36 @@ alerts_tab._watch_shown(False)
 check("'Watch none' clears them", alerts.load()["watch"]["156"] == {})
 alerts_tab.test()
 check("the test button shows a notification", notes[-1] == "This is how a friend alert looks.")
+pr = notify_status.problem
+check("Windows with notifications switched off says so", pr("win32", True, False) == notify_status.WINDOWS_OFF)
+check("Windows with notifications on and a tray is fine", pr("win32", True, True) is None)
+check("Windows without a tray that can show messages says so", pr("win32", False, True) == notify_status.NONE_AVAILABLE)
+check("Linux with a tray that shows messages is fine", pr("linux", True, None, False) is None)
+check("Linux without a tray but with a notification service is fine", pr("linux", False, None, True) is None)
+check("Linux with neither says so", pr("linux", False, None, False) == notify_status.NONE_AVAILABLE)
+check("the answer is a plain sentence that says the app still shows the alert", "still appear at the bottom of the app" in notify_status.NONE_AVAILABLE)
+notify_status.problem = lambda *a, **k: "Windows notifications are switched off."
+alerts_tab.refresh_system()
+check("the Alerts page warns when the system will not show notifications", not alerts_tab.sys_note.isHidden() and "switched off" in alerts_tab.sys_note.text())
+alerts_tab.on.setChecked(False); alerts_tab.on.setChecked(True)
+check("...and switching alerts on says so in the status line", "Alerts are on, but windows notifications" in w.statusBar().currentMessage(), w.statusBar().currentMessage())
+notify_status.problem = lambda *a, **k: None
+alerts_tab.refresh_system()
+check("the warning goes away when the system allows notifications", alerts_tab.sys_note.isHidden())
+notify_status.problem = pr
+sc = w.settings_tab.c_alerts
+check("Settings has a switch for friend alerts, and it shows they are on", sc.isChecked() and alerts_tab.on.isChecked())
+alerts_tab.watched()["201"] = "Ann"
+sc.setChecked(False)
+check("switching alerts off in Settings switches them off on the Alerts page and on disk", not alerts_tab.on.isChecked() and alerts.load()["enabled"] is False)
+mark = len([x for x in State.log if "presence" in x[1]])
+alerts_tab.poll(); spin(0.3)
+check("...and nothing is looked up any more", len([x for x in State.log if "presence" in x[1]]) == mark)
+alerts_tab.on.setChecked(True)
+check("switching them on on the Alerts page shows in Settings", sc.isChecked() and alerts.load()["enabled"] is True)
+sc.setChecked(False); sc.setChecked(True)
+check("...and switching on from Settings looks at the friends at once", wait(lambda: len([x for x in State.log if "presence" in x[1]]) > mark))
+alerts_tab.watched().pop("201", None)
 check("the setting is kept on disk (0600)", (alerts.FILE.stat().st_mode & 0o777) == 0o600 if os.name == "posix" else True)
 client.user = None; w.ctx.signed_out.emit(); spin(0.1)
 n = len(State.log)

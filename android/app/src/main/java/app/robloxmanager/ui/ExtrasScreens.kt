@@ -22,6 +22,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,6 +53,38 @@ import app.robloxmanager.core.joinRequestsOfAll
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
+// ======================================================================== the switch for friend alerts (People > Alerts and Settings)
+@Composable
+fun AlertsSwitch(sv: Services, onNote: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val on by sv.alertsOn.collectAsState()
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) onNote("Notifications are blocked for this app, so alerts cannot be shown. Allow them in the phone's settings.")
+        sv.setAlerts(true)
+    }
+    var why by remember { mutableStateOf<String?>(null) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(owner) {                       // the phone's own notification settings are looked at again when the person comes back from them
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) why = Notifier.problem(ctx) }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(on) { why = Notifier.problem(ctx) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(on, { v ->
+                if (!v) sv.setAlerts(false)
+                else if (Build.VERSION.SDK_INT >= 33 && !Notifier.allowed(ctx)) permission.launch(Manifest.permission.POST_NOTIFICATIONS) else sv.setAlerts(true)
+            })
+            Spacer(Modifier.width(8.dp)); Text("Friend alerts on", fontWeight = FontWeight.Medium)
+        }
+        why?.let { w ->
+            Text(w, color = C.warn, fontSize = 12.sp)
+            QuietButton("Open the phone's notification settings") { try { ctx.startActivity(Notifier.settingsIntent(ctx)) } catch (_: Exception) { onNote("The phone's notification settings could not be opened.") } }
+        }
+    }
+}
+
 // ======================================================================== People > Alerts
 @Composable
 fun AlertsScreen(sv: Services) {
@@ -61,32 +94,17 @@ fun AlertsScreen(sv: Services) {
     val loader = rememberLoader(me.id) { sv.api.friends() }
     val avatars = remember { AvatarBook(sv) }
     val watched = remember(me.id) { mutableStateMapOf<Long, String>().also { it.putAll(sv.alerts.watched(me.id)) } }
-    var enabled by remember { mutableStateOf(sv.alerts.enabled) }
     var online by remember { mutableStateOf(sv.alerts.online) }
     var ingame by remember { mutableStateOf(sv.alerts.ingame) }
     var filter by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
 
     fun save() { sv.alerts.setWatched(me.id, watched.toMap()); sv.resetAlerts() }
-    fun turnOn() {
-        enabled = true; sv.alerts.enabled = true; sv.resetAlerts()
-        scope.launch { try { sv.pollAlerts() } catch (e: CancellationException) { throw e } catch (_: Exception) { } }          // (the first look: who is where)
-    }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (!granted) note = "Notifications are blocked for this app, so alerts cannot be shown. Allow them in the phone's settings."
-        turnOn()
-    }
     LaunchedEffect(loader.value) { loader.value?.let { avatars.ensure(it.map { p -> p.id }) } }
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(enabled, { on ->
-                    if (!on) { enabled = false; sv.alerts.enabled = false; sv.resetAlerts() }
-                    else if (Build.VERSION.SDK_INT >= 33 && !Notifier.allowed(ctx)) permission.launch(Manifest.permission.POST_NOTIFICATIONS) else turnOn()
-                })
-                Spacer(Modifier.width(8.dp)); Text("Alerts on", fontWeight = FontWeight.Medium)
-            }
+            AlertsSwitch(sv) { note = it }
             Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(online, { online = it; sv.alerts.online = it }); Text("when a friend comes online") }
             Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(ingame, { ingame = it; sv.alerts.ingame = it }); Text("when a friend joins a game") }
             Text("Tick the friends you want news about. The app looks at them every ${AlertRules.INTERVAL_MS / 1000} seconds while it is running (Android may pause it " +
@@ -247,6 +265,7 @@ fun BackupSection(sv: Services, onMessage: (String) -> Unit) {
             val (s, w, g) = Backup.restore(sv.prefs, d)
             sv.client.readBurst = sv.prefs.double("readBurst", 0.5)
             sv.log.writeFile = sv.prefs.bool("logToFile", true)
+            sv.alertsOn.value = sv.alerts.enabled
             sv.resetAlerts()
             onMessage("Restored $s setting(s), $w watched friend(s) and $g recent game(s). Open the pages again to see them.")
         }, { pending = null })

@@ -168,6 +168,12 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
                 Text("The log never contains your cookie, passwords, codes or request bodies.", color = C.muted, fontSize = 12.sp)
             }
         }
+        if (part == "settings") Section("FRIEND ALERTS", collapsible = true) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                AlertsSwitch(sv) { msg = it }
+                Text("A notification when the friends you picked (People > Alerts) come online or join a game.", color = C.muted, fontSize = 12.sp)
+            }
+        }
         if (part == "settings") BackupSection(sv) { msg = it }
         if (part == "settings") Section("ACCOUNT", collapsible = true) { DangerButton("Sign out") { confirmSignOut = true } }
         if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)

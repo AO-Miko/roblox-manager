@@ -5,6 +5,7 @@ from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 import alerts
+import notify_status
 from ui_common import PRESENCE, button, hint, make_table
 
 
@@ -25,6 +26,11 @@ class AlertsTab(QWidget):
         lay = QVBoxLayout(self)
         lay.addWidget(hint("Tick the friends you want news about. While the app is open, it looks at them every "
                            f"{alerts.INTERVAL_S} seconds and shows a notification when one comes online or joins a game. Nothing is sent to anyone but Roblox."))
+        self.sys_note = QLabel("")
+        self.sys_note.setWordWrap(True)
+        self.sys_note.setProperty("role", "warn")
+        self.sys_note.hide()
+        lay.addWidget(self.sys_note)
         row = QHBoxLayout()
         self.on = QCheckBox("Alerts on")
         self.on.setToolTip("Switches all alerts on or off")
@@ -66,6 +72,19 @@ class AlertsTab(QWidget):
         ctx.signed_in.connect(self._signed_in)
         ctx.signed_out.connect(self._signed_out)
         ctx.data_restored.connect(self._restored)
+        ctx.alerts_changed.connect(self._sync)
+
+    # ---------------------------------------------------------------- the system's own notification settings
+    def refresh_system(self):
+        """Ask the system whether it will show notifications, and say so here when it will not."""
+        why = notify_status.problem()
+        self.sys_note.setText(why or "")
+        self.sys_note.setVisible(bool(why))
+        return why
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self.refresh_system()
 
     # ---------------------------------------------------------------- what is watched
     def _me(self):
@@ -78,9 +97,8 @@ class AlertsTab(QWidget):
     def _option(self, key, value):
         self.data[key] = bool(value)
         alerts.save(self.data)
-        if key == "enabled" and value:
-            self.snap = {}
-            self.poll()
+        if key == "enabled":
+            self.ctx.alerts_changed.emit()
 
     def _ticked(self, item):
         if self._filling or item.column() != 0:
@@ -202,6 +220,7 @@ class AlertsTab(QWidget):
         self.ctx.notify("Roblox Manager", text)
 
     def test(self):
+        self.refresh_system()
         self.notify("This is how a friend alert looks.")
 
     # ---------------------------------------------------------------- accounts
@@ -214,6 +233,20 @@ class AlertsTab(QWidget):
             box.setChecked(self.data[key])
             box.blockSignals(False)
         self.show_friends()
+
+    def _sync(self):
+        """Alerts were switched on or off somewhere (here or in Settings): take the saved choice, and start looking if they are on."""
+        self.data["enabled"] = alerts.load()["enabled"]
+        self.on.blockSignals(True)
+        self.on.setChecked(self.data["enabled"])
+        self.on.blockSignals(False)
+        self.snap = {}
+        self._count()
+        if self.data["enabled"]:
+            why = self.refresh_system()
+            if why:
+                self.ctx.status("Alerts are on, but " + why[0].lower() + why[1:], 15000)
+            self.poll()
 
     def _restored(self):
         self._signed_in()

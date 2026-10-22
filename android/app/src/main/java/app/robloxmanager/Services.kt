@@ -57,6 +57,8 @@ class Services(app: Application) {
     val alerts = AlertSettings(prefs)
     /** Shows one piece of friend news (set by the activity, which has the Android context). */
     var notifier: (String) -> Unit = {}
+    /** Whether friend alerts are on (shown by the switch in People > Alerts and in Settings). */
+    val alertsOn = MutableStateFlow(prefs.bool("alerts.enabled", false))
     private var seen: Map<Long, Seen> = emptyMap()
     private var seenFor: Long? = null
     val bans = BanStore(File(dir, "bans.cache.json"))
@@ -117,6 +119,14 @@ class Services(app: Application) {
         seen = now
         found.take(5).forEach { notifier(it.second) }
         if (found.size > 5) notifier("...and ${found.size - 5} more friends")
+    }
+
+    /** Switches friend alerts on or off everywhere; switching on takes the first look at once. */
+    fun setAlerts(on: Boolean) {
+        alerts.enabled = on
+        alertsOn.value = on
+        resetAlerts()
+        if (on) scope.launch { try { pollAlerts() } catch (e: CancellationException) { throw e } catch (_: Throwable) { } }
     }
 
     /** Forget where everybody was (alerts were switched on, or the watch list changed), so the next look starts fresh. */

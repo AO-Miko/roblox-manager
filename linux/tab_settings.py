@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 
 import accounts
+import alerts
 import backup
 import cleanup
 import plat
@@ -90,7 +91,7 @@ class SettingsTab(QWidget):
         lay = QVBoxLayout(box)
         lay.addWidget(hint("Save your settings, friend alerts and recently viewed games to a file, and bring them back later or on another computer. "
                            "Your sign-ins are never in the file."))
-        self.c_lists = QCheckBox("Also keep a copy of my friends, followers, following and groups (needs sign-in)")
+        self.c_lists = WrapCheck("Also keep a copy of my friends, followers, following and groups (needs sign-in)")
         self.c_lists.setChecked(True)
         lay.addWidget(self.c_lists)
         row = FlowLayout()
@@ -288,6 +289,12 @@ class SettingsTab(QWidget):
     def _ui_box(self):
         box = QGroupBox("Window and confirmations")
         form = self._form(box)
+        self.c_alerts = WrapCheck("Friend alerts: a notification when friends I picked (People > Alerts) come online or join a game")
+        self.c_alerts.setChecked(alerts.load()["enabled"])
+        self.c_alerts.toggled.connect(self._alerts_toggled)
+        form.addRow(self.c_alerts)
+        self.ctx.alerts_changed.connect(self._alerts_synced)
+        self.ctx.data_restored.connect(self._alerts_synced)
         form.addRow(self._check("ui.remember_window", "Remember the window size and the tab you were on"))
         form.addRow(self._lab("Ask me to type the number when I change"), self._spin("confirm.typed_from", " people or groups or more at once"))
         row = FlowLayout()
@@ -295,6 +302,17 @@ class SettingsTab(QWidget):
         row.addStretch()
         form.addRow(row)
         return box
+
+    def _alerts_toggled(self, on):
+        data = alerts.load()
+        data["enabled"] = bool(on)
+        alerts.save(data)
+        self.ctx.alerts_changed.emit()
+
+    def _alerts_synced(self):
+        self.c_alerts.blockSignals(True)
+        self.c_alerts.setChecked(alerts.load()["enabled"])
+        self.c_alerts.blockSignals(False)
 
     def reset(self):
         if self.ctx.confirm("Reset settings", "Put every setting back to its default?"):

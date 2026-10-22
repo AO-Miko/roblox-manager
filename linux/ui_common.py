@@ -66,6 +66,7 @@ class Context(QObject):
     """What every tab needs: the API client, background runner, and ways to talk to the user."""
     signed_in = Signal()
     signed_out = Signal()
+    alerts_changed = Signal()         # friend alerts were switched on or off (in People > Alerts or in Settings)
     data_restored = Signal()          # a backup was restored: tabs that keep their own saved data read it again
     accounts_changed = Signal()       # an account was added, removed or switched
     counts = Signal(str, object)      # (what, how many or None): shown in the tab titles (friends, requests, followers, following, blocked, groups, vip)
