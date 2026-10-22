@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.9.0.1.0",
+    "date": "2026-10-22",
+    "changes": [
+      "Fixed text that was cut off on the Admin page with wider fonts"
+    ]
+  },
+  {
     "version": "1.9.0.0.0",
     "date": "2026-10-22",
     "changes": [
