@@ -150,7 +150,8 @@ class FakeRoblox(rbx.Client):
             if job in JOIN_FAIL:
                 return {"jobId": job, "status": 22, "joinScript": None, "joinTicket": "T"}
             n = int(job[-1])
-            return {"jobId": job, "status": 2, "joinScript": {"UdmuxEndpoints": [{"Address": f"128.116.{44 if n % 2 else 97}.{n}", "Port": 1}], "MachineAddress": "10.0.0.1"}, "joinTicket": "T"}
+            return {"jobId": job, "status": 2, "joinTicket": "T", "joinScript": {"UdmuxEndpoints": [{"Address": f"128.116.{44 if n % 2 else 97}.{n}", "Port": 1}], "MachineAddress": "10.0.0.1",
+                                                                                "DataCenterId": 25960 if n % 2 else 25853, "ServerClaimedTime": int(time.time() * 1000) - n * 3600 * 1000, "PlaceVersion": 9}}
         if "presence.roblox.com" in url:
             return {"userPresences": [{"userId": 201, "userPresenceType": 2, "lastLocation": "Alpha Game", "rootPlaceId": 11, "placeId": 11, "gameId": "job-aaaa-1111", "universeId": 1},
                                       {"userId": 202, "userPresenceType": 1, "lastLocation": "Website"}, {"userId": 203, "userPresenceType": 0}]}
@@ -476,7 +477,7 @@ check("Join selected opens the launcher on that server (place id + server id)", 
 real_servers = det.servers
 det.servers = [{"id": "a", "playing": 5, "max": 12, "ping": 90, "fps": 30.0}, {"id": "b", "playing": 2, "max": 12, "ping": 40, "fps": 59.0},
                {"id": "c", "playing": 9, "max": 12, "ping": None, "fps": None}, {"id": "d", "playing": 1, "max": 12, "ping": 40, "fps": 60.0}]
-check("the sort box has Roblox's order, ping, FPS and the player counts", [det.order.itemData(i) for i in range(det.order.count())] == ["roblox", "ping", "fps", "most", "fewest"])
+check("the sort box has Roblox's order, ping, FPS, the player counts and the running time", [det.order.itemData(i) for i in range(det.order.count())] == ["roblox", "ping", "fps", "most", "fewest", "oldest", "newest"])
 for mode, expect in (("roblox", "abcd"), ("ping", "bdac"), ("fps", "dbac"), ("most", "cabd"), ("fewest", "dbac")):
     det.order.setCurrentIndex(det.order.findData(mode)); det._show_servers()
     got = "".join(det.server_table.item(r, 4).text() for r in range(det.server_table.rowCount()))
@@ -484,15 +485,17 @@ for mode, expect in (("roblox", "abcd"), ("ping", "bdac"), ("fps", "dbac"), ("mo
 check("an unknown mode keeps Roblox's order", [s["id"] for s in tab_discover.sort_servers(det.servers, "nonsense")] == list("abcd"))
 det.servers = real_servers
 det.order.setCurrentIndex(0)
-# ---------------------------------------------------------------- where the servers are
+# ---------------------------------------------------------------- where the servers are, and how long they have been running
 import geo
 import settings
 import worldmap
 infos = []
 QMessageBox.information = staticmethod(lambda *a, **k: infos.append(str(a[2]) if len(a) > 2 else ""))          # ('sign in first' would wait for a click)
-rbx.Client.JOIN_WAIT = 0.01
-GEO = []
+rbx.Client.JOIN_WAIT = 0.001
+GEO, LIST = [], []
 GEO_PLACES = {"128.116.44": ("Frankfurt am Main", "Germany", "DE", 50.1155, 8.6842), "128.116.97": ("Singapore", "Singapore", "SG", 1.2897, 103.85)}
+ROSEAL_LIST = [{"id": 1, "dataCenterIds": [25960], "location": {"city": "Frankfurt", "region": "Hesse", "country": "DE", "latLong": ["50.1155", "8.6842"]}},
+               {"id": 2, "dataCenterIds": [25853], "location": {"city": "Singapore", "region": "Singapore", "country": "SG", "latLong": ["1.2897", "103.8501"]}}]
 
 
 def fake_geo(url):
@@ -502,61 +505,81 @@ def fake_geo(url):
 
 
 geo._fetch = fake_geo
-real_confirm, asked_geo = w.ctx.confirm, []
-w.ctx.confirm = lambda title, text, danger=False: asked_geo.append(text) or True
-check("the table has a Location column (after the server id, so the other columns keep their places)", det.server_table.columnCount() == 6 and det.server_table.horizontalHeaderItem(5).text() == "Location")
-check("the Locate and map buttons are there", det.b_locate.text() == "Locate servers" and det.b_map.text() == "Show map" and det.b_stop_locate.isHidden())
+geo._fetch_roseal = lambda url: (LIST.append(url), ROSEAL_LIST)[1]
+asked_source = []
+det.ask_geo_source = lambda: (asked_source.append(1), "roseal")[1]
+check("the table has Location and Running for columns (after the server id, so the other columns keep their places)", det.server_table.columnCount() == 7
+      and [det.server_table.horizontalHeaderItem(i).text() for i in (5, 6)] == ["Location", "Running for"])
+check("the button and the map button are there", det.b_locate.text() == "Location and uptime" and det.b_map.text() == "Show map" and det.b_stop_locate.isHidden())
+check("the sort box has the uptime orders too", [det.order.itemData(i) for i in range(det.order.count())] == ["roblox", "ping", "fps", "most", "fewest", "oldest", "newest"])
+check("nothing is allowed to contact RoSeal or ipwho.is at first", settings.get("geo.roseal") is False and settings.get("geo.allowed") is False)
 w.ctx.client.user = None
 det.locate_servers()
-check("Locate needs the sign-in (nothing is asked of Roblox without it)", not JOIN_CALLS and not asked_geo and infos and "sign in" in infos[0].lower(), infos)
+check("Location and uptime needs the sign-in (nothing is asked of Roblox without it)", not JOIN_CALLS and not asked_source and infos and "sign in" in infos[0].lower(), infos)
 w.ctx.client.user = {"id": 156, "name": "me", "displayName": "Me"}
 det.server_table.selectRow(0)
 first_id = det.server_table.item(0, 4).text()
 det.locate_servers()
-check("the first time, the person is told what happens (Roblox's address, ipwho.is) and agrees", wait(lambda: len(det.places) == 1) and len(asked_geo) == 1 and "ipwho.is" in asked_geo[0] and "nothing is joined" in asked_geo[0], asked_geo)
+check("the first time, the person is asked which service may be used, and chooses RoSeal's list", wait(lambda: len(det.places) == 1) and asked_source == [1] and settings.get("geo.roseal") is True and settings.get("geo.allowed") is False)
 check("...the join request was for that server only", len(JOIN_CALLS) == 1 and JOIN_CALLS[0]["gameId"] == first_id and JOIN_CALLS[0]["placeId"] == 11, JOIN_CALLS)
-check("...the table shows its place", wait(lambda: any(det.server_table.item(r, 5).text() == "Frankfurt am Main, Germany" for r in range(det.server_table.rowCount()))), [det.server_table.item(r, 5).text() for r in range(det.server_table.rowCount())])
-check("...and the agreement is remembered", settings.get("geo.allowed") is True)
+check("...RoSeal's list was downloaded once, and ipwho.is not at all", LIST == ["https://data.roseal.live/v2/grouped-datacenters.json"] and not GEO, (LIST, GEO))
+check("...the table shows its place and how long it has been running", wait(lambda: any(det.server_table.item(r, 5).text() == "Frankfurt, DE" for r in range(det.server_table.rowCount()))
+      and any(det.server_table.item(r, 6).text() for r in range(det.server_table.rowCount()))), [(det.server_table.item(r, 5).text(), det.server_table.item(r, 6).text()) for r in range(det.server_table.rowCount())])
 det.server_table.clearSelection()
 det.locate_servers()
-check("with nothing selected, all the others are located", wait(lambda: len(det.places) == 6 and not det._locating), len(det.places))
-check("...each server was asked for once (6 in all)", len(JOIN_CALLS) == 6 and len({c["gameId"] for c in JOIN_CALLS}) == 6, len(JOIN_CALLS))
-check("...and the person was not asked again", len(asked_geo) == 1)
-check("...the lookup service was asked once per block of addresses (2), not once per server", len(GEO) == 2, GEO)
-check("...the note says how many were located", "Located 5 of 5" in det.server_note.text(), det.server_note.text())
-locs = {det.server_table.item(r, 4).text()[-1]: det.server_table.item(r, 5).text() for r in range(det.server_table.rowCount())}
-check("the odd servers are in Frankfurt and the even ones in Singapore", locs["1"] == locs["3"] == locs["5"] == locs["9"] == "Frankfurt am Main, Germany" and locs["2"] == "Singapore, Singapore", locs)
+check("with nothing selected, all the others are looked up", wait(lambda: len(det.places) == 6 and len(det.started) == 6 and not det._locating), (len(det.places), len(det.started)))
+check("...each server was asked about once (6 in all)", len(JOIN_CALLS) == 6 and len({c["gameId"] for c in JOIN_CALLS}) == 6, len(JOIN_CALLS))
+check("...the person was not asked again, and RoSeal's list was not downloaded again", asked_source == [1] and len(LIST) == 1)
+check("...the note says how many were looked up", "Looked up 5 of 5 server(s), 5 located" in det.server_note.text(), det.server_note.text())
+by_digit = {det.server_table.item(r, 4).text()[-1]: (det.server_table.item(r, 5).text(), det.server_table.item(r, 6).text()) for r in range(det.server_table.rowCount())}
+check("the odd servers are in Frankfurt and the even ones in Singapore", by_digit["1"][0] == by_digit["3"][0] == by_digit["5"][0] == by_digit["9"][0] == "Frankfurt, DE" and by_digit["2"][0] == "Singapore, SG", by_digit)
+check("...and server N started N hours ago", by_digit["2"][1].startswith("2 h") and by_digit["4"][1].startswith("4 h") and by_digit["5"][1].startswith("5 h"), by_digit)
+for mode, expect in (("oldest", "9" + "5"), ("newest", "1")):
+    det.order.setCurrentIndex(det.order.findData(mode))
+    got = "".join(det.server_table.item(r, 4).text()[-1] for r in range(det.server_table.rowCount()))
+    check(f"sorting by '{mode}' puts {'the longest running' if mode == 'oldest' else 'the newest'} server first", got.startswith(expect[0]), got)
+det.order.setCurrentIndex(0)
 n = len(JOIN_CALLS)
 det.locate_servers()
-check("when every server is located, pressing Locate again does nothing but say so", len(JOIN_CALLS) == n and "located already" in w.statusBar().currentMessage(), w.statusBar().currentMessage())
-dlg = tab_discover.ServerMapDialog(det, det.servers, det.places, det._join_server)
+check("when every server is looked up, pressing the button again does nothing but say so", len(JOIN_CALLS) == n and "looked up already" in w.statusBar().currentMessage(), w.statusBar().currentMessage())
+dlg = tab_discover.ServerMapDialog(det, det.servers, det.places, det._join_server, det.started)
 check("the map window shows two dots: Frankfurt (4 servers) and Singapore (2)", sorted(len(d["ids"]) for d in dlg.map.dots) == [2, 4] and "6 of 6" in dlg.note.text(), (dlg.map.dots, dlg.note.text()))
 dlg.map.picked.emit(next(d["ids"] for d in dlg.map.dots if len(d["ids"]) == 2))
-check("pressing a dot lists its servers", dlg.table.rowCount() == 2 and {dlg.table.item(r, 4).text()[-1] for r in range(2)} == {"2", "4"}, dlg.table.rowCount())
+check("pressing a dot lists its servers, with how long they have run", dlg.table.rowCount() == 2 and {dlg.table.item(r, 4).text()[-1] for r in range(2)} == {"2", "4"}
+      and all("h" in dlg.table.item(r, 5).text() for r in range(2)), [dlg.table.item(r, 5).text() for r in range(dlg.table.rowCount())])
 dlg.table.selectRow(0)
 launched_before = len(launched)
 dlg.join_selected()
 check("Join selected in the map window opens the launcher on that server", len(launched) == launched_before + 1 and "gameInstanceId=aaaaaaaa-0000-0000-0000-00000000000" in launched[-1], launched[-1:])
 dlg.close()
-det.show_map_note = None
-# a server that Roblox will not give an address for, and a lookup service that is down
-det.places.clear(); det._show_servers()
+# a server Roblox gives no information about
+det.places.clear(); det.started.clear(); det._show_servers()
 JOIN_FAIL.add("aaaaaaaa-0000-0000-0000-000000000002")
 det.server_table.selectRow(next(r for r in range(det.server_table.rowCount()) if det.server_table.item(r, 4).text().endswith("2")))
 det.locate_servers()
-check("a server Roblox gives no address for is reported without a popup, and the button works again", wait(lambda: "could not be located" in det.server_note.text() and det.b_locate.isEnabled())
-      and "did not give this server's address" in det.server_note.text() and not warnings, det.server_note.text())
+check("a server Roblox gives no information about is reported without a popup, and the button works again", wait(lambda: "could not be located" in det.server_note.text() and det.b_locate.isEnabled())
+      and "still getting this server ready" in det.server_note.text() and not warnings, det.server_note.text())
 JOIN_FAIL.clear()
+# switched off in Settings, and the other service
+settings.set("geo.roseal", False)
+geo.CACHE_FILE.unlink(missing_ok=True); geo.ROSEAL_FILE.unlink(missing_ok=True)
+det.places.clear(); det.started.clear(); det._show_servers()
+det.ask_geo_source = lambda: (asked_source.append(2), "ipwho")[1]
+det.server_table.selectRow(0)
+det.locate_servers()
+check("with both services off the person is asked again, and ipwho.is can be chosen instead", wait(lambda: len(det.places) == 1) and asked_source == [1, 2] and settings.get("geo.allowed") is True and settings.get("geo.roseal") is False, asked_source)
+check("...then the server's address went to ipwho.is, and RoSeal was not contacted", len(GEO) == 1 and GEO[0].startswith("https://ipwho.is/128.116.") and len(LIST) == 1, (GEO, LIST))
+check("...and the place is shown", any(det.server_table.item(r, 5).text() == "Frankfurt am Main, Germany" for r in range(det.server_table.rowCount())))
 geo_real = geo._fetch
 geo._fetch = lambda url: (_ for _ in ()).throw(geo.requests.ConnectionError("down"))
 geo.CACHE_FILE.unlink()
-det.server_table.selectRow(0)
+det.places.clear(); det.started.clear()
+det.server_table.selectRow(1)
 det.locate_servers()
-check("a lookup service that is down is reported in plain words", wait(lambda: "could not be reached" in det.server_note.text()) and not det.places, det.server_note.text())
+check("a lookup service that is down is reported in plain words (the uptime is still shown)", wait(lambda: "could not be reached" in det.server_note.text()) and not det.places and len(det.started) == 1, det.server_note.text())
 geo._fetch = geo_real
 det.find_servers(True); wait(lambda: det.server_table.rowCount() == 6 and not det.server_busy)
-check("a new list of servers starts without places", det.places == {} and all(det.server_table.item(r, 5).text() == "" for r in range(det.server_table.rowCount())))
-w.ctx.confirm = real_confirm
+check("a new list of servers starts without places and start times", det.places == {} and det.started == {} and all(det.server_table.item(r, 5).text() == "" and det.server_table.item(r, 6).text() == "" for r in range(det.server_table.rowCount())))
 det.order.setCurrentIndex(0)
 det.sort.setCurrentIndex(1)
 det.b_servers.click()

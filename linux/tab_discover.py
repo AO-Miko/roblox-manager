@@ -7,7 +7,7 @@ import uuid
 
 from PySide6.QtCore import QRectF, QUrl, Qt, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QPainter, QPixmap
-from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu, QPlainTextEdit, QScrollArea, QStackedWidget, QVBoxLayout,
+from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox, QPlainTextEdit, QScrollArea, QStackedWidget, QVBoxLayout,
                                QWidget)
 
 import games_store
@@ -61,16 +61,38 @@ def launch_roblox(ctx, place_id, link_code=None, web_url=None, job_id=None):
     return False
 
 
-SERVER_ORDERS = [("roblox", "Roblox's order"), ("ping", "Lowest ping first"), ("fps", "Highest FPS first"), ("most", "Most players first"), ("fewest", "Fewest players first")]
+SERVER_ORDERS = [("roblox", "Roblox's order"), ("ping", "Lowest ping first"), ("fps", "Highest FPS first"), ("most", "Most players first"), ("fewest", "Fewest players first"),
+                 ("oldest", "Running longest first"), ("newest", "Started most recently first")]
 
 
-def sort_servers(servers, mode):
-    """The servers in the order asked for. A server without a ping or FPS value (Roblox leaves it out sometimes) goes last; ties keep Roblox's order."""
+def sort_servers(servers, mode, started=None):
+    """The servers in the order asked for. A server without a ping, FPS or start time (not looked up yet, or Roblox leaves it out) goes last; ties keep Roblox's order.
+    `started` is {server id: start time in Unix milliseconds}."""
+    started = started or {}
+
     def last(value, flip=1):
         return (value is None, 0 if value is None else value * flip)
     keys = {"ping": lambda s: last(s.get("ping")), "fps": lambda s: last(s.get("fps"), -1),
-            "most": lambda s: -s["playing"], "fewest": lambda s: s["playing"]}
+            "most": lambda s: -s["playing"], "fewest": lambda s: s["playing"],
+            "oldest": lambda s: last(started.get(s["id"])), "newest": lambda s: last(started.get(s["id"]), -1)}
     return sorted(servers, key=keys[mode]) if mode in keys else list(servers)
+
+
+def age_text(started_ms, now=None):
+    """How long a server has been running: '12 min', '6 h 12 min', '2 d 3 h' ('' when not known)."""
+    if not started_ms:
+        return ""
+    secs = max(0, int(((time.time() if now is None else now) * 1000 - started_ms) // 1000))
+    if secs < 60:
+        return "under a minute"
+    mins = secs // 60
+    if mins < 60:
+        return f"{mins} min"
+    hours, mins = divmod(mins, 60)
+    if hours < 24:
+        return f"{hours} h {mins:02d} min"
+    days, hours = divmod(hours, 24)
+    return f"{days} d {hours} h"
 
 
 class RatioBar(QWidget):
@@ -189,8 +211,9 @@ class FriendCard(QFrame):
 class ServerMapDialog(QDialog):
     """The located servers on a world map. Pressing a dot lists the servers there; one of them can be joined."""
 
-    def __init__(self, parent, servers, places, join):
+    def __init__(self, parent, servers, places, join, started=None):
         super().__init__(parent)
+        self.started = started or {}
         self.setWindowTitle("Where the servers are")
         self.resize(820, 640)
         self.servers = {s["id"]: s for s in servers}
@@ -202,10 +225,10 @@ class ServerMapDialog(QDialog):
         lay.addWidget(self.map)
         located = sum(len(ids) for _, ids in groups)
         self.note = hint(f"{located} of {len(servers)} loaded servers are located, in {len(groups)} place(s). Press a dot to see its servers." if groups
-                         else "No server is located yet. Close this window and press Locate servers first.")
+                         else "No server is located yet. Close this window and press Location and uptime first.")
         self.note.setWordWrap(True)
         lay.addWidget(self.note)
-        self.table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server"], [80, 60, 90, 60, 280], empty="Press a dot on the map.")
+        self.table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server", "Running for"], [80, 60, 90, 60, 250, 110], empty="Press a dot on the map.")
         self.table.setMinimumHeight(110)
         self.table.doubleClicked.connect(lambda _=None: self.join_selected())
         lay.addWidget(self.table, 1)
@@ -222,7 +245,7 @@ class ServerMapDialog(QDialog):
         for i in ids:
             s = self.servers.get(i)
             if s:
-                rows.append([s["playing"], s["max"], int(s["ping"]) if s.get("ping") is not None else "-", int(s["fps"]) if s.get("fps") is not None else "-", i])
+                rows.append([s["playing"], s["max"], int(s["ping"]) if s.get("ping") is not None else "-", int(s["fps"]) if s.get("fps") is not None else "-", i, age_text(self.started.get(i))])
         fill_table(self.table, rows, keys=[r[4] for r in rows])
 
     def join_selected(self):
@@ -238,7 +261,7 @@ class GameDetail(QWidget):
     def __init__(self, ctx):
         super().__init__()
         self.ctx = ctx
-        self.places, self._locating, self._locate_stop = {}, False, False
+        self.places, self.started, self._locating, self._locate_stop = {}, {}, False, False
         self.card = None
         self.place_id = None
         self.vip_servers_for = lambda universe_id, place_id: []        # the app connects this to the VIP servers page
@@ -332,20 +355,20 @@ class GameDetail(QWidget):
         self.order = QComboBox()
         for key, label in SERVER_ORDERS:
             self.order.addItem("Sort: " + label, key)
-        self.order.setToolTip("Sorts the servers loaded so far (Load more brings in more). Roblox does not tell how long a server has been running, so that cannot be sorted.")
+        self.order.setToolTip("Sorts the servers loaded so far (Load more brings in more). The running time and the start time need 'Location and uptime' first.")
         self.order.currentIndexChanged.connect(lambda _=None: self._show_servers())
         self.b_servers = button("Find servers", lambda: self.find_servers(True), "List the public servers of this game")
         self.b_join_server = button("Join selected", self.join_selected, "Open the Roblox launcher on the selected server")
         self.b_join_emptiest = button("Join the emptiest", self.join_emptiest, "Open the launcher on the server with the fewest players (not full)")
         self.b_more_servers = button("Load more", lambda: self.find_servers(False))
-        self.b_locate = button("Locate servers", self.locate_servers, "Find out where the selected servers (or the loaded ones) are. Asks Roblox for each server's address, like pressing Play, but nothing is joined.")
+        self.b_locate = button("Location and uptime", self.locate_servers, "Find out where the selected servers (or the loaded ones) are and how long they have been running. Asks Roblox about each server, like pressing Play, but nothing is joined.")
         self.b_stop_locate = button("Stop", self.stop_locate)
         self.b_stop_locate.hide()
         self.b_map = button("Show map", self.show_map, "Show the located servers on a world map")
         for w_ in (self.sort, self.order, self.b_servers, self.b_join_server, self.b_join_emptiest, self.b_more_servers, self.b_locate, self.b_stop_locate, self.b_map):
             srow.addWidget(w_)
         lay.addLayout(srow)
-        self.server_table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server", "Location"], [80, 60, 90, 60, 260, 190], empty="Press Find servers.")
+        self.server_table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server", "Location", "Running for"], [80, 60, 90, 60, 250, 170, 100], empty="Press Find servers.")
         self.server_table.setMinimumHeight(150)
         self.server_table.doubleClicked.connect(lambda _=None: self.join_selected())
         lay.addWidget(self.server_table)
@@ -478,7 +501,7 @@ class GameDetail(QWidget):
             return
         if reset:
             self.server_gen += 1
-            self.servers, self.server_cursor, self.places = [], "", {}
+            self.servers, self.server_cursor, self.places, self.started = [], "", {}, {}
         elif self.server_busy or not self.server_cursor:
             return
         self.server_busy = True
@@ -506,47 +529,66 @@ class GameDetail(QWidget):
         self.ctx.async_.run(lambda: c.game_servers(place, sort, cursor), done, failed)
 
     def _show_servers(self):
-        shown = sort_servers(self.servers, self.order.currentData())
+        shown = sort_servers(self.servers, self.order.currentData(), self.started)
         rows = [[s["playing"], s["max"], int(s["ping"]) if s.get("ping") is not None else "-", int(s["fps"]) if s.get("fps") is not None else "-", s["id"],
-                 geo.label(self.places[s["id"]]) if s["id"] in self.places else ""] for s in shown]
+                 geo.label(self.places[s["id"]]) if s["id"] in self.places else "", age_text(self.started.get(s["id"]))] for s in shown]
         self.server_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)         # (the order chosen above; click a header to sort by it instead)
         fill_table(self.server_table, rows, keys=[s["id"] for s in shown])
         self.b_more_servers.setEnabled(bool(self.server_cursor))
         self.server_note.setText(f"{len(self.servers)} servers" + ("  (more available: Load more)" if self.server_cursor else "") if self.servers else "No public servers are open right now (or the game has none).")
 
-    # ---- where the servers are
+    # ---- where the servers are, and how long they have been running
     LOCATE_AT_ONCE = 25
 
+    def ask_geo_source(self):
+        """Which service may say where a server is. Asked once, until the person changes it in Settings. Returns 'roseal', 'ipwho' or None (cancel)."""
+        box = QMessageBox(QMessageBox.Icon.Question, "Where should server locations come from?",
+                          "Roblox's answer says which data centre a server runs in and its public address. To turn that into a city, one of these services can be used:\n\n"
+                          "- RoSeal's list (data.roseal.live): the app downloads the public list of Roblox data centres kept by the RoSeal extension. Nothing about you, your account or "
+                          "the server is sent: it is one plain download. This service is run by RoSeal, not by Roblox or by this app.\n\n"
+                          "- ipwho.is: the server's public address is sent there, and it says which city the address is in. Nothing else is sent.\n\n"
+                          "Nothing is contacted until you choose. You can change this later in Settings.", self.window())
+        b_roseal = box.addButton("Use RoSeal's list", QMessageBox.ButtonRole.AcceptRole)
+        b_ip = box.addButton("Use ipwho.is", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is b_roseal:
+            return "roseal"
+        return "ipwho" if box.clickedButton() is b_ip else None
+
     def locate_servers(self):
-        """The selected servers (or, if none is selected, the loaded ones not located yet; 25 at a time): Roblox's join answer gives each one's address, ipwho.is says where it is."""
+        """The selected servers (or, if none is selected, the loaded ones not looked up yet; 25 at a time): Roblox's join answer gives each one's data centre, address and start time;
+        the place comes from RoSeal's list or ipwho.is, whichever the person allowed."""
         c = self.ctx
         if not self.place_id or c.need_login() or self._locating:
             return
         picked = [row_key(self.server_table, r) for r in selected_rows(self.server_table)]
-        ids = picked or [s["id"] for s in self.servers if s["id"] not in self.places]
-        ids = [i for i in ids if i not in self.places][:self.LOCATE_AT_ONCE]
+        ids = picked or [s["id"] for s in self.servers if s["id"] not in self.started]
+        ids = [i for i in ids if i not in self.started][:self.LOCATE_AT_ONCE]
         if not ids:
-            c.status("Every loaded server is located already." if self.servers else "Press Find servers first.")
+            c.status("Every loaded server is looked up already." if self.servers else "Press Find servers first.")
             return
-        if not settings.get("geo.allowed"):
-            if not c.confirm("Locate servers", "To find where a server is, the app asks Roblox for the server's address (the same request the website makes when you press Play, "
-                             "but nothing is joined), then looks that address up on ipwho.is, which says which city it is in. Only Roblox's server address is sent to ipwho.is.\n\n"
-                             "Do this when you press Locate servers?"):
+        if not settings.get("geo.roseal") and not settings.get("geo.allowed"):
+            choice = self.ask_geo_source()
+            if choice is None:
                 return
-            settings.set("geo.allowed", True)
+            settings.set("geo.roseal" if choice == "roseal" else "geo.allowed", True)
+        use_roseal, use_ipwho = settings.get("geo.roseal"), settings.get("geo.allowed")
         self._locating, self._locate_stop = True, False
         self.b_locate.setEnabled(False)
         self.b_stop_locate.show()
         gen, place, client = self.server_gen, self.place_id, c.client
 
         def work():
-            found, problems = {}, []
+            found, when, problems = {}, {}, []
             for k, sid in enumerate(ids):
                 if self._locate_stop:
                     break
                 self.locating.emit(k, len(ids))
                 try:
-                    found[sid] = geo.lookup(client.server_address(place, sid))
+                    info = client.server_info(place, sid)
+                    when[sid] = info["started_ms"] or 0
+                    found[sid] = geo.resolve(info, use_roseal, use_ipwho)
                 except rbx.Cancelled:
                     break
                 except rbx.RobloxError as e:
@@ -555,7 +597,7 @@ class GameDetail(QWidget):
                         break
                 except (geo.GeoError, ValueError) as e:
                     problems.append(str(e))
-            return found, len(ids), problems
+            return found, when, len(ids), problems
 
         c.async_.run(work, lambda res: self._located(gen, *res), lambda e: (self._locate_done(), c.error(e)))
 
@@ -571,19 +613,20 @@ class GameDetail(QWidget):
         self.b_stop_locate.setEnabled(True)
         self.ctx.client.clear_cancel()
 
-    def _located(self, gen, found, tried, problems):
+    def _located(self, gen, found, when, tried, problems):
         self._locate_done()
         if gen != self.server_gen:
             return                                            # (another game, or a new search: this answer is old)
         self.places.update(found)
+        self.started.update(when)
         self._show_servers()
-        text = f"Located {len(found)} of {tried} server(s)."
+        text = f"Looked up {len(when)} of {tried} server(s), {len(found)} located."
         if problems:
             text += f" {len(problems)} could not be located: {problems[0]}"
         self.server_note.setText(text)
 
     def show_map(self):
-        dlg = ServerMapDialog(self, self.servers, self.places, self._join_server)
+        dlg = ServerMapDialog(self, self.servers, self.places, self._join_server, self.started)
         dlg.exec()
 
     def _join_server(self, server_id):

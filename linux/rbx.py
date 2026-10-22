@@ -902,33 +902,38 @@ class Client:
                    for s in d.get("data", []) if isinstance(s, dict) and safe_code(s.get("id"))]
         return servers, d.get("nextPageCursor") or ""
 
-    JOIN_WAIT = 1.5          # seconds between the asks of server_address when Roblox says 'not ready'
+    JOIN_WAIT = 1.25         # seconds between the asks of server_info while Roblox says 'not ready'
+    JOIN_RETRY = (0, 2, 22)  # the statuses of a join answer that mean 'ask again'
 
-    def server_address(self, place_id, job_id, tries=4):
-        """The public address of one public server, from Roblox's join answer (the call the website makes when Play is pressed; nothing is joined).
-        Only the address is taken out of the answer: its tickets are never kept or logged. Needs the sign-in. The first answers may say 'not ready', so it asks again a few times."""
+    def server_info(self, place_id, job_id, tries=8):
+        """What Roblox's join answer says about one public server: {'address': its public address, 'started_ms': when it started (Unix milliseconds) or None, 'dc': the id of its
+        data centre or None, 'place_version': the version of the place it runs or None}. It is the call the website makes when Play is pressed; nothing is joined. Only these
+        values are taken out of the answer: its tickets are never kept or logged. Needs the sign-in. The first answers may say 'not ready', so it asks again a few times."""
         import uuid
         job = safe_code(job_id)
         if not job:
             raise ValueError("odd server id")
+        status = None
         for k in range(tries):
             d = self.post("https://gamejoin.roblox.com/v1/join-game-instance",
                           {"placeId": int(place_id), "isTeleport": False, "gameId": job, "gameJoinAttemptId": str(uuid.uuid4())})
-            script = d.get("joinScript") if isinstance(d, dict) else None
+            d = d if isinstance(d, dict) else {}
+            script = d.get("joinScript")
             if isinstance(script, str):
                 try:
                     script = json.loads(script)
                 except ValueError:
                     script = None
             if isinstance(script, dict):
-                for e in script.get("UdmuxEndpoints") or []:
-                    addr = e.get("Address") if isinstance(e, dict) else None
-                    if isinstance(addr, str) and _public_ipv4(addr):
-                        return addr
-                raise RobloxError(0, "Roblox did not give a public address for this server")
-            if k + 1 < tries:
+                return _join_info(script)
+            status = d.get("status")
+            if status in self.JOIN_RETRY and k + 1 < tries:
                 self._sleep(self.JOIN_WAIT)
-        raise RobloxError(0, "Roblox did not give this server's address (it may be full or just closed)")
+                continue
+            break
+        if status in self.JOIN_RETRY or status is None:
+            raise RobloxError(0, "Roblox is still getting this server ready (it may be full or just closed)")
+        raise RobloxError(0, f"Roblox would not let this server be looked at (status {status})")
 
     def game_favorite_state(self, universe_id):
         """True if the account in use has favorited the game (needs the sign-in)."""
@@ -1278,6 +1283,33 @@ def save_avatar(uid, data):
 
 
 _CODE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def _join_info(script):
+    """The few values wanted from a join script (PascalCase as Roblox sends them, or camelCase)."""
+    def pick(*names):
+        for n in names:
+            if n in script:
+                return script[n]
+        return None
+    address = None
+    for key in (("UdmuxEndpoints", "udmuxEndpoints"), ("ServerConnections", "serverConnections")):
+        for e in pick(*key) or []:
+            a = (e.get("Address") or e.get("address")) if isinstance(e, dict) else None
+            if isinstance(a, str) and _public_ipv4(a):
+                address = a.strip()
+                break
+        if address:
+            break
+    if not address:
+        raise RobloxError(0, "Roblox did not give a public address for this server")
+
+    def whole(v):
+        return v if isinstance(v, int) and not isinstance(v, bool) and v > 0 else None
+    started = whole(pick("ServerClaimedTime", "serverClaimedTime"))
+    if started and not 946684800000 < started < (time.time() + 86400) * 1000:           # (milliseconds since 1970, and not in the future)
+        started = None
+    return {"address": address, "started_ms": started, "dc": whole(pick("DataCenterId", "dataCenterId")), "place_version": whole(pick("PlaceVersion", "placeVersion"))}
 
 
 def _public_ipv4(text):

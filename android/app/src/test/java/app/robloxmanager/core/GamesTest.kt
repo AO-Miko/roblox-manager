@@ -155,7 +155,19 @@ class GamesTest {
         assertEquals(listOf("c", "a", "b", "d"), Games.sortServers(all, "most").map { it.id })
         assertEquals(listOf("d", "b", "a", "c"), Games.sortServers(all, "fewest").map { it.id })
         assertEquals(listOf("a", "b", "c", "d"), Games.sortServers(all, "nonsense").map { it.id })
-        assertEquals(listOf("roblox", "ping", "fps", "most", "fewest"), Games.SERVER_ORDERS.map { it.first })
+        assertEquals(listOf("roblox", "ping", "fps", "most", "fewest", "oldest", "newest"), Games.SERVER_ORDERS.map { it.first })
+        val started = mapOf("a" to 3000L, "b" to 1000L, "d" to 2000L)                                       // c: not looked up
+        assertEquals(listOf("b", "d", "a", "c"), Games.sortServers(all, "oldest", started).map { it.id })          // running longest = started first; unknown last
+        assertEquals(listOf("a", "d", "b", "c"), Games.sortServers(all, "newest", started).map { it.id })
+        assertEquals(listOf("a", "b", "c", "d"), Games.sortServers(all, "oldest", mapOf("a" to 0L)).map { it.id })       // 0 means not known: nothing to sort by, Roblox's order stays
+    }
+
+    @Test fun howLongAServerHasBeenRunning() {
+        val now = 10_000_000_000L
+        assertEquals("", Games.ageText(null, now)); assertEquals("", Games.ageText(0, now))
+        assertEquals("under a minute", Games.ageText(now - 30_000, now)); assertEquals("under a minute", Games.ageText(now + 5000, now))
+        assertEquals("12 min", Games.ageText(now - 12 * 60_000, now)); assertEquals("6 h 12 min", Games.ageText(now - (6 * 60 + 12) * 60_000, now))
+        assertEquals("1 h 00 min", Games.ageText(now - 60 * 60_000, now)); assertEquals("2 d 3 h", Games.ageText(now - (2 * 24 + 3) * 3600_000, now))
     }
 
     @Test fun launcherLinkWithAServerId() {

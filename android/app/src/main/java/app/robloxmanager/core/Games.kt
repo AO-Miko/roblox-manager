@@ -83,15 +83,34 @@ object Games {
     } ?: emptyList()
 
     /** How the loaded servers can be ordered on the phone: key -> label. Roblox does not say how long a server has been running, so that is not one of them. */
-    val SERVER_ORDERS = listOf("roblox" to "Roblox's order", "ping" to "Lowest ping", "fps" to "Highest FPS", "most" to "Most players", "fewest" to "Fewest players")
+    val SERVER_ORDERS = listOf("roblox" to "Roblox's order", "ping" to "Lowest ping", "fps" to "Highest FPS", "most" to "Most players", "fewest" to "Fewest players",
+        "oldest" to "Running longest", "newest" to "Started most recently")
 
-    /** The servers in the order asked for. A server without a ping or FPS value goes last; ties keep Roblox's order (the sort is stable). */
-    fun sortServers(servers: List<ServerInfo>, mode: String): List<ServerInfo> = when (mode) {
-        "ping" -> servers.sortedWith(compareBy<ServerInfo> { it.ping == null }.thenBy { it.ping ?: 0 })
-        "fps" -> servers.sortedWith(compareBy<ServerInfo> { it.fps == null }.thenByDescending { it.fps ?: 0 })
-        "most" -> servers.sortedByDescending { it.playing }
-        "fewest" -> servers.sortedBy { it.playing }
-        else -> servers
+    /** The servers in the order asked for. A server without a ping, FPS or start time (not looked up yet, or Roblox leaves it out) goes last; ties keep Roblox's order (the sort is stable).
+     *  [started] is the start time of servers in Unix milliseconds (0 or missing: not known). */
+    fun sortServers(servers: List<ServerInfo>, mode: String, started: Map<String, Long> = emptyMap()): List<ServerInfo> {
+        fun start(s: ServerInfo): Long? = started[s.id]?.takeIf { it > 0 }
+        return when (mode) {
+            "ping" -> servers.sortedWith(compareBy<ServerInfo> { it.ping == null }.thenBy { it.ping ?: 0 })
+            "fps" -> servers.sortedWith(compareBy<ServerInfo> { it.fps == null }.thenByDescending { it.fps ?: 0 })
+            "most" -> servers.sortedByDescending { it.playing }
+            "fewest" -> servers.sortedBy { it.playing }
+            "oldest" -> servers.sortedWith(compareBy<ServerInfo> { start(it) == null }.thenBy { start(it) ?: 0 })
+            "newest" -> servers.sortedWith(compareBy<ServerInfo> { start(it) == null }.thenByDescending { start(it) ?: 0 })
+            else -> servers
+        }
+    }
+
+    /** How long a server has been running: "12 min", "6 h 12 min", "2 d 3 h" ("" when not known). */
+    fun ageText(startedMs: Long?, nowMs: Long = System.currentTimeMillis()): String {
+        if (startedMs == null || startedMs <= 0) return ""
+        val secs = maxOf(0L, (nowMs - startedMs) / 1000)
+        if (secs < 60) return "under a minute"
+        val mins = secs / 60
+        if (mins < 60) return "$mins min"
+        val hours = mins / 60
+        if (hours < 24) return "$hours h ${"%02d".format(mins % 60)} min"
+        return "${hours / 24} d ${hours % 24} h"
     }
 
     /** Whole percent of the votes that are likes, or null when nobody voted. */

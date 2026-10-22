@@ -15,6 +15,7 @@ import app.robloxmanager.core.KeystoreVault
 import app.robloxmanager.core.NameCache
 import app.robloxmanager.core.Geo
 import app.robloxmanager.core.GeoBook
+import app.robloxmanager.core.RoSealList
 import app.robloxmanager.core.Prefs
 import app.robloxmanager.core.PolicyStatus
 import app.robloxmanager.core.PolicyStore
@@ -57,8 +58,10 @@ class Services(app: Application) {
     val accounts = Accounts(File(dir, "accounts.json"), KeystoreVault())
     val prefs = Prefs(File(dir, "prefs.json"))
     val alerts = AlertSettings(prefs)
-    /** Where servers are (the answers of ipwho.is, kept 30 days); only used when the person presses Locate servers. */
+    /** Where servers are (answers kept 30 days); only used when the person presses Location and uptime and allowed a service. */
     val geo = GeoBook(File(dir, "server_places.json"), Geo.httpFetch())
+    /** RoSeal's public list of Roblox data centres (data.roseal.live), only downloaded when the person allowed it. */
+    val rosealList = RoSealList(File(dir, "roseal_datacenters.json"), Geo.rosealFetch())
     /** Shows one piece of friend news (set by the activity, which has the Android context). */
     var notifier: (String) -> Unit = {}
     /** Whether friend alerts are on (shown by the switch in People > Alerts and in Settings). */

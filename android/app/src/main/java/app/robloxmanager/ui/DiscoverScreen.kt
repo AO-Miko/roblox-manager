@@ -74,7 +74,7 @@ import app.robloxmanager.core.FriendGame
 import app.robloxmanager.core.GeoException
 import app.robloxmanager.core.Place
 import app.robloxmanager.core.WorldMap
-import app.robloxmanager.core.serverAddress
+import app.robloxmanager.core.serverInfo
 import app.robloxmanager.core.GameSort
 import app.robloxmanager.core.RecentGames
 import app.robloxmanager.core.ServerInfo
@@ -392,6 +392,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     var sort by remember { mutableStateOf("Asc") }
     var order by remember { mutableStateOf("roblox") }
     val places = remember(card.universeId) { mutableStateMapOf<String, Place>() }
+    val started = remember(card.universeId) { mutableStateMapOf<String, Long>() }
     var locating by remember { mutableStateOf(false) }
     val stopLocate = remember { booleanArrayOf(false) }
     var askGeo by remember { mutableStateOf(false) }
@@ -409,7 +410,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         val p = place ?: return
         if (srvBusy || (!reset && cursor.isEmpty())) return                         // one page at a time: pressing again meanwhile does nothing
         srvBusy = true; srvNote = "Looking for servers…"
-        if (reset) { places.clear(); mapFilter = null }
+        if (reset) { places.clear(); started.clear(); mapFilter = null }
         val s0 = sort
         scope.launch {
             try {
@@ -421,29 +422,37 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         }
     }
 
-    /** The loaded servers that are not located yet (25 at a time): Roblox's join answer gives each one's address, ipwho.is says where it is. */
+    /** The loaded servers that are not looked up yet (25 at a time): Roblox's join answer gives each one's data centre, address and start time; the place comes from RoSeal's list
+     *  or ipwho.is, whichever the person allowed. */
     fun locate() {
         val p = place ?: return
         if (locating) return
-        if (signedIn == null) { srvNote = "Sign in first: locating servers needs your account."; return }
-        val todo = servers.filter { it.id !in places }.take(25)
-        if (todo.isEmpty()) { srvNote = if (servers.isEmpty()) "Press Find servers first." else "Every loaded server is located already."; return }
+        if (signedIn == null) { srvNote = "Sign in first: this needs your account."; return }
+        val todo = servers.filter { it.id !in started }.take(25)
+        if (todo.isEmpty()) { srvNote = if (servers.isEmpty()) "Press Find servers first." else "Every loaded server is looked up already."; return }
+        val useRoseal = sv.prefs.bool("geo.roseal", false)
+        val useIpwho = sv.prefs.bool("geo.allowed", false)
         locating = true; stopLocate[0] = false
         scope.launch {
-            var ok = 0
+            var located = 0
             val problems = ArrayList<String>()
+            var looked = 0
             try {
                 for ((k, s) in todo.withIndex()) {
                     if (stopLocate[0]) break
-                    srvNote = "Locating servers: $k/${todo.size}…"
-                    try { places[s.id] = sv.geo.lookup(sv.api.serverAddress(p, s.id)); ok++ }
+                    srvNote = "Looking up servers: $k/${todo.size}…"
+                    try {
+                        val info = sv.api.serverInfo(p, s.id)
+                        started[s.id] = info.startedMs ?: 0; looked++
+                        places[s.id] = sv.geo.resolve(info, useRoseal, useIpwho, sv.rosealList); located++
+                    }
                     catch (e: CancellationException) { throw e }
                     catch (e: RobloxException) { problems += errorText(e); if (e.status == 401) break }
                     catch (e: GeoException) { problems += e.message ?: "unknown" }
                     catch (e: IllegalArgumentException) { problems += "odd server id" }
                 }
             } finally { locating = false }
-            srvNote = "Located $ok of ${todo.size} server(s)." + (problems.firstOrNull()?.let { " ${problems.size} could not be located: $it" } ?: "")
+            srvNote = "Looked up $looked of ${todo.size} server(s), $located located." + (problems.firstOrNull()?.let { " ${problems.size} could not be looked up: $it" } ?: "")
         }
     }
 
@@ -468,9 +477,21 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         } catch (e: RobloxException) { note = errorText(e) }
     }
 
-    if (askGeo) Confirm("Locate servers", "To find where a server is, the app asks Roblox for the server's address (the same request the website makes when you press Play, but nothing is joined), " +
-        "then looks that address up on ipwho.is, which says which city it is in. Only Roblox's server address is sent to ipwho.is.", "Locate", false,
-        { askGeo = false; sv.prefs.put("geo.allowed", true); locate() }, { askGeo = false })
+    if (askGeo) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { askGeo = false }, title = { Text("Where should server locations come from?") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Roblox's answer says which data centre a server runs in and its public address. To turn that into a city, one of these services can be used:", fontSize = 13.sp)
+                Text("• RoSeal's list (data.roseal.live): the app downloads the public list of Roblox data centres kept by the RoSeal extension. Nothing about you, your account or the server is sent: " +
+                    "it is one plain download. This service is run by RoSeal, not by Roblox or by this app.", fontSize = 13.sp)
+                Text("• ipwho.is: the server's public address is sent there, and it says which city the address is in. Nothing else is sent.", fontSize = 13.sp)
+                Text("Nothing is contacted until you choose. You can change this later in Settings.", color = C.muted, fontSize = 12.sp)
+                TextButton(onClick = { askGeo = false }) { Text("Cancel") }
+            }
+        },
+        confirmButton = { TextButton(onClick = { askGeo = false; sv.prefs.put("geo.roseal", true); locate() }) { Text("Use RoSeal's list") } },
+        dismissButton = { TextButton(onClick = { askGeo = false; sv.prefs.put("geo.allowed", true); locate() }) { Text("Use ipwho.is") } },
+    )
     if (askInstall) InstallRobloxDialog { askInstall = false }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
         TextButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp)) { Text("‹ Back") }
@@ -543,9 +564,11 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 Text("Sort:", color = C.muted, fontSize = 12.sp)
                 Games.SERVER_ORDERS.forEach { (key, label) -> androidx.compose.material3.FilterChip(selected = order == key, onClick = { order = key }, label = { Text(label) }) }
             }
-            Text("Sorts the servers loaded so far. Roblox does not say how long a server has been running.", color = C.muted, fontSize = 11.sp)
+            Text("Sorts the servers loaded so far. The running time needs Location and uptime first.", color = C.muted, fontSize = 11.sp)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuietButton(if (locating) "Locating…" else "Locate servers", enabled = !locating && servers.isNotEmpty()) { if (sv.prefs.bool("geo.allowed", false)) locate() else askGeo = true }
+                QuietButton(if (locating) "Looking up…" else "Location and uptime", enabled = !locating && servers.isNotEmpty()) {
+                    if (sv.prefs.bool("geo.roseal", false) || sv.prefs.bool("geo.allowed", false)) locate() else askGeo = true
+                }
                 if (locating) QuietButton("Stop") { stopLocate[0] = true }
                 QuietButton(if (showMap) "Hide map" else "Show map") { showMap = !showMap }
             }
@@ -565,16 +588,17 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
             if (showMap) {
                 val groups = WorldMap.groupPlaces(servers, places)
                 ServerMap(groups, mapFilter) { ids -> mapFilter = if (mapFilter == ids) null else ids }
-                Text(if (groups.isEmpty()) "No server is located yet. Press Locate servers." else "${places.size} of ${servers.size} loaded servers are located, in ${groups.size} place(s). Press a dot to list its servers.",
+                Text(if (groups.isEmpty()) "No server is located yet. Press Location and uptime." else "${places.size} of ${servers.size} loaded servers are located, in ${groups.size} place(s). Press a dot to list its servers.",
                     color = C.muted, fontSize = 12.sp)
             }
             mapFilter?.let { f -> Row(verticalAlignment = Alignment.CenterVertically) { Text("Showing ${f.size} server(s) at one place", color = C.muted, fontSize = 12.sp, modifier = Modifier.weight(1f)); QuietButton("Show all") { mapFilter = null } } }
             if (servers.isNotEmpty()) Card {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Games.sortServers(servers, order).filter { s -> mapFilter?.let { s.id in it } ?: true }.forEach { s ->
+                    Games.sortServers(servers, order, started).filter { s -> mapFilter?.let { s.id in it } ?: true }.forEach { s ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${s.playing}/${s.max}", Modifier.width(64.dp), fontWeight = FontWeight.Medium)
-                            Text(listOfNotNull(s.ping?.let { "$it ms" } ?: "-", s.fps?.let { "$it fps" }, places[s.id]?.label).joinToString("  ·  "), Modifier.weight(1f), color = C.muted, fontSize = 12.sp)
+                            Text(listOfNotNull(s.ping?.let { "$it ms" } ?: "-", s.fps?.let { "$it fps" }, places[s.id]?.label, started[s.id]?.takeIf { it > 0 }?.let { "running ${Games.ageText(it)}" }).joinToString("  ·  "),
+                                Modifier.weight(1f), color = C.muted, fontSize = 12.sp)
                             TextButton(onClick = { place?.let { launchRoblox(ctx, it, jobId = s.id) { askInstall = true } } }) { Text("Join") }
                         }
                     }

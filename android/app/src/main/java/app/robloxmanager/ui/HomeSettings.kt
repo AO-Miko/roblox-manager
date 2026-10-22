@@ -174,6 +174,15 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
                 Text("A notification when the friends you picked (People > Alerts) come online or join a game.", color = C.muted, fontSize = 12.sp)
             }
         }
+        if (part == "settings") Section("SERVER LOCATIONS", collapsible = true) {
+            var roseal by remember { mutableStateOf(sv.prefs.bool("geo.roseal", false)) }
+            var ipwho by remember { mutableStateOf(sv.prefs.bool("geo.allowed", false)) }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) { Switch(roseal, { roseal = it; sv.prefs.put("geo.roseal", it) }); Spacer(Modifier.width(8.dp)); Text("Download RoSeal's list of Roblox data centres (data.roseal.live) to show where servers are. Nothing about you is sent.", fontSize = 13.sp) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Switch(ipwho, { ipwho = it; sv.prefs.put("geo.allowed", it) }); Spacer(Modifier.width(8.dp)); Text("Ask ipwho.is which city a server's public address is in. The address of the server is sent there, nothing else.", fontSize = 13.sp) }
+                Text("Used by Location and uptime on a game's page. Nothing is contacted unless one of these is on.", color = C.muted, fontSize = 12.sp)
+            }
+        }
         if (part == "settings") BackupSection(sv) { msg = it }
         if (part == "settings") Section("ACCOUNT", collapsible = true) { DangerButton("Sign out") { confirmSignOut = true } }
         if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)

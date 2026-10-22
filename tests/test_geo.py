@@ -52,42 +52,65 @@ class FakeRoblox(rbx.Client):
         raise rbx.RobloxError(404, "not faked: " + url)
 
 
-rbx.Client.JOIN_WAIT = 0.01
+rbx.Client.JOIN_WAIT = 0.001
 c = FakeRoblox()
 
 # ================================================================ the address from Roblox's join answer
 FakeRoblox.answers = [script("128.116.44.33")]
-check("a join answer gives the server's public address", c.server_address(11, JOB) == "128.116.44.33")
+check("a join answer gives the server's public address", c.server_info(11, JOB)["address"] == "128.116.44.33")
 url, body = FakeRoblox.calls[-1]
 check("...asked like the website asks, for that place and that server, and nothing is joined by it", url == "https://gamejoin.roblox.com/v1/join-game-instance" and body["placeId"] == 11
       and body["gameId"] == JOB and body["isTeleport"] is False and len(body["gameJoinAttemptId"]) == 36, body)
 FakeRoblox.answers, FakeRoblox.calls = [NOT_READY, NOT_READY, script("128.116.97.20")], []
-check("'not ready' answers are asked again", c.server_address(11, JOB) == "128.116.97.20" and len(FakeRoblox.calls) == 3, len(FakeRoblox.calls))
+check("'not ready' answers (status 22) are asked again", c.server_info(11, JOB)["address"] == "128.116.97.20" and len(FakeRoblox.calls) == 3, len(FakeRoblox.calls))
 FakeRoblox.answers, FakeRoblox.calls = [NOT_READY], []
 try:
-    c.server_address(11, JOB)
+    c.server_info(11, JOB)
     msg = "no error"
 except rbx.RobloxError as e:
     msg = str(e)
-check("...but not for ever (4 times), and then it says so", "did not give this server's address" in msg and len(FakeRoblox.calls) == 4, (msg, len(FakeRoblox.calls)))
+check("...but not for ever (8 times), and then it says so", "still getting this server ready" in msg and len(FakeRoblox.calls) == 8, (msg, len(FakeRoblox.calls)))
+for status in (0, 2):
+    FakeRoblox.answers, FakeRoblox.calls = [{"status": status, "joinScript": None}, script("128.116.44.1")], []
+    check(f"status {status} is 'ask again' too", c.server_info(11, JOB)["address"] == "128.116.44.1" and len(FakeRoblox.calls) == 2)
+FakeRoblox.answers, FakeRoblox.calls = [{"status": 12, "joinScript": None, "message": "x"}], []
+try:
+    c.server_info(11, JOB)
+    msg = "no error"
+except rbx.RobloxError as e:
+    msg = str(e)
+check("any other status is answered at once, without asking again", "would not let this server be looked at (status 12)" in msg and len(FakeRoblox.calls) == 1, (msg, len(FakeRoblox.calls)))
 FakeRoblox.answers = [{"status": 2, "joinScript": json.dumps({"UdmuxEndpoints": [{"Address": "128.116.88.5"}]})}]
-check("a join script that comes as text is read too", c.server_address(11, JOB) == "128.116.88.5")
+check("a join script that comes as text is read too", c.server_info(11, JOB)["address"] == "128.116.88.5")
 for bad in (["10.0.0.5"], ["192.168.1.1"], ["127.0.0.1"], ["169.254.1.1"], ["::1"], ["not an address"], [], [None]):
     FakeRoblox.answers = [script(*bad)]
     try:
-        r = c.server_address(11, JOB)
+        r = c.server_info(11, JOB)
     except rbx.RobloxError:
         r = None
     check(f"a private or odd address is never used: {bad}", r is None, r)
 FakeRoblox.answers = [script("10.0.0.5", "128.116.5.3")]
-check("the first PUBLIC address is taken", c.server_address(11, JOB) == "128.116.5.3")
+check("the first PUBLIC address is taken", c.server_info(11, JOB)["address"] == "128.116.5.3")
 for odd in ("x&y=1", "a b", "../x", ""):
     try:
-        c.server_address(11, odd)
+        c.server_info(11, odd)
         r = "accepted"
     except ValueError:
         r = "refused"
     check(f"an odd server id is refused before anything is sent: {odd!r}", r == "refused")
+NOW_MS = int(__import__("time").time() * 1000)
+FakeRoblox.answers = [script("128.116.44.33", extra=None)]
+FakeRoblox.answers[0]["joinScript"].update({"ServerClaimedTime": NOW_MS - 6 * 3600 * 1000, "DataCenterId": 25960, "PlaceVersion": 1805})
+i = c.server_info(11, JOB)
+check("the join answer also gives when the server started, its data centre and its place version", i == {"address": "128.116.44.33", "started_ms": NOW_MS - 6 * 3600 * 1000, "dc": 25960, "place_version": 1805}, i)
+for name, value in (("missing", None), ("text", "yesterday"), ("a boolean", True), ("zero", 0), ("negative", -5), ("in the future", NOW_MS + 10 * 86400 * 1000), ("long ago (seconds, not milliseconds)", 1792672523)):
+    FakeRoblox.answers = [script("128.116.44.33")]
+    FakeRoblox.answers[0]["joinScript"]["ServerClaimedTime"] = value
+    check(f"a start time that is {name} is left out", c.server_info(11, JOB)["started_ms"] is None, name)
+FakeRoblox.answers = [{"status": 2, "joinScript": {"udmuxEndpoints": [{"address": "128.116.5.9"}], "serverClaimedTime": NOW_MS - 1000, "dataCenterId": 7, "placeVersion": 3}}]
+check("camelCase names are read too", c.server_info(11, JOB) == {"address": "128.116.5.9", "started_ms": NOW_MS - 1000, "dc": 7, "place_version": 3})
+FakeRoblox.answers = [{"status": 2, "joinScript": {"ServerConnections": [{"Address": "128.116.31.33", "Port": 1}], "MachineAddress": "10.0.0.1"}}]
+check("the server connections are used when there are no udmux endpoints", c.server_info(11, JOB)["address"] == "128.116.31.33")
 FakeRoblox.answers = [script("128.116.44.33")]
 log_text = (rbx.STATE_DIR / "requests.log").read_text(encoding="utf-8", errors="replace") if (rbx.STATE_DIR / "requests.log").exists() else ""
 check("the tickets of the join answer are not in the request log", "SECRET" not in log_text)
@@ -149,6 +172,84 @@ check("a damaged answer file is ignored", geo.lookup("128.116.44.33", fake, now=
 for i in range(600):
     geo.lookup(f"20.{i % 250}.{i // 250}.1", fake, now=100 + i)
 check("at most 500 answers are kept", len(json.loads(geo.CACHE_FILE.read_text())) <= geo.MAX_CACHED)
+
+# ================================================================ RoSeal's list of data centres, and the choice of service
+GROUPS = [{"id": 1, "dataCenterIds": [295, 25960], "robloxIps": ["1.2.3.4"], "location": {"city": "Frankfurt", "region": "Hesse", "country": "DE", "latLong": ["50.1155", "8.6842"]}},
+          {"id": 2, "dataCenterIds": [25853], "location": {"city": "Singapore", "region": "Singapore", "country": "SG", "latLong": ["1.2897", "103.8501"]}}]
+check("RoSeal's list is read (text positions become numbers)", geo.clean_groups(GROUPS)[0] == {"ids": {295, 25960}, "city": "Frankfurt", "region": "Hesse", "cc": "DE", "lat": 50.115, "lon": 8.684}, geo.clean_groups(GROUPS)[0])
+bad_groups = [{"dataCenterIds": [1], "location": {"city": "x", "latLong": ["95", "0"]}}, {"dataCenterIds": [1], "location": {"city": "x", "latLong": ["a", "b"]}},
+              {"dataCenterIds": ["x", True], "location": {"city": "x", "latLong": ["1", "2"]}}, {"dataCenterIds": [1]}, "junk", None, {"dataCenterIds": [5], "location": {"city": "y" * 500, "latLong": [1, 2]}}]
+check("wrong entries of the list are dropped, long text is cut", [g["ids"] for g in geo.clean_groups(bad_groups)] == [{5}] and len(geo.clean_groups(bad_groups)[0]["city"]) == 60)
+check("anything that is not a list gives nothing", geo.clean_groups({"a": 1}) == [] and geo.clean_groups(None) == [])
+fetched = []
+
+
+def roseal(url):
+    fetched.append(url)
+    return GROUPS
+
+
+check("a data centre id gives its place from RoSeal's list", geo.place_for_dc(25960, roseal, now=10) == {"city": "Frankfurt", "region": "Hesse", "country": "", "cc": "DE", "lat": 50.115, "lon": 8.684})
+check("...asked of data.roseal.live, a plain download", fetched == ["https://data.roseal.live/v2/grouped-datacenters.json"], fetched)
+check("a data centre that is not in the list gives None", geo.place_for_dc(999, roseal, now=11) is None)
+check("the list is kept for 6 hours (not downloaded again)", len(fetched) == 1, fetched)
+geo.place_for_dc(25853, roseal, now=10 + geo.ROSEAL_TTL + 1)
+check("...and downloaded again after that", len(fetched) == 2)
+
+
+def down(url):
+    raise geo.requests.ConnectionError("down")
+
+
+check("when it cannot be downloaded, the old list is used", geo.place_for_dc(25853, down, now=10 + 3 * geo.ROSEAL_TTL)["city"] == "Singapore")
+geo.ROSEAL_FILE.unlink()
+try:
+    geo.place_for_dc(25853, down, now=5)
+    r = "found"
+except geo.GeoError as e:
+    r = str(e)
+check("...and with no old list, it says so in plain words", "could not be downloaded" in r, r)
+try:
+    geo.place_for_dc(25853, lambda u: {"x": 1}, now=5)
+    r = "found"
+except geo.GeoError as e:
+    r = str(e)
+check("a list that does not look right is refused", "did not look right" in r, r)
+geo.CACHE_FILE.unlink(missing_ok=True)
+geo.ROSEAL_FILE.unlink(missing_ok=True)
+fetched.clear()
+asked_ip = []
+info = {"address": "128.116.44.33", "dc": 25960, "started_ms": 1, "place_version": 1}
+check("RoSeal's list says where a server is when the person allowed it (and nothing is sent to ipwho.is)",
+      geo.resolve(info, True, False, roseal, lambda u: asked_ip.append(u), now=100)["city"] == "Frankfurt" and not asked_ip and len(fetched) == 1)
+check("the answer is kept by data centre: the next server there needs no download and no lookup", geo.resolve(dict(info, address="128.116.99.1"), True, True, roseal, lambda u: asked_ip.append(u), now=200)["city"] == "Frankfurt"
+      and len(fetched) == 1 and not asked_ip)
+check("...also when both services are switched off afterwards (nothing is contacted)", geo.resolve(info, False, False, roseal, lambda u: asked_ip.append(u), now=300)["city"] == "Frankfurt" and len(fetched) == 1)
+try:
+    geo.resolve({"address": "128.116.31.33", "dc": 77, "started_ms": None, "place_version": None}, False, False, roseal, fake, now=100)
+    r = "found"
+except geo.GeoError as e:
+    r = str(e)
+check("with both services off, a new data centre is not looked up at all and the reason is clear", r == "Server locations are switched off in Settings" and len(fetched) == 1, r)
+try:
+    geo.resolve({"address": "128.116.31.33", "dc": 77, "started_ms": None, "place_version": None}, True, False, roseal, fake, now=100)
+    r = "found"
+except geo.GeoError as e:
+    r = str(e)
+check("a data centre RoSeal does not know is reported (and ipwho.is is not used without permission)", "does not know this data centre" in r and "ipwho.is is switched off" in r, r)
+n = len(asked)
+p3 = geo.resolve({"address": "128.116.31.33", "dc": 77, "started_ms": None, "place_version": None}, True, True, roseal, fake, now=100)
+check("with ipwho.is allowed too, it is the fallback for a data centre RoSeal does not know", p3["city"] == "Frankfurt am Main" and len(asked) == n + 1, p3)
+p4 = geo.resolve({"address": "128.116.97.50", "dc": None, "started_ms": None, "place_version": None}, True, True, roseal, lambda u: dict(GOOD, city="Singapore", country="Singapore", country_code="SG", latitude=1.3, longitude=103.8), now=100)
+check("a join answer without a data centre id uses ipwho.is when allowed", p4["city"] == "Singapore")
+try:
+    geo.resolve({"address": "128.116.97.51", "dc": None, "started_ms": None, "place_version": None}, True, False, down, fake, now=100)
+    r = "found"
+except geo.GeoError as e:
+    r = str(e)
+check("RoSeal's list alone cannot place a server without a data centre id, and says so", r != "found" and len(r) > 10, r)
+geo.CACHE_FILE.unlink(missing_ok=True)
+geo.ROSEAL_FILE.unlink(missing_ok=True)
 
 # ================================================================ the map
 check("the land of the world is there (128 rings of Natural Earth)", len(worldmap.land()) > 100, len(worldmap.land()))
