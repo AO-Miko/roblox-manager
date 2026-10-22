@@ -3,7 +3,7 @@ import re
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFontMetrics, QKeySequence, QPainter, QPainterPath, QPen, QShortcut
-from PySide6.QtWidgets import (QAbstractButton, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+from PySide6.QtWidgets import (QAbstractButton, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
 from theme import T
@@ -19,7 +19,7 @@ PAGES = {
     "API Explorer": ("Tools", "Send any Roblox web API request and read the answer."),
     "Staff List": ("Staff", "Who is on the staff, from the owner down, with their Roblox profiles."),
     "Admin": ("Staff", "Ban and unban Roblox user ids. Only accounts with the admin role or higher see this page."),
-    "Info": ("", "Settings, updates and what changed in each version."),
+    "Settings": ("", "Preferences, updates and what changed in each version."),
 }
 KEYWORDS = {                      # extra words the search also understands, so "robux" finds Money and "private server" finds VIP servers
     "Home": "account login sign in cookie profile avatar switch discover games search play browse trending",
@@ -29,7 +29,7 @@ KEYWORDS = {                      # extra words the search also understands, so 
     "Money": "robux balance pending transactions history csv export revenue",
     "Request log": "log requests http rate limit errors",
     "API Explorer": "api endpoint http get post developer",
-    "Info": "settings updates update log version changes about preferences theme confirm cache",
+    "Settings": "settings info updates update log version changes about preferences theme confirm cache",
     "Admin": "ban unban banned reason roles moderator",
     "Staff List": "staff team owner co-owner senior admin trusted friends roles hierarchy members profile",
 }
@@ -72,7 +72,7 @@ def icon_path(name):
     elif name == "Admin":
         p.moveTo(12, 3.5); p.lineTo(19.5, 6.5); p.lineTo(19.5, 12); p.cubicTo(19.5, 16.5, 16, 19.5, 12, 20.8); p.cubicTo(8, 19.5, 4.5, 16.5, 4.5, 12)
         p.lineTo(4.5, 6.5); p.closeSubpath(); p.moveTo(9, 12); p.lineTo(11.2, 14.2); p.lineTo(15.2, 9.8)
-    elif name == "Info":
+    elif name == "Settings":
         p.moveTo(4, 7); p.lineTo(20, 7); p.moveTo(4, 17); p.lineTo(20, 17); p.addEllipse(QPointF(9, 7), 2.2, 2.2); p.addEllipse(QPointF(15, 17), 2.2, 2.2)
     elif name == "chevron_down":
         p.moveTo(6, 9.5); p.lineTo(12, 15.5); p.lineTo(18, 9.5)
@@ -357,7 +357,7 @@ class Sidebar(QFrame):
         for i in range(tabs.count()):
             title = base_title(tabs.tabText(i))[0]
             group = PAGES.get(title, ("", ""))[0]
-            if i == tabs.count() - 1 and title == "Info":
+            if i == tabs.count() - 1 and title == "Settings":
                 lay.addStretch(1)
                 group = ""
             if group != last:

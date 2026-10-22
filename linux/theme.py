@@ -3,7 +3,7 @@ from string import Template
 
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPalette, QPen, QPolygonF
-from PySide6.QtWidgets import QApplication, QStyleFactory
+from PySide6.QtWidgets import QStyleFactory
 
 # One place for every colour. They follow the app icon's electric blue.
 T = {

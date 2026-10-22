@@ -82,7 +82,7 @@ check("Enter opens the first result (People > Blocked) and closes the search", n
 w.open_search(); spin(0.1)
 w.palette_box.edit.setText("updates"); spin(0.05)
 QTest.keyClick(w.palette_box.edit, Qt.Key.Key_Return); spin(0.2)
-check("'updates' opens Info > Updates", w.current_page() is w.info_tab and w.info_tab.currentIndex() == 1, (w.tabs.currentIndex(), w.info_tab.currentIndex()))
+check("'updates' opens Settings > Updates", w.current_page() is w.info_tab and w.info_tab.currentIndex() == 1, (w.tabs.currentIndex(), w.info_tab.currentIndex()))
 
 # loaded items are searchable
 from ui_common import fill_table

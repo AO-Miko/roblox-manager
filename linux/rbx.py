@@ -13,7 +13,6 @@ import re
 import threading
 import time
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 from urllib.parse import urlparse
 
 import requests

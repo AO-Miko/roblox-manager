@@ -2,9 +2,8 @@
 import re
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-import rbx
 from tab_account import pending_rows
 from ui_common import button, export_csv, fill_table, hint, make_table
 

@@ -1,4 +1,4 @@
-"""Info tab: the settings, and the updates (controls plus the update log that says what changed in each version)."""
+"""Settings page: the settings, and the updates (controls plus the update log that says what changed in each version)."""
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QLabel, QScrollArea, QTabWidget, QVBoxLayout, QWidget
 
@@ -44,5 +44,5 @@ class InfoTab(QTabWidget):
         self.setProperty("sub", True)
         self.settings_tab = SettingsTab(ctx, on_cleared=on_cleared)
         self.updates = UpdatesPage(self.settings_tab)
-        self.addTab(self.settings_tab, "Settings")
+        self.addTab(self.settings_tab, "Preferences")
         self.addTab(self.updates, "Updates")

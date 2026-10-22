@@ -91,7 +91,7 @@ class MainWindow(QMainWindow):
         self.settings_tab = self.info_tab.settings_tab
         for w, name in ((self.home, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
                         (self.money, "Money"), (self.requests, "Request log"), (self.explorer, "API Explorer"),
-                        (self.staff, "Staff List"), (self.admin, "Admin"), (self.info_tab, "Info")):
+                        (self.staff, "Staff List"), (self.admin, "Admin"), (self.info_tab, "Settings")):
             holder = nav.PageHolder(w)
             self.holders[w] = holder
             self.tabs.addTab(holder, name)
@@ -198,7 +198,7 @@ class MainWindow(QMainWindow):
             if page is self.info_tab:
                 for j in range(page.count()):
                     sub = page.tabText(j)
-                    out.append((sub, "Info", "update version changes" if sub == "Updates" else "preferences options", lambda page=page, j=j: (self._go(page), page.setCurrentIndex(j))))
+                    out.append((sub, "Settings", "update version changes" if sub == "Updates" else "preferences options", lambda page=page, j=j: (self._go(page), page.setCurrentIndex(j))))
         for uid, role, _rank in roles.staff():
             i = self.staff.info.get(uid, {})
             label = f"{i.get('displayName') or i['name']} (@{i['name']})" if i.get("name") else f"User {uid}"

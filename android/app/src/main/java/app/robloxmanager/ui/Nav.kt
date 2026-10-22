@@ -30,7 +30,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Paid
 import androidx.compose.material.icons.outlined.People
@@ -77,17 +77,17 @@ val MONEY = Dest("money", "Money", Icons.Outlined.Paid, "Robux balance, pending,
 val LOG = Dest("log", "Request log", Icons.AutoMirrored.Outlined.ListAlt, "Every request the app sends to Roblox and the answer.", "log requests http rate limit errors")
 val STAFF = Dest("staff", "Staff List", Icons.Outlined.Badge, "Who is on the staff, from the owner down, with their Roblox profiles.", "staff team owner co-owner senior admin trusted friends roles hierarchy members profile")
 val ADMIN = Dest("admin", "Admin", Icons.Outlined.AdminPanelSettings, "Who is banned and by whom (admin role or higher).", "ban unban banned reason roles moderator")
-val INFO = Dest("info", "Info", Icons.Outlined.Info, "Settings, updates and what changed in each version.", "settings updates update log version changes about preferences")
+val INFO = Dest("info", "Settings", Icons.Outlined.Settings, "Preferences, updates and what changed in each version.", "settings updates update log version changes about preferences")
 val MORE = Dest("more", "More", Icons.Outlined.MoreHoriz, "Money, request log, settings and updates.", "")
 
 val BOTTOM = listOf(HOME, PEOPLE, GROUPS, VIP, MORE)
 val IN_MORE = listOf(MONEY, LOG, STAFF, ADMIN, INFO)           // (the Admin page is only offered to the admin role and higher)
 val ALL = listOf(HOME, PEOPLE, GROUPS, VIP, MONEY, LOG, STAFF, ADMIN, INFO)
 
-/** A request to open a page, and optionally one of its sub pages (People: 0..5, Info: 0 settings / 1 updates). [nonce] makes the same request work twice. */
+/** A request to open a page, and optionally one of its sub pages (People: 0..5, Settings: 0 preferences / 1 updates). [nonce] makes the same request work twice. */
 class Jump(val dest: String, val sub: Int = 0, val nonce: Int = 0)
 
-/** What the search can open: pages, and the sub pages of People and Info. */
+/** What the search can open: pages, and the sub pages of People and Settings. */
 class Hit(val title: String, val where: String, val words: String, val icon: ImageVector, val jump: Jump)
 
 private val PEOPLE_SUBS = listOf("Friends", "Requests", "Followers", "Following", "Blocked", "Find a user")
@@ -96,8 +96,8 @@ fun searchHits(admin: Boolean = false): List<Hit> = buildList {
     add(Hit("Discover", "Home", "games search play browse trending roblox find", HOME.icon, Jump("home", 1)))
     ALL.filter { admin || it != ADMIN }.forEach { add(Hit(it.title, "page", it.words, it.icon, Jump(it.id))) }
     PEOPLE_SUBS.forEachIndexed { i, s -> add(Hit(s, "People", "", PEOPLE.icon, Jump("people", i))) }
-    add(Hit("Settings", "Info", "preferences options rate limit log cache confirm", INFO.icon, Jump("info", 0)))
-    add(Hit("Updates", "Info", "update version changes log install", INFO.icon, Jump("info", 1)))
+    add(Hit("Preferences", "Settings", "preferences options rate limit log cache confirm", INFO.icon, Jump("info", 0)))
+    add(Hit("Updates", "Settings", "update version changes log install", INFO.icon, Jump("info", 1)))
 }
 
 /** Pages whose words contain every word the person typed, best (title starts with it) first. */

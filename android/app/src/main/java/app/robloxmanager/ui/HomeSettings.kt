@@ -202,14 +202,14 @@ fun UpdateLog() {
     }
 }
 
-/** The Info tab: Settings, and Updates (controls and the update log). */
+/** The Settings page: Preferences, and Updates (controls and the update log). */
 @Composable
 fun InfoScreen(sv: Services, jump: Jump? = null) {
     var sub by remember { mutableStateOf(0) }
     LaunchedEffect(jump) { if (jump != null && jump.dest == "info") sub = jump.sub.coerceIn(0, 1) }
     Column(Modifier.fillMaxSize()) {
         androidx.compose.material3.TabRow(selectedTabIndex = sub, containerColor = C.bg) {
-            listOf("Settings", "Updates").forEachIndexed { i, t -> androidx.compose.material3.Tab(selected = sub == i, onClick = { sub = i }, text = { Text(t) }) }
+            listOf("Preferences", "Updates").forEachIndexed { i, t -> androidx.compose.material3.Tab(selected = sub == i, onClick = { sub = i }, text = { Text(t) }) }
         }
         SettingsScreen(sv, if (sub == 0) "settings" else "updates")
     }

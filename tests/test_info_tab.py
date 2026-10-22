@@ -1,4 +1,4 @@
-"""Test of the Info tab (Settings + Updates with the update log) and the changelog reader. Run: QT_QPA_PLATFORM=offscreen python3 tests/test_info_tab.py"""
+"""Test of the Settings page (Settings + Updates with the update log) and the changelog reader. Run: QT_QPA_PLATFORM=offscreen python3 tests/test_info_tab.py"""
 import json
 import os
 import sys
@@ -63,7 +63,7 @@ tab = tab_info.InfoTab(Ctx())
 tab.show()
 app.processEvents()
 names = [tab.tabText(i) for i in range(tab.count())]
-check("the Info tab has Settings and Updates", names == ["Settings", "Updates"], names)
+check("the Settings page has Preferences and Updates", names == ["Preferences", "Updates"], names)
 check("the update controls are on the Updates page, not on Settings", tab.settings_tab.update_box.parent() is not None and tab.updates.isAncestorOf(tab.settings_tab.update_box)
       and not tab.settings_tab.isAncestorOf(tab.settings_tab.update_box))
 check("the log shows the installed version marked", "Version 1.1.2" in tab.updates.log.text() and "installed" in tab.updates.log.text())
@@ -73,7 +73,7 @@ app.processEvents()
 check("the Updates page can be shown", tab.currentWidget() is tab.updates)
 from PySide6.QtWidgets import QScrollArea
 tab.resize(560, 700)
-for page, nm in ((tab.settings_tab, "Settings"), (tab.updates, "Updates")):
+for page, nm in ((tab.settings_tab, "Preferences"), (tab.updates, "Updates")):
     tab.setCurrentWidget(page)
     app.processEvents()
     sa = page.findChild(QScrollArea)

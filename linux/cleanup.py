@@ -2,8 +2,6 @@
 
 Sign-in data (the encrypted cookies, the list of accounts) and settings are never touched here.
 """
-import os
-from pathlib import Path
 
 import rbx
 
