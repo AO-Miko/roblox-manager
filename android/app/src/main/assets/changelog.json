@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.10.1.1.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Forced updates: a version that has missed two updates cannot be used until it is updated; a page covers the app (PC and phone) with an Update now button, and nothing is signed out or deleted",
+      "The decision comes from a new signed file in the repository (the list of versions released to everybody); beta versions are never locked",
+      "Staff List and ban confirmation fixes carried over from the earlier betas"
+    ]
+  },
+  {
     "version": "1.9.1.1.1",
     "date": "2026-10-22",
     "changes": [

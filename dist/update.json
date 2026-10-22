@@ -1,7 +1,7 @@
 {
-  "versionName": "1.9.1.1.1",
-  "versionCode": 21,
+  "versionName": "1.10.1.1.1",
+  "versionCode": 22,
   "apk": "roblox-manager.apk",
-  "sha256": "3e3282e499f1c5c8d77793c1308119adffb3916ca9180f9f4d1ca22262859839",
-  "notes": "Admin: a ban needs a reason, and before banning the person's Roblox profile (picture, names, joined, followers, following, friends, description) is shown with the reason and an Are you sure question; only Yes bans, Cancel changes nothing|Fixed text that was cut off with wider Windows fonts (Updates channel names, Admin hints)"
+  "sha256": "71627e18b5f5f93655500ea649e0b67d22b2db1d41b7bd7838ebecec84d4e394",
+  "notes": "Forced updates: a version that has missed two updates cannot be used until it is updated; a page covers the app (PC and phone) with an Update now button, and nothing is signed out or deleted|The decision comes from a new signed file in the repository (the list of versions released to everybody); beta versions are never locked|Staff List and ban confirmation fixes carried over from the earlier betas"
 }
