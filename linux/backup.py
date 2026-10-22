@@ -45,9 +45,11 @@ def build(version="", account=None, friends=None, followers=None, following=None
 
 def save(path, data):
     text = json.dumps(data, indent=1, ensure_ascii=False)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    tmp = f"{path}.part"                          # written aside and then moved into place, so a half-written backup never exists
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(text)
+    os.replace(tmp, path)
     return len(text)
 
 
