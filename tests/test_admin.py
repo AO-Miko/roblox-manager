@@ -234,23 +234,73 @@ check("banning themselves is explained and nothing is published", wait(lambda: "
 w.admin.target.setText("5005")
 w.admin.ban()
 check("...so is banning a co-owner", wait(lambda: "co-owner" in w.admin.msg.text()), w.admin.msg.text())
-w.admin.target.setText("2002")
-asked = []
-w.ctx.confirm = lambda *a, **k: asked.append(a) or False
+# profiles come from Roblox's public API: replaced here by canned answers
+canned = {239345228: ("Kyl3ST", "AKMikoOFC", "Hello, I make the app.\nSecond line."), 2002: ("adm", "The Admin", "Admin bio"), 3003: ("sen", "Senior One", "Senior bio"),
+          4004: ("fri", "Friendly", "Trusted"), 5005: ("coo", "Co Owner", "Co bio"), 7777: ("plain", "Plain Person", "I am nobody special")}
+
+
+def user_detail(uid):
+    if uid not in canned:
+        raise rbx.RobloxError("no such user", 404)
+    return {"id": uid, "name": canned[uid][0], "displayName": canned[uid][1], "description": canned[uid][2], "created": "2020-05-06T10:00:00Z"}
+
+
+w.ctx.client.user_detail = user_detail
+w.ctx.client.headshots = lambda ids, size="48x48": {i: "https://example.invalid/%d.png" % i for i in ids}
+w.ctx.client.fetch_bytes = lambda url: b""
+w.ctx.client.counts = lambda uid: {"friends": 12, "followers": 3456, "following": 7}
+published = []
+adminops.ban = lambda uid, why, actor, **k: published.append((uid, why, actor)) or (True, "ok")
+shown = []
+answer = {"yes": False}
+w.admin.confirm_ban = lambda uid, profile, reason: shown.append((uid, profile, reason)) or answer["yes"]
+
+w.admin.target.setText("7777"); w.admin.reason.setText("")
+w.admin.ban(); spin(0.2)
+check("a ban needs a reason: no reason, no question, nothing is looked up or published", "needs a reason" in w.admin.msg.text() and not shown and not published, w.admin.msg.text())
+w.admin.reason.setText("   ")
+w.admin.ban(); spin(0.2)
+check("...spaces are not a reason", "needs a reason" in w.admin.msg.text() and not shown)
+w.admin.reason.setText("spamming")
+w.admin.target.setText("999999")
 w.admin.ban()
-check("a senior admin banning an admin gets as far as the confirmation", wait(lambda: len(asked) == 1) and "2002" in asked[0][1], asked)
+check("an id that is nobody says so", wait(lambda: "no Roblox user" in w.admin.msg.text()) and not shown and not published, w.admin.msg.text())
+w.admin.target.setText("3003")
+w.admin.ban()
+check("(the hierarchy is checked before anything is shown)", wait(lambda: "yourself" in w.admin.msg.text()) and not shown)
+
+w.admin.target.setText("7777")
+answer["yes"] = False
+w.admin.ban()
+check("a valid ban shows the profile and asks (with the reason)", wait(lambda: len(shown) == 1) and shown[0][0] == 7777 and shown[0][2] == "spamming"
+      and shown[0][1]["info"]["displayName"] == "Plain Person" and shown[0][1]["counts"]["followers"] == 3456, shown)
+check("answering no cancels: nothing is published and the list is as it was", wait(lambda: "Cancelled" in w.admin.msg.text()) and not published, w.admin.msg.text())
+answer["yes"] = True
+w.admin.ban()
+check("answering yes publishes the ban once, with the reason and who did it", wait(lambda: len(published) == 1) and published[0] == (7777, "spamming", 3003), published)
+check("...and says so", wait(lambda: "banned" in w.admin.msg.text() and "plain" in w.admin.msg.text()), w.admin.msg.text())
+
+# the question itself
+prof = tab_staff.fetch_profile(w.ctx.client, 7777)
+dlg = admin_dialog = None
+import tab_admin
+dlg = tab_admin.BanDialog(w, 7777, prof, "spamming")
+check("the question shows the profile: names, id, joined, followers, description and the reason", dlg.display.text() == "Plain Person" and dlg.user.text() == "@plain"
+      and "7777" in dlg.facts.text() and "2020" in dlg.facts.text() and "3,456" in dlg.facts.text() and dlg.about.toPlainText() == "I am nobody special"
+      and "spamming" in dlg.reason.text(), (dlg.display.text(), dlg.facts.text()))
+check("...Cancel is the default button, the other says Yes, ban", dlg.b_no.isDefault() and dlg.b_no.text() == "Cancel" and dlg.b_yes.text() == "Yes, ban" and not dlg.b_yes.isDefault())
+dlg.b_no.click()
+check("Cancel rejects", dlg.result() == tab_admin.QDialog.DialogCode.Rejected)
+dlg2 = tab_admin.BanDialog(w, 7777, prof, "x")
+dlg2.b_yes.click()
+check("Yes, ban accepts", dlg2.result() == tab_admin.QDialog.DialogCode.Accepted)
+dlg3 = tab_admin.BanDialog(w, 7777, {"info": {"name": "n", "isBanned": True}, "counts": {}, "avatar": b""}, "x")
+check("a profile that is half empty (no counts, no picture, banned by Roblox) still shows", "banned by Roblox" in dlg3.facts.text() and dlg3.display.text() == "n")
 w.admin.target.setText("")
 w.admin.ban(); spin(0.2)
 check("an empty box asks for an id or a name", "Type a user id" in w.admin.msg.text(), w.admin.msg.text())
 
 # ---------------------------------------------------------------- the Staff List
-canned = {239345228: ("Kyl3ST", "AKMikoOFC", "Hello, I make the app.\nSecond line."), 2002: ("adm", "The Admin", ""), 3003: ("sen", "Senior One", "Senior bio"),
-          4004: ("fri", "Friendly", "Trusted"), 5005: ("coo", "Co Owner", "Co bio")}
-calls = []
-w.ctx.client.user_detail = lambda uid: {"id": uid, "name": canned[uid][0], "displayName": canned[uid][1], "description": canned[uid][2], "created": "2020-05-06T10:00:00Z"}
-w.ctx.client.headshots = lambda ids, size="48x48": {i: "https://example.invalid/%d.png" % i for i in ids}
-w.ctx.client.fetch_bytes = lambda url: b""
-w.ctx.client.counts = lambda uid: {"friends": 12, "followers": 3456, "following": 7} if uid == 239345228 else {"friends": 1, "followers": 2, "following": 3}
 opened = []
 tab_staff.open_url = lambda url: opened.append(url)
 w.tabs.setCurrentIndex(staff_idx)

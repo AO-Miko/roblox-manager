@@ -2,12 +2,73 @@
 under the hierarchy owner > co-owner > senior admin > admin: a higher role acts on lower roles and on people without a role; nobody acts on
 themselves or on the same or a higher role."""
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QVBoxLayout, QWidget
 
 import adminops
 import bans
+import rbx
 import roles
+import tab_staff
 from ui_common import button, fill_table, hint, make_table, row_key, selected_rows
+
+
+class BanDialog(QDialog):
+    """'Are you sure?': the person's Roblox profile (picture, names, joined, followers, description) and the reason, with Cancel and Yes, ban.
+    Cancel is the default button: nothing is banned unless it is answered Yes."""
+
+    def __init__(self, parent, uid, profile, reason):
+        super().__init__(parent)
+        self.setWindowTitle("Ban this user?")
+        self.setMinimumWidth(480)
+        info = profile.get("info", {})
+        lay = QVBoxLayout(self)
+        ask = QLabel("<b>Are you sure you want to ban this user?</b>")
+        ask.setProperty("role", "title")
+        lay.addWidget(ask)
+        card = QFrame()
+        card.setProperty("card", True)
+        cl = QVBoxLayout(card)
+        top = QHBoxLayout()
+        self.pic = QLabel()
+        self.pic.setFixedSize(96, 96)
+        self.pic.setPixmap(tab_staff.round_icon(profile.get("avatar"), 96))
+        top.addWidget(self.pic)
+        names = QVBoxLayout()
+        self.display = QLabel(info.get("displayName") or info.get("name") or f"User {uid}")
+        self.display.setProperty("role", "title")
+        self.display.setWordWrap(True)
+        self.user = hint(f"@{info['name']}" if info.get("name") else "")
+        names.addWidget(self.display)
+        names.addWidget(self.user)
+        names.addStretch()
+        top.addLayout(names, 1)
+        cl.addLayout(top)
+        self.facts = QLabel(tab_staff.facts_html(uid, info, profile.get("counts")))
+        self.facts.setTextFormat(Qt.TextFormat.RichText)
+        self.facts.setWordWrap(True)
+        self.facts.setMinimumHeight(165)            # (a rich-text table is measured a little short: five rows, nothing may be cut)
+        cl.addWidget(self.facts)
+        cl.addWidget(QLabel("<b>Description</b>"))
+        self.about = QPlainTextEdit()
+        self.about.setReadOnly(True)
+        self.about.setPlainText(info.get("description") or "")
+        self.about.setPlaceholderText("No description.")
+        self.about.setMaximumHeight(100)
+        cl.addWidget(self.about)
+        lay.addWidget(card)
+        self.reason = QLabel(f"<b>Reason:</b> {reason}")
+        self.reason.setWordWrap(True)
+        self.reason.setProperty("role", "notice")
+        lay.addWidget(self.reason)
+        lay.addWidget(hint("They are signed out and removed from every PC and phone within about ten minutes."))
+        row = QHBoxLayout()
+        row.addStretch()
+        self.b_no = button("Cancel", self.reject)
+        self.b_yes = button("Yes, ban", self.accept, danger=True)
+        self.b_no.setDefault(True)
+        row.addWidget(self.b_no)
+        row.addWidget(self.b_yes)
+        lay.addLayout(row)
 
 
 class AdminTab(QWidget):
@@ -114,25 +175,42 @@ class AdminTab(QWidget):
             raise ValueError(f"No Roblox user is called '{text}'.")
         return int(u["id"]), u["name"]
 
+    def confirm_ban(self, uid, profile, reason):
+        """Show the profile and ask. True only if the answer is Yes (a separate method so it can be replaced in tests)."""
+        return BanDialog(self.window(), uid, profile, reason).exec() == QDialog.DialogCode.Accepted
+
     def ban(self):
         text, why = self.target.text().strip(), self.reason.text().strip()
         if not text:
             self._say("Type a user id or a username.", True)
             return
+        if not why:
+            self._say("A ban needs a reason: it is shown to the person and kept in the list.", True)
+            self.reason.setFocus()
+            return
         actor = self.my_id()
+        self._say("Looking the user up...")
 
         def work():
             uid, name = self._resolve(text)
             ok, note = roles.may_ban(self.my_rank(), actor, uid, roles.rank_of(uid))
-            return uid, name, ok, note
+            if not ok:
+                return uid, name, ok, note, None
+            try:
+                profile = tab_staff.fetch_profile(self.ctx.client, uid)
+            except rbx.RobloxError:
+                return uid, name, False, f"There is no Roblox user with the id {uid}.", None
+            return uid, name, ok, note, profile
 
         def decided(res):
-            uid, name, ok, note = res
+            uid, name, ok, note, profile = res
             if not ok:
                 self._say(note, True)
                 return
-            label = f"{name} ({uid})" if name else str(uid)
-            if not self.ctx.confirm("Ban", f"Ban {label}?\n\nThey are signed out and removed from every PC and phone within about ten minutes.\nReason: {why or '(none)'}", danger=True):
+            info = profile["info"]
+            label = f"{info.get('name') or name or ''} ({uid})".strip()
+            if not self.confirm_ban(uid, profile, why):
+                self._say("Cancelled. Nobody was banned.")
                 return
             self._say("Publishing the ban...")
             self.ctx.async_.run(lambda: adminops.ban(uid, why, actor), lambda r: self._done(r, "banned", label), self._failed)

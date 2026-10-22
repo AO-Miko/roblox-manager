@@ -47,7 +47,9 @@ followers, following, friends, description) and a **Go to profile** button. It n
 On the phone (under **More**) it shows what is in force: who is banned, by whom and with which role, and the staff. Bans and unbans themselves are published from a PC (below).
 
 On the PC it appears only when the signed-in account's user id has a role of admin or higher; for everybody else it is hidden and Ctrl+number skips it.
-It bans and unbans by user id or username, with a reason, and shows who is banned, by whom and with which role.
+It bans and unbans by user id or username. **A ban needs a reason.** Before anything is banned the page shows the person's Roblox profile (picture, display name, username,
+user id, joined date, followers, following, friends, description) together with the reason and asks **"Are you sure you want to ban this user?"**; only **Yes, ban** publishes it,
+**Cancel** (the default button) changes nothing. The page also shows who is banned, by whom and with which role.
 The rules above are checked in the page, and again in `tools/ban.sh` (so they hold however a ban is started).
 
 **Publishing needs the release key.** A ban is only valid when signed with the release key, so the page publishes by running `tools/ban.sh` in your

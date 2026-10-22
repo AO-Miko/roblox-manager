@@ -31,6 +31,48 @@ def round_icon(data, size=64):
     return out
 
 
+def fetch_profile(client, uid):
+    """{'info', 'counts', 'avatar'} of a user: public data, no sign-in needed. Raises rbx.RobloxError if there is no such user."""
+    info = client.user_detail(uid)
+    try:
+        counts = client.counts(uid)
+    except rbx.RobloxError:
+        counts = {}
+    avatar = b""
+    f = rbx.AVATAR_DIR / f"{int(uid)}-150.png"
+    try:
+        if time.time() - f.stat().st_mtime < rbx.AVATAR_MAX_AGE:
+            avatar = f.read_bytes()
+    except OSError:
+        pass
+    if not avatar:
+        try:
+            url = client.headshots([uid], size="150x150").get(int(uid))
+            avatar = client.fetch_bytes(url) if url else b""
+        except rbx.RobloxError:
+            avatar = b""
+        if avatar:
+            try:
+                rbx.AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+                f.write_bytes(avatar)
+            except OSError:
+                pass
+    return {"info": info, "counts": counts, "avatar": avatar}
+
+
+def facts_html(uid, info, counts):
+    """The little table of a profile: id, joined, followers, following, friends (and badges)."""
+    fmt = lambda v: "-" if v is None else format(v, ",")          # noqa: E731
+    rows = [("User id", str(uid)), ("Joined", when(info.get("created")) if info.get("created") else "-"),
+            ("Followers", fmt(counts.get("followers")) if counts else "..."), ("Following", fmt(counts.get("following")) if counts else "..."),
+            ("Friends", fmt(counts.get("friends")) if counts else "...")]
+    if info.get("hasVerifiedBadge"):
+        rows.append(("Verified", "yes"))
+    if info.get("isBanned"):
+        rows.append(("Roblox account", "banned by Roblox"))
+    return "<table cellspacing='6'>" + "".join(f"<tr><td style='color:#8d96a7'>{k}</td><td>&nbsp;&nbsp;{v}</td></tr>" for k, v in rows) + "</table>"
+
+
 class StaffTab(QWidget):
     def __init__(self, ctx):
         super().__init__()
@@ -82,6 +124,7 @@ class StaffTab(QWidget):
         self.facts = QLabel("")
         self.facts.setWordWrap(True)
         self.facts.setTextFormat(Qt.TextFormat.RichText)
+        self.facts.setMinimumHeight(165)
         cl.addWidget(self.facts)
         cl.addWidget(QLabel("<b>Description</b>"))
         self.about = QPlainTextEdit()
@@ -223,16 +266,7 @@ class StaffTab(QWidget):
         self.display.setText(i.get("displayName") or i.get("name") or f"User {uid}")
         self.user.setText(f"@{i['name']}" if i.get("name") else "(profile not loaded)")
         self.role.setText(f"<b style='color:{ROLE_COLOURS.get(role, '#8d96a7')}'>{roles.LABELS.get(role, '')}</b>")
-        c = self.counts.get(uid)
-        fmt = lambda v: "-" if v is None else format(v, ",")          # noqa: E731
-        rows = [("User id", str(uid)), ("Joined", when(i.get("created")) if i.get("created") else "-"),
-                ("Followers", fmt(c.get("followers")) if c else "..."), ("Following", fmt(c.get("following")) if c else "..."),
-                ("Friends", fmt(c.get("friends")) if c else "...")]
-        if i.get("hasVerifiedBadge"):
-            rows.append(("Verified", "yes"))
-        if i.get("isBanned"):
-            rows.append(("Roblox account", "banned by Roblox"))
-        self.facts.setText("<table cellspacing='6'>" + "".join(f"<tr><td style='color:#8d96a7'>{k}</td><td>&nbsp;&nbsp;{v}</td></tr>" for k, v in rows) + "</table>")
+        self.facts.setText(facts_html(uid, i, self.counts.get(uid)))
         self.about.setPlainText(i.get("description") or "")
         self.pic.setPixmap(round_icon(self.avatars.get(uid), 96))
 
