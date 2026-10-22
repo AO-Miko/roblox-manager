@@ -1,7 +1,7 @@
 {
-  "versionName": "1.13.3.2.3",
-  "versionCode": 30,
+  "versionName": "1.14.3.2.3",
+  "versionCode": 31,
   "apk": "roblox-manager.apk",
-  "sha256": "cae6f097576d94aea53010ce635a4a72ff94b5f2682ab8a9f30fd2cc87f062d0",
-  "notes": "Servers: sort by ping, FPS, players, and by how long a server has been running; a Running for column|Location and uptime on a game's page, with a world map of where the servers are (PC and phone). It asks Roblox about each server the way the Play button does; nothing is joined|Locations come from RoSeal's list of Roblox data centres or from ipwho.is, and nothing is contacted until you agree (asked once, switches in Settings)|Backups are written safely (no half-written file)"
+  "sha256": "2260cb3063e9e17fe877073bd2e39dcacf993fd5d3432e9cb71adc954460804b",
+  "notes": "Mutual friends and since when you are friends, for any person in the friends, requests, followers, following and search lists (PC and phone)|Friend requests show when they were sent, where they came from and how many friends you share|Servers show the place version (marking older ones) and can copy a join link|Game wiki button, from RoSeal's list of game links: asked before RoSeal is contacted, links are checked before they open|Account page shows voice chat state and age verification; Money shows a Developer Exchange line"
 }

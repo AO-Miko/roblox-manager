@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.14.3.2.3",
+    "date": "2026-10-22",
+    "changes": [
+      "Mutual friends and since when you are friends, for any person in the friends, requests, followers, following and search lists (PC and phone)",
+      "Friend requests show when they were sent, where they came from and how many friends you share",
+      "Servers show the place version (marking older ones) and can copy a join link",
+      "Game wiki button, from RoSeal's list of game links: asked before RoSeal is contacted, links are checked before they open",
+      "Account page shows voice chat state and age verification; Money shows a Developer Exchange line"
+    ]
+  },
+  {
     "version": "1.13.3.2.3",
     "date": "2026-10-22",
     "changes": [
