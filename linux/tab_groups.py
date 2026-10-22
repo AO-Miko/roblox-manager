@@ -613,7 +613,10 @@ class GroupsTab(QWidget):
 
         def work():
             try:
-                return c.client.group_search_members(gid, q).get("data", [])
+                search = getattr(c.client, "group_search_members", None)
+                if search is None:
+                    raise rbx.RobloxError("the member search is not available", 404)
+                return search(gid, q).get("data", [])
             except rbx.RobloxError:                            # (the search is not available: look the exact username up instead)
                 u = c.client.user_by_name(q)
                 if not u:

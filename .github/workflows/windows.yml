@@ -52,6 +52,12 @@ jobs:
       - name: Forced updates
         if: ${{ !cancelled() }}
         run: python tests/test_policy.py
+      - name: Start after an update
+        if: ${{ !cancelled() }}
+        run: python tests/test_launcher_update.py
+      - name: Every call the app makes exists
+        if: ${{ !cancelled() }}
+        run: python tests/test_api_surface.py
       - name: Version numbers
         if: ${{ !cancelled() }}
         run: python tests/test_versions.py

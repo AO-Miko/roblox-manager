@@ -89,6 +89,13 @@ The repository is public, so it contains only source, the signed APK and public 
   Linux and Windows apps once (they only trust the key they were installed with).
 - `android-release.jks`, `android.pass`, `android-signing.properties`: sign the APK. **If lost, installed phones can never be updated** (Android rejects a different signing key); you would uninstall and reinstall.
 
+## Starting after an update (Windows)
+
+The launcher installs an update before it starts the app. When it installed one, a window says **"Roblox Manager was updated to version X. It has to be restarted to complete the
+update. Restart it now?"**: *Yes* starts the app again from the new files, *No* closes it. The app is deliberately not started from the folder that was replaced while the launcher was
+running, and `app.py` also forgets any module an older launcher had already loaded from the old folder, so old and new files can never be mixed in memory (that mix showed up as errors
+like "'Client' object has no attribute ..."). `tests/test_api_surface.py` checks that every module name and client method the app uses actually exists.
+
 ## Forced updates (an app that is two updates behind)
 
 An app that has missed **two** updates cannot be used any more: a page covers the whole window (PC) or screen (phone), says which version it is and how far behind, and has an

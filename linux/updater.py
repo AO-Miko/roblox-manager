@@ -398,13 +398,15 @@ def boot():
     """Used by the launcher at every start: quiet, quick, and never an obstacle."""
     cfg = load_config()
     if not cfg["auto"] or not cfg["repo"]:
-        return
+        return None
     try:
         res = apply(cfg)
         if res["status"] not in ("up-to-date", "disabled"):
             log(f"boot: {res['status']}: {res.get('message', '')}")
+        return res                                               # (the launcher asks for a restart when this says 'updated')
     except Exception as e:                                       # noqa: BLE001
         log(f"boot: failed: {e.__class__.__name__}: {e}")
+        return None
 
 
 def main(argv):

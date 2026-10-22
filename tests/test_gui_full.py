@@ -150,6 +150,7 @@ class Fake(rbx.Client):
             (r"POST groups.roblox.com/v1/groups/77/bans/\d+", lambda q, b: {}),
             (r"GET groups.roblox.com/v1/groups/77/bans", lambda q, b: {"data": [{"user": U(41, "banned1"), "created": "2026-09-01T00:00:00Z"}]}),
             (r"GET groups.roblox.com/v1/groups/77/audit-log", lambda q, b: {"data": [{"actor": {"user": U(1000, "tester")}, "actionType": "Change Rank", "description": {"TargetName": "dave"}, "created": "2026-10-20T12:00:00Z"}]}),
+            (r"GET groups.roblox.com/v1/groups/77/search-members", lambda q, b: {"data": [{"user": U(77, "realfind"), "role": ROLES[1]}] if q.get("keyword", "").lower() in "realfind" else []}),
             (r"GET groups.roblox.com/v1/groups/77/roles/\d+/permissions", lambda q, b: {"permissions": {"groupPostsPermissions": {"viewWall": True, "postToWall": False}}}),
             (r"PATCH groups.roblox.com/v1/groups/77/(description|status)", lambda q, b: {}),
             (r"GET users.roblox.com/v1/users/authenticated/roles", lambda q, b: {"roles": []}),
@@ -479,6 +480,9 @@ w.groups.member_filter.setText("yoshi"); spin(0.9)
 check("without the search, the exact username is looked up and its membership checked", [w.groups.mtable.item(r, 1).text() for r in range(w.groups.mtable.rowCount())] == ["yoshi"], [w.groups.mtable.item(r, 1).text() for r in range(w.groups.mtable.rowCount())])
 client.user_by_name, client.get = real_by_name, real_get
 client.group_search_members = real_search
+w.groups.member_filter.setText("realf"); spin(0.9)
+check("the REAL client method (no stand-in) searches the group through Roblox's search-members route", real_search is not None and [w.groups.mtable.item(r, 1).text() for r in range(w.groups.mtable.rowCount())] == ["realfind"] and calls("GET", "/groups/77/search-members"),
+      ([w.groups.mtable.item(r, 1).text() for r in range(w.groups.mtable.rowCount())], calls("GET", "/search-members")))
 w.groups.member_filter.setText(""); spin(0.2)
 
 # ---------------------------------------------------------------- VIP servers

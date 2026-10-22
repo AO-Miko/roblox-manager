@@ -56,6 +56,10 @@ jobs:
         run: python tests/test_channels.py
       - name: Forced updates
         run: python tests/test_policy.py
+      - name: Start after an update
+        run: python tests/test_launcher_update.py
+      - name: Every call the app makes exists
+        run: python tests/test_api_surface.py
       - name: Version numbers
         run: python tests/test_versions.py
       - name: Updates box

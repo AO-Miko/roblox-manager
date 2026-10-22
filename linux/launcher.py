@@ -2,7 +2,9 @@
 
   1. If the app is not already open, look for a newer signed version and install it (quietly, for at most a short while; any problem just
      means the installed version starts as it is).
-  2. Start the app.
+  2. If an update was installed: a window says so and asks to restart, to complete the update (the app is not started from the half-replaced
+     folder; "Restart now" starts it again from the new files).
+  3. Otherwise start the app.
   --selftest   start everything without a screen, print "selftest ok" and exit (used to check a package)
 """
 import os
@@ -69,15 +71,53 @@ def first_run_setup():
 
 
 def check_for_update(seconds=40):
+    """Looks for an update and installs it. Returns what happened (a dict with 'status', 'version' ...) or None."""
+    out = {}
+
     def work():
         try:
             import updater
-            updater.boot()
+            out["result"] = updater.boot()
         except Exception:                              # noqa: BLE001 - an update must never keep the app from starting
             pass
     t = threading.Thread(target=work, daemon=True)
     t.start()
     t.join(seconds)
+    return out.get("result")
+
+
+def ask_restart(version):
+    """'Roblox Manager was updated ... restart to complete the update': True if the person chose Restart now."""
+    text = (f"Roblox Manager was updated to version {version}.\n\n" if version else "Roblox Manager was updated.\n\n") + \
+        "It has to be restarted to complete the update. Restart it now?\n\n(Choose No to close it and open it yourself later.)"
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            # MB_YESNO | MB_ICONINFORMATION | MB_SETFOREGROUND ; 6 = Yes
+            return ctypes.windll.user32.MessageBoxW(0, text, "Roblox Manager - update installed", 0x4 | 0x40 | 0x10000) == 6
+        except Exception:                              # noqa: BLE001
+            return True
+    print(text, file=sys.stderr)
+    return True
+
+
+def relaunch():
+    """The same launcher again, after a moment (this process is about to end): it finds no update to install and starts the new version."""
+    import subprocess
+    script = Path(__file__).resolve()
+    wait = "import subprocess, sys, time; time.sleep(1.5); subprocess.Popen(sys.argv[1:], close_fds=True)"
+    flags = 0x00000008 | 0x00000200 if sys.platform == "win32" else 0            # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+    subprocess.Popen([sys.executable, "-c", wait, sys.executable, str(script)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
+
+
+def after_update(result, ask=None, restart=None):
+    """True if the launcher must stop here: an update was just installed, so the person is asked to restart (the app is never started from a folder that was
+    replaced while this process was running). Restart now starts it again from the new files; No just closes."""
+    if not result or result.get("status") != "updated":
+        return False
+    if (ask or ask_restart)(result.get("version") or ""):
+        (restart or relaunch)()
+    return True
 
 
 def selftest():
@@ -108,8 +148,8 @@ def main():
         return
     try:
         first_run_setup()
-        if not app_is_open():
-            check_for_update()
+        if not app_is_open() and after_update(check_for_update()):
+            return
         import runpy
         sys.argv = [str(HERE / "app.py")] + [a for a in sys.argv[1:]]
         runpy.run_path(str(HERE / "app.py"), run_name="__main__")

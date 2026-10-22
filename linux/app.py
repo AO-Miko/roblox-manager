@@ -19,6 +19,17 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# --- forget stale modules (started as a program, not imported)
+# A launcher of an older version may already have loaded some modules (rbx, plat ...) from this folder BEFORE it replaced the folder with an update. Modules loaded
+# now would then be the new files next to old ones in memory ("'Client' object has no attribute ..."). So every module that came from this folder is forgotten first.
+if __name__ == "__main__":
+    _here = os.path.dirname(os.path.abspath(__file__))
+    for _name, _mod in list(sys.modules.items()):
+        _file = getattr(_mod, "__file__", None)
+        if _file and _name not in ("__main__", "app") and os.path.dirname(os.path.abspath(_file)) == _here:
+            del sys.modules[_name]
+# --- end
 from PySide6.QtCore import QByteArray, QLockFile, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
