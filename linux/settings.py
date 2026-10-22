@@ -15,7 +15,7 @@ DEFAULTS = {
     "cache.names_days": (30, 1, 365),        # how long saved names are reused
     "confirm.typed_from": (5, 2, 100),       # changing at least this many people/groups at once asks you to type the number
     "ui.remember_window": (True, None, None),
-    "geo.roseal": (False, None, None),       # the person allows downloading RoSeal's list of Roblox data centres (data.roseal.live) to show where servers are
+    "geo.roseal": (False, None, None),       # the person allows downloading RoSeal's public data files (data.roseal.live): data centres for server locations, links to game wikis
     "geo.allowed": (False, None, None),      # the person allows asking ipwho.is where a server's public address is (the address is sent there)
     "ui.rate_notes": (True, None, None),     # the orange 'waiting for Roblox's limit' notes
 }

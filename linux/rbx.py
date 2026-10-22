@@ -708,6 +708,71 @@ class Client:
     def friend_requests(self):
         return self._people("https://friends.roblox.com/v1/my/friends/requests", resolve=False)      # names are filled in gradually by the list
 
+    def profile_insights(self, user_ids):
+        """What Roblox's profile insights say about up to 50 people, one request: {user id: {'mutual': [{'id', 'username', 'displayName'}], 'friends_since_ms': when you became
+        friends (Unix milliseconds) or None, 'played_together': bool}}. A person with nothing in common with you is there with empty values."""
+        ids = [int(i) for i in dict.fromkeys(user_ids)][:50]
+        if not ids:
+            return {}
+        d = self.post("https://apis.roblox.com/profile-insights-api/v1/multiProfileInsights", {"userIds": [str(i) for i in ids]})
+        out = {}
+        for u in (d.get("userInsights") if isinstance(d, dict) else None) or []:
+            try:
+                uid = int(u.get("targetUser"))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            info = {"mutual": [], "friends_since_ms": None, "played_together": False}
+            for ins in u.get("profileInsights") or []:
+                if not isinstance(ins, dict):
+                    continue
+                mutual = (ins.get("mutualFriendInsight") or {}).get("mutualFriends")
+                if isinstance(mutual, dict):
+                    for mid, m in list(mutual.items())[:500]:
+                        if str(mid).isdigit() and isinstance(m, dict):
+                            info["mutual"].append({"id": int(mid), "username": str(m.get("username") or "")[:40], "displayName": str(m.get("displayName") or "")[:60]})
+                secs = ((ins.get("friendshipAgeInsight") or {}).get("friendsSinceDateTime") or {}).get("seconds")
+                if isinstance(secs, (int, float, str)) and str(secs).lstrip("-").isdigit() and int(secs) > 0:
+                    info["friends_since_ms"] = int(secs) * 1000
+                if (ins.get("offlineFrequentsInsight") or {}).get("havePlayedTogether") is True:
+                    info["played_together"] = True
+            out[uid] = info
+        return out
+
+    def voice_status(self):
+        """Your voice chat state: {'enabled', 'eligible', 'opted_in', 'banned', 'banned_until' (ISO text or None), 'verified'}. Needs the sign-in."""
+        d = self.get("https://voice.roblox.com/v1/settings")
+        d = d if isinstance(d, dict) else {}
+        until = d.get("bannedUntil")
+        until = until.get("Seconds") if isinstance(until, dict) else until
+        return {"enabled": bool(d.get("isVoiceEnabled")), "eligible": bool(d.get("isUserEligible")), "opted_in": bool(d.get("isUserOptIn")), "banned": bool(d.get("isBanned")),
+                "banned_until": str(until)[:40] if until else None, "verified": bool(d.get("isVerifiedForVoice"))}
+
+    def verified_age(self):
+        """Your age verification: {'verified': bool, 'age': the verified age or None}. Needs the sign-in."""
+        d = self.get("https://apis.roblox.com/age-verification-service/v1/age-verification/verified-age")
+        d = d if isinstance(d, dict) else {}
+        age = d.get("verifiedAge")
+        return {"verified": bool(d.get("isVerified")), "age": age if isinstance(age, int) and not isinstance(age, bool) and 0 < age < 120 else None}
+
+    def devex_status(self):
+        """Developer Exchange: {'eligible_robux': Robux that can be cashed out or None, 'updated': ISO text or None, 'min_cash_out', 'can_cash_out', 'suspended', 'at_risk'}.
+        Both calls are read-only; one that Roblox refuses (an account that never earned) leaves its values None."""
+        out = {"eligible_robux": None, "updated": None, "min_cash_out": None, "can_cash_out": None, "suspended": None, "at_risk": None}
+        try:
+            d = self.get("https://apis.roblox.com/creator-devex-data-service/v1/devexEligibleRobux")
+            if isinstance(d, dict) and isinstance(d.get("eligibleRobux"), int):
+                out["eligible_robux"], out["updated"] = d["eligibleRobux"], (str(d.get("updatedUtc"))[:25] if d.get("updatedUtc") else None)
+        except RobloxError:
+            pass
+        try:
+            d = self.get("https://economy.roblox.com/v1/developer-exchange/info")
+            if isinstance(d, dict):
+                out["min_cash_out"] = d.get("minRobuxToCashOut") if isinstance(d.get("minRobuxToCashOut"), int) else None
+                out["can_cash_out"], out["suspended"], out["at_risk"] = (None if d.get(k) is None else bool(d.get(k)) for k in ("canProceedToCashout", "isDevExSuspended", "isAtRiskOfSuspension"))
+        except RobloxError:
+            pass
+        return out
+
     def friend_request_count(self):
         return int(self.get("https://friends.roblox.com/v1/user/friend-requests/count").get("count") or 0)
 

@@ -100,6 +100,7 @@ private fun PeopleList(
     val avatars = remember { AvatarBook(sv) }
     var filter by remember(kind) { mutableStateOf("") }
     var pending by remember(kind) { mutableStateOf<PeopleAction?>(null) }
+    var info by remember(kind) { mutableStateOf<Person?>(null) }
     val scope = rememberCoroutineScope()
     val bs by bulk.state.collectAsState()
 
@@ -122,6 +123,7 @@ private fun PeopleList(
             OutlinedTextField(filter, { filter = it }, placeholder = { Text("Search this list") }, singleLine = true, modifier = Modifier.weight(1f))
             QuietButton("↻") { loader.load() }
         }
+        Text("Tap a name to see mutual friends and since when you are friends.", color = C.muted, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val shown = list.filter { filter.isBlank() || it.title.contains(filter, true) || it.name.contains(filter, true) }
             QuietButton(if (selected.size == shown.size && shown.isNotEmpty()) "Select none" else "Select all (${shown.size})") {
@@ -144,12 +146,13 @@ private fun PeopleList(
             if (shown.isEmpty()) Box(Modifier.fillMaxSize().padding(24.dp)) { Text("Nobody here.", color = C.muted) }
             else LazyColumn(Modifier.fillMaxSize()) {
                 items(shown, key = { it.id }) { p ->
-                    PersonRow(p, avatars.urls[p.id], selected = p.id in selected, onToggle = { if (p.id in selected) selected.remove(p.id) else selected.add(p.id) })
+                    PersonRow(p, avatars.urls[p.id], selected = p.id in selected, onToggle = { if (p.id in selected) selected.remove(p.id) else selected.add(p.id) }, onClick = { info = p })
                 }
             }
         }
     }
 
+    info?.let { PersonInfoDialog(sv, it) { info = null } }
     pending?.let { a ->
         val ids = if (a.label == "Decline all") emptyList() else selected.toList()
         Confirm(a.label, if (a.label == "Decline all") "Decline every pending friend request?" else "${a.label} ${ids.size} ${if (ids.size == 1) "person" else "people"}?",
@@ -183,6 +186,8 @@ private fun FindPeople(sv: Services, bulk: Bulk) {
     var msg by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val avatars = remember { AvatarBook(sv) }
+    var info by remember { mutableStateOf<Person?>(null) }
+    info?.let { PersonInfoDialog(sv, it) { info = null } }
     val doSearch = {
         if (text.isNotBlank() && !busy) {
             busy = true; msg = ""
@@ -204,7 +209,7 @@ private fun FindPeople(sv: Services, bulk: Bulk) {
         LazyColumn(Modifier.fillMaxSize()) {
             items(results, key = { it.id }) { p ->
                 Column {
-                    PersonRow(p, avatars.urls[p.id])
+                    PersonRow(p, avatars.urls[p.id], onClick = { info = p })
                     Row(Modifier.padding(start = 72.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         QuietButton("Add friend") { bulk.run("Friend request", listOf(p), { it.title }, { sv.api.sendRequest(it.id) }) }
                         QuietButton("Follow") { bulk.run("Following", listOf(p), { it.title }, { sv.api.follow(it.id) }) }

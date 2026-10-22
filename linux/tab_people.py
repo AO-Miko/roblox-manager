@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 import rbx
+import relation
 import settings
 from tab_account import FriendsTab
 from tab_alerts import AlertsTab
@@ -76,6 +77,7 @@ class UserListTab(QWidget):
             row.addWidget(b)
         row.addStretch()
         row.addWidget(button("Open profile", self.open_profile))
+        row.addWidget(button("Mutual friends...", self.relationship, "Since when you are friends and which friends you share, from Roblox (one request)"))
         row.addWidget(button("Copy user id", self.copy_id))
         lay.addLayout(row)
         self.info = hint(signed_out)
@@ -204,6 +206,13 @@ class UserListTab(QWidget):
         if s:
             open_url(f"https://www.roblox.com/users/{s[0]['id']}/profile")
 
+    def relationship(self):
+        s = self.sels()
+        if s:
+            relation.show(self.ctx, s[0]["id"], s[0]["name"])
+        else:
+            self.ctx.status("Select a person first.")
+
     def copy_id(self):
         s = self.sels()
         if s:
@@ -285,15 +294,26 @@ class UserListTab(QWidget):
 
 
 # ============================================================ the lists
+ORIGINS = {"InGame": "A game", "UserProfile": "Your profile", "PhoneContactImport": "Contacts", "FriendRecommendation": "Recommendations", "QrCode": "QR code",
+           "ProfileShare": "A shared profile", "UserSearch": "Search", "PlayerSearch": "Search", "Chat": "Chat"}
+
+
+def origin_text(kind):
+    """Where a friend request came from, as Roblox says it ('InGame' -> 'A game'); anything unknown is shown as it is (letters only, cut short)."""
+    if not kind:
+        return ""
+    return ORIGINS.get(str(kind)) or "".join(c for c in str(kind) if c.isalnum() or c in " _-")[:30]
+
+
 def _requests_tab(ctx):
     def load(client):
         out = []
         for u in client.friend_requests():
             fr = u.get("friendRequest") or {}
             mutual = u.get("mutualFriendsList") or []
-            out.append(person(u, [when(fr.get("sentAt")), str(len(mutual)) if mutual else ""]))
+            out.append(person(u, [when(fr.get("sentAt")), str(len(mutual)) if mutual else "", origin_text(fr.get("originSourceType"))]))
         return out
-    t = UserListTab(ctx, ["Sent", "Mutual friends"], load, [
+    t = UserListTab(ctx, ["Sent", "Mutual friends", "Found you via"], load, [
         {"label": "Accept selected", "verb": "Accept the friend requests of", "run": lambda c, r: c.accept_friend_request(r["id"]), "remove": True,
          "tip": "Accepts every selected request", "primary": True},
         {"label": "Decline selected", "verb": "Decline the friend requests of", "run": lambda c, r: c.decline_friend_request(r["id"]),
@@ -446,7 +466,7 @@ class FindTab(QWidget):
         self.b_follow = button("Follow", lambda: self.act("Now following", lambda c, u: c.follow(u["id"])))
         self.b_block = button("Block...", self.block)
         self.b_block.setProperty("danger", True)
-        for b in (self.b_friend, self.b_follow, self.b_block, button("Open profile", self.open_profile), button("Copy user id", self.copy_id)):
+        for b in (self.b_friend, self.b_follow, self.b_block, button("Open profile", self.open_profile), button("Mutual friends...", self.relationship, "Since when you are friends and which friends you share, from Roblox (one request)"), button("Copy user id", self.copy_id)):
             row.addWidget(b)
         row.addStretch()
         lay.addLayout(row)
@@ -490,6 +510,13 @@ class FindTab(QWidget):
         u = self.current()
         if u:
             open_url(f"https://www.roblox.com/users/{u['id']}/profile")
+
+    def relationship(self):
+        u = self.current()
+        if u:
+            relation.show(self.ctx, u["id"], u.get("displayName") or u.get("name") or f"User {u['id']}")
+        else:
+            self.ctx.status("Select a person first.")
 
     def copy_id(self):
         u = self.current()

@@ -151,7 +151,7 @@ class FakeRoblox(rbx.Client):
                 return {"jobId": job, "status": 22, "joinScript": None, "joinTicket": "T"}
             n = int(job[-1])
             return {"jobId": job, "status": 2, "joinTicket": "T", "joinScript": {"UdmuxEndpoints": [{"Address": f"128.116.{44 if n % 2 else 97}.{n}", "Port": 1}], "MachineAddress": "10.0.0.1",
-                                                                                "DataCenterId": 25960 if n % 2 else 25853, "ServerClaimedTime": int(time.time() * 1000) - n * 3600 * 1000, "PlaceVersion": 9}}
+                                                                                "DataCenterId": 25960 if n % 2 else 25853, "ServerClaimedTime": int(time.time() * 1000) - n * 3600 * 1000, "PlaceVersion": 1800 + n % 3}}
         if "presence.roblox.com" in url:
             return {"userPresences": [{"userId": 201, "userPresenceType": 2, "lastLocation": "Alpha Game", "rootPlaceId": 11, "placeId": 11, "gameId": "job-aaaa-1111", "universeId": 1},
                                       {"userId": 202, "userPresenceType": 1, "lastLocation": "Website"}, {"userId": 203, "userPresenceType": 0}]}
@@ -508,8 +508,8 @@ geo._fetch = fake_geo
 geo._fetch_roseal = lambda url: (LIST.append(url), ROSEAL_LIST)[1]
 asked_source = []
 det.ask_geo_source = lambda: (asked_source.append(1), "roseal")[1]
-check("the table has Location and Running for columns (after the server id, so the other columns keep their places)", det.server_table.columnCount() == 7
-      and [det.server_table.horizontalHeaderItem(i).text() for i in (5, 6)] == ["Location", "Running for"])
+check("the table has Location, Running for and Version columns (after the server id, so the other columns keep their places)", det.server_table.columnCount() == 8
+      and [det.server_table.horizontalHeaderItem(i).text() for i in (5, 6, 7)] == ["Location", "Running for", "Version"])
 check("the button and the map button are there", det.b_locate.text() == "Location and uptime" and det.b_map.text() == "Show map" and det.b_stop_locate.isHidden())
 check("the sort box has the uptime orders too", [det.order.itemData(i) for i in range(det.order.count())] == ["roblox", "ping", "fps", "most", "fewest", "oldest", "newest"])
 check("nothing is allowed to contact RoSeal or ipwho.is at first", settings.get("geo.roseal") is False and settings.get("geo.allowed") is False)
@@ -534,6 +534,17 @@ check("...the note says how many were looked up", "Looked up 5 of 5 server(s), 5
 by_digit = {det.server_table.item(r, 4).text()[-1]: (det.server_table.item(r, 5).text(), det.server_table.item(r, 6).text()) for r in range(det.server_table.rowCount())}
 check("the odd servers are in Frankfurt and the even ones in Singapore", by_digit["1"][0] == by_digit["3"][0] == by_digit["5"][0] == by_digit["9"][0] == "Frankfurt, DE" and by_digit["2"][0] == "Singapore, SG", by_digit)
 check("...and server N started N hours ago", by_digit["2"][1].startswith("2 h") and by_digit["4"][1].startswith("4 h") and by_digit["5"][1].startswith("5 h"), by_digit)
+vers = {det.server_table.item(r, 4).text()[-1]: det.server_table.item(r, 7).text() for r in range(det.server_table.rowCount())}
+check("the Version column shows the place version of each server, and which are older than the newest one looked up", vers == {"1": "v1801 (older)", "2": "v1802", "3": "v1800 (older)", "4": "v1801 (older)", "5": "v1802", "9": "v1800 (older)"}, vers)
+check("the version words", tab_discover.version_text(0, 5) == "" and tab_discover.version_text(7, 0) == "v7" and tab_discover.version_text(7, 7) == "v7" and tab_discover.version_text(6, 7) == "v6 (older)")
+det.server_table.clearSelection()
+det.b_copy_link.click()
+check("Copy join link without a selection asks to select a server", "Select a server" in w.statusBar().currentMessage(), w.statusBar().currentMessage())
+det.server_table.selectRow(2)
+chosen = det.server_table.item(2, 4).text()
+det.b_copy_link.click()
+check("Copy join link puts the web link of the selected server on the clipboard", QApplication.clipboard().text() == f"https://www.roblox.com/games/start?placeId=11&gameInstanceId={chosen}" and "Join link copied" in w.statusBar().currentMessage(), QApplication.clipboard().text())
+det.server_table.clearSelection()
 for mode, expect in (("oldest", "9" + "5"), ("newest", "1")):
     det.order.setCurrentIndex(det.order.findData(mode))
     got = "".join(det.server_table.item(r, 4).text()[-1] for r in range(det.server_table.rowCount()))
@@ -552,6 +563,29 @@ launched_before = len(launched)
 dlg.join_selected()
 check("Join selected in the map window opens the launcher on that server", len(launched) == launched_before + 1 and "gameInstanceId=aaaaaaaa-0000-0000-0000-00000000000" in launched[-1], launched[-1:])
 dlg.close()
+# the game's wiki, from RoSeal's list of game links
+import roseal_links
+LINK_FETCHES = []
+roseal_links.FILE.unlink(missing_ok=True)
+roseal_links._fetch = lambda url: (LINK_FETCHES.append(url), [{"universeIds": [det.card["universeId"]], "links": [{"type": "communityWiki", "url": "alpha.fandom.com"}]}])[1]
+asked_wiki = []
+settings.set("geo.roseal", False)
+w.ctx.confirm = lambda title, text, danger=False: (asked_wiki.append(text), False)[1]
+det.b_wiki.click(); spin(0.2)
+check("the game wiki asks before contacting RoSeal, and a No contacts nothing", len(asked_wiki) == 1 and "data.roseal.live" in asked_wiki[0] and "nothing about you" in asked_wiki[0] and not LINK_FETCHES and settings.get("geo.roseal") is False, asked_wiki)
+w.ctx.confirm = lambda title, text, danger=False: (asked_wiki.append(text), True)[1]
+opened_urls.clear()
+det.b_wiki.click()
+check("after a Yes the list is downloaded once and the wiki opens in the browser", wait(lambda: opened_urls == ["https://alpha.fandom.com"]) and LINK_FETCHES == ["https://data.roseal.live/v2/experience-links.json"] and settings.get("geo.roseal") is True, (opened_urls, LINK_FETCHES))
+det.b_wiki.click()
+check("...the next time it does not ask again and does not download again", wait(lambda: len(opened_urls) == 2) and len(asked_wiki) == 2 and len(LINK_FETCHES) == 1, (len(asked_wiki), len(LINK_FETCHES)))
+real_card = det.card
+det.card = dict(real_card, universeId=999)
+opened_urls.clear()
+det.b_wiki.click()
+check("a game that has no wiki in the list says so and opens nothing", wait(lambda: "no wiki for this game" in w.statusBar().currentMessage()) and not opened_urls, w.statusBar().currentMessage())
+det.card = real_card
+settings.set("geo.roseal", True)
 # a server Roblox gives no information about
 det.places.clear(); det.started.clear(); det._show_servers()
 JOIN_FAIL.add("aaaaaaaa-0000-0000-0000-000000000002")

@@ -110,7 +110,7 @@ object Geo {
     fun httpFetch(http: OkHttpClient = plainClient()): suspend (String) -> JsonElement? = { ip -> fetchJson(http, "https://ipwho.is/$ip?fields=$FIELDS", MAX_ANSWER) }
 
     /** Downloads RoSeal's list of data centres: a plain GET, no cookie, no redirect. */
-    fun rosealFetch(http: OkHttpClient = plainClient()): suspend (String) -> JsonElement? = { url -> fetchJson(http, url, RoSeal.MAX_BYTES) }
+    fun rosealFetch(http: OkHttpClient = plainClient(), max: Long = RoSeal.MAX_BYTES): suspend (String) -> JsonElement? = { url -> fetchJson(http, url, max) }
 }
 
 /** One group of data centres of RoSeal's list, with the city they are in. */

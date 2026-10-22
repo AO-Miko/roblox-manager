@@ -101,6 +101,9 @@ object Games {
         }
     }
 
+    /** The web link that opens Roblox on one server (null when the ids look odd). */
+    fun serverLink(placeId: Long, jobId: String): String? = if (validCode(jobId)) "https://www.roblox.com/games/start?placeId=$placeId&gameInstanceId=$jobId" else null
+
     /** How long a server has been running: "12 min", "6 h 12 min", "2 d 3 h" ("" when not known). */
     fun ageText(startedMs: Long?, nowMs: Long = System.currentTimeMillis()): String {
         if (startedMs == null || startedMs <= 0) return ""

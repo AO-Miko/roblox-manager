@@ -14,6 +14,7 @@ import accounts
 import bans
 import plat
 import rbx
+import relation
 import settings
 from signin import SignInDialog
 from ui_common import (
@@ -72,6 +73,24 @@ class CookieDialog(QDialog):
 
 
 # ============================================================ account tab
+def voice_text(v):
+    """Your voice chat state in a few words, from rbx.voice_status()."""
+    if v.get("banned"):
+        return "suspended" + (f" until {v['banned_until'][:10]}" if v.get("banned_until") else "")
+    if not v.get("eligible"):
+        return "not available for this account"
+    if not v.get("enabled"):
+        return "off"
+    return ("on" if v.get("opted_in") else "available, not switched on") + (", verified" if v.get("verified") else "")
+
+
+def age_verification_text(a):
+    """Your age verification in a few words, from rbx.verified_age()."""
+    if not a.get("verified"):
+        return "not verified"
+    return "verified" + (f" (age {a['age']})" if a.get("age") else "")
+
+
 class NotifyLabel(QLabel):
     """A label that tells the page when its text changes (the header tiles copy these values)."""
 
@@ -153,7 +172,7 @@ class AccountTab(QWidget):
         # KDE's Breeze style keeps form fields at their smallest size, which squeezed the wrapped Pending Robux text into a 100 px column
         # whose second line was cut off. Let the fields use the width that is there.
         self.form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        self.fields = {k: NotifyLabel("-") for k in ("User id", "Username", "Display name", "Joined", "Roblox Plus", "Email", "Robux", "Pending Robux", "Groups' pending", "Friends", "Followers", "Following")}
+        self.fields = {k: NotifyLabel("-") for k in ("User id", "Username", "Display name", "Joined", "Roblox Plus", "Email", "Voice chat", "Age verification", "Robux", "Pending Robux", "Groups' pending", "Friends", "Followers", "Following")}
         for k, w in self.fields.items():
             w.on_change = self.update_tiles
             w.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -491,6 +510,9 @@ class AccountTab(QWidget):
         self.ctx.async_.run(self.ctx.client.email_status, lambda d: self.fields["Email"].setText(
             (d["address"] or "none") + ("  (verified)" if d["verified"] else "  (NOT verified)" if d["address"] else "")),
             lambda e: self.fields["Email"].setText("(not available)"))
+        self.ctx.async_.run(self.ctx.client.voice_status, lambda v: self.fields["Voice chat"].setText(voice_text(v)), lambda e: self.fields["Voice chat"].setText("(not available)"))
+        self.ctx.async_.run(self.ctx.client.verified_age, lambda a: self.fields["Age verification"].setText(age_verification_text(a)),
+                            lambda e: self.fields["Age verification"].setText("(not available)"))
         self.ctx.async_.run(self.ctx.client.robux, lambda r: self.fields["Robux"].setText(f"{r:,}" if r is not None else "-"),
                             lambda e: self.fields["Robux"].setText("(not available)"))
         self.load_pending()
@@ -793,12 +815,13 @@ class FriendsTab(QWidget):
         lay.addWidget(self.panel)
         row = QHBoxLayout()
         self.btn_profile = button("Open profile", self.open_profile)
+        self.btn_mutual = button("Mutual friends...", self.relationship, "Since when you are friends and which friends you share, from Roblox (one request)")
         self.btn_join = button("Open their game", self.open_game, "Opens the game page in your browser")
         self.btn_joinfriend = button("Join friend's server", self.join_friend, "Opens a link that starts Roblox in their server")
         self.btn_copy = button("Copy join link", self.copy_link)
         self.btn_vip = button("Find VIP servers in their games", self.scan_vips,
                               "Looks at the games your friends are playing and lists private (VIP) servers, marking the ones friends own")
-        for b in (self.btn_profile, self.btn_join, self.btn_joinfriend, self.btn_copy):
+        for b in (self.btn_profile, self.btn_mutual, self.btn_join, self.btn_joinfriend, self.btn_copy):
             row.addWidget(b)
         row.addStretch()
         row.addWidget(self.btn_vip)
@@ -1007,6 +1030,13 @@ class FriendsTab(QWidget):
     def open_profile(self):
         r = self._selected()
         r and open_url(f"https://www.roblox.com/users/{r['id']}/profile")
+
+    def relationship(self):
+        r = self._selected()
+        if r:
+            relation.show(self.ctx, r["id"], r["name"])
+        else:
+            self.ctx.status("Select a friend first.")
 
     def open_game(self):
         r = self._selected()

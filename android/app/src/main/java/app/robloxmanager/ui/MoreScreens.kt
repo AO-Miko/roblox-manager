@@ -37,6 +37,7 @@ import app.robloxmanager.Services
 import app.robloxmanager.core.Money
 import app.robloxmanager.core.RobloxApi
 import app.robloxmanager.core.bool
+import app.robloxmanager.core.devexState
 import app.robloxmanager.core.str
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -121,6 +122,7 @@ fun MoneyScreen(sv: Services) {
     val fmt = NumberFormat.getInstance()
     val balance = rememberLoader(me.id) { sv.api.robux() }
     val pending = rememberLoader(me.id) { sv.api.pendingTotal() }
+    val devex = rememberLoader(me.id) { sv.api.devexState() }
     val totals = rememberLoader(listOf(me.id, period)) { Money.totalRows(sv.api.transactionTotals(period)) }
     val tx = rememberLoader(listOf(me.id, kind, onlyPending)) {
         val items = sv.api.transactions(kind)
@@ -130,8 +132,9 @@ fun MoneyScreen(sv: Services) {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Column { Text("Robux", color = C.muted, fontSize = 12.sp); Text(balance.value?.let { "R$ ${fmt.format(it)}" } ?: "-", fontSize = 22.sp, fontWeight = FontWeight.SemiBold) }
             Column { Text("Pending", color = C.muted, fontSize = 12.sp); Text(pending.value?.let { fmt.format(it) } ?: "-", fontSize = 22.sp, fontWeight = FontWeight.SemiBold) }
-            QuietButton("↻") { balance.load(); pending.load(); totals.load(); tx.load() }
+            QuietButton("↻") { balance.load(); pending.load(); devex.load(); totals.load(); tx.load() }
         }
+        Text(devex.value?.let { app.robloxmanager.core.Features.devexText(it) } ?: if (devex.state is Load.Failed) "DevEx: (not available)" else "DevEx: …", color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Money.PERIODS.forEach { (k, l) -> FilterChip(period == k, { period = k }, label = { Text(l) }) }
         }

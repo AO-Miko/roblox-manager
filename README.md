@@ -212,6 +212,17 @@ Settings has a switch for each (and you can turn them off again):
 Answers are kept on your device for 30 days by data centre, so most lookups need no request at all. The map is drawn from Natural Earth data (public domain). Thanks to RoSeal for the
 list. These two services are third parties: if one of them changes or stops, locations stop showing and everything else keeps working.
 
+## More things you can see (PC and phone)
+
+- **Mutual friends and friends since:** press *Mutual friends...* (PC) or tap a name (phone) in the friends, requests, followers, following and search lists. Roblox says since when you are
+  friends, whether you played together, and which friends you share (by name). One request.
+- **Friend requests** show when they were sent, where they came from (a game, your profile, contacts ...) and how many friends you share.
+- **Servers** also show the **version** of the game each one runs, marking the ones older than the newest looked up, and **Copy join link** (PC) / **Link** (phone) gives a web link that opens Roblox on that server.
+- **Game wiki:** a button on a game's page opens its community wiki, from RoSeal's list of game links (`data.roseal.live`). Like the data centre list, it is only contacted after you agree
+  (asked the first time; the same switch in Settings), and every link is checked before it can be opened (https, a plain site name, nothing else).
+- **Account:** your voice chat state (on, off, suspended until ...) and whether your age is verified.
+- **Money:** a Developer Exchange line: the Robux you can cash out, the minimum, and whether DevEx is suspended or open to you. No dollar value is guessed (the rate is Roblox's to set).
+
 ## Friend alerts, join requests of all groups, backup
 
 - **Alerts** (People → Alerts): tick the friends you want news about and switch alerts on. While the app is running it asks Roblox where they are every 90 seconds

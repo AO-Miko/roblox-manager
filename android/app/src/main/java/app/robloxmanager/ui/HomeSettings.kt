@@ -34,6 +34,10 @@ import app.robloxmanager.BuildConfig
 import app.robloxmanager.Services
 import app.robloxmanager.Updates
 import app.robloxmanager.core.Account
+import app.robloxmanager.core.Features
+import app.robloxmanager.core.devexState
+import app.robloxmanager.core.verifiedAge
+import app.robloxmanager.core.voiceState
 import java.io.File
 import java.text.NumberFormat
 import kotlinx.coroutines.launch
@@ -49,6 +53,8 @@ fun AccountScreen(sv: Services, onAddAccount: () -> Unit) {
     val pending = rememberLoader(me.id) { sv.api.pendingTotal() }
     val counts = rememberLoader(me.id) { sv.api.counts(me.id) }
     val premium = rememberLoader(me.id) { sv.api.hasPremium() }
+    val voice = rememberLoader(me.id) { sv.api.voiceState() }
+    val age = rememberLoader(me.id) { sv.api.verifiedAge() }
     var msg by remember { mutableStateOf("") }
     var confirmRemove by remember { mutableStateOf<Account?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -62,6 +68,8 @@ fun AccountScreen(sv: Services, onAddAccount: () -> Unit) {
                     Text(me.displayName.ifEmpty { me.name }, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                     Text("@${me.name}  ·  id ${me.id}", color = C.muted, fontSize = 12.sp)
                     premium.value?.let { Text(if (it) "Roblox Plus: active" else "Roblox Plus: not active", color = if (it) C.success else C.muted, fontSize = 12.sp) }
+                    Text("Voice chat: " + (voice.value?.let { Features.voiceText(it) } ?: if (voice.state is Load.Failed) "(not available)" else "…"), color = C.muted, fontSize = 12.sp)
+                    Text("Age verification: " + (age.value?.let { Features.verifiedText(it) } ?: if (age.state is Load.Failed) "(not available)" else "…"), color = C.muted, fontSize = 12.sp)
                 }
             }
         }
@@ -75,7 +83,7 @@ fun AccountScreen(sv: Services, onAddAccount: () -> Unit) {
             Box2("Followers", c?.get("followers")?.toString() ?: "…", Modifier.weight(1f))
             Box2("Following", c?.get("following")?.toString() ?: "…", Modifier.weight(1f))
         }
-        QuietButton("↻ Refresh") { avatar.load(); robux.load(); pending.load(); counts.load(); premium.load() }
+        QuietButton("↻ Refresh") { avatar.load(); robux.load(); pending.load(); counts.load(); premium.load(); voice.load(); age.load() }
 
         Section("ACCOUNTS", collapsible = true) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -178,7 +186,7 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
             var roseal by remember { mutableStateOf(sv.prefs.bool("geo.roseal", false)) }
             var ipwho by remember { mutableStateOf(sv.prefs.bool("geo.allowed", false)) }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) { Switch(roseal, { roseal = it; sv.prefs.put("geo.roseal", it) }); Spacer(Modifier.width(8.dp)); Text("Download RoSeal's list of Roblox data centres (data.roseal.live) to show where servers are. Nothing about you is sent.", fontSize = 13.sp) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Switch(roseal, { roseal = it; sv.prefs.put("geo.roseal", it) }); Spacer(Modifier.width(8.dp)); Text("Download RoSeal's public data files (data.roseal.live): its list of Roblox data centres, to show where servers are, and its links to game wikis. Nothing about you is sent.", fontSize = 13.sp) }
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(ipwho, { ipwho = it; sv.prefs.put("geo.allowed", it) }); Spacer(Modifier.width(8.dp)); Text("Ask ipwho.is which city a server's public address is in. The address of the server is sent there, nothing else.", fontSize = 13.sp) }
                 Text("Used by Location and uptime on a game's page. Nothing is contacted unless one of these is on.", color = C.muted, fontSize = 12.sp)
             }

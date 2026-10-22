@@ -68,6 +68,9 @@ jobs:
       - name: Server locations and the world map
         if: ${{ !cancelled() }}
         run: python tests/test_geo.py
+      - name: Mutual friends, voice and age, DevEx, game wikis
+        if: ${{ !cancelled() }}
+        run: python tests/test_features.py
       - name: Security checks
         if: ${{ !cancelled() }}
         run: python tests/test_security.py

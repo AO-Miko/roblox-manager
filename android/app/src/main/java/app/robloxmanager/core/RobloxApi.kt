@@ -147,7 +147,7 @@ class RobloxApi(val client: RobloxClient, val names: NameCache = NameCache()) {
     }
 
     suspend fun friendRequests(onPage: ((List<Person>) -> Unit)? = null): List<Person> =
-        fill(paged("https://friends.roblox.com/v1/my/friends/requests", onPage = onPage?.let { cb -> { p -> cb(fill(p)) } }))
+        fill(paged("https://friends.roblox.com/v1/my/friends/requests", onPage = onPage?.let { cb -> { p -> cb(fill(p, Features::requestExtra)) } }), Features::requestExtra)
 
     suspend fun friendRequestCount(): Int = client.get("https://friends.roblox.com/v1/user/friend-requests/count").json.obj?.int("count") ?: 0
     suspend fun followers(): List<Person> = fill(paged("https://friends.roblox.com/v1/users/$me/followers"))

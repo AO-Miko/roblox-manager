@@ -14,6 +14,7 @@ import games_store
 import geo
 import rbx
 import roblox_launcher
+import roseal_links
 import settings
 from worldmap import WorldMap, group_places
 from tab_staff import round_icon
@@ -76,6 +77,13 @@ def sort_servers(servers, mode, started=None):
             "most": lambda s: -s["playing"], "fewest": lambda s: s["playing"],
             "oldest": lambda s: last(started.get(s["id"])), "newest": lambda s: last(started.get(s["id"]), -1)}
     return sorted(servers, key=keys[mode]) if mode in keys else list(servers)
+
+
+def version_text(version, newest):
+    """'v1805' for the version of the place a server runs, with '(older)' when other servers run a newer one (the newest one that was looked up)."""
+    if not version:
+        return ""
+    return f"v{version}" + (" (older)" if newest and version < newest else "")
 
 
 def age_text(started_ms, now=None):
@@ -261,7 +269,7 @@ class GameDetail(QWidget):
     def __init__(self, ctx):
         super().__init__()
         self.ctx = ctx
-        self.places, self.started, self._locating, self._locate_stop = {}, {}, False, False
+        self.places, self.started, self.versions, self._locating, self._locate_stop = {}, {}, {}, False, False
         self.card = None
         self.place_id = None
         self.vip_servers_for = lambda universe_id, place_id: []        # the app connects this to the VIP servers page
@@ -302,11 +310,12 @@ class GameDetail(QWidget):
         self.b_vip = button("Join my VIP server", self.join_vip, "Open the Roblox launcher and join one of your own VIP servers of this game")
         self.b_vip.hide()
         self.b_open = button("Open on roblox.com", self.open_page)
+        self.b_wiki = button("Game wiki", self.open_wiki, "Open the game's community wiki, if RoSeal's list of game links has one (asks before it contacts RoSeal)")
         self.b_copy = button("Copy link", self.copy_link)
         self.b_fav = button("Favorite", self.toggle_favorite, "Add this game to (or remove it from) your Roblox favorites")
         self.b_fav.hide()
         self.favorited = None
-        for b in (self.b_play, self.b_vip, self.b_fav, self.b_open, self.b_copy):
+        for b in (self.b_play, self.b_vip, self.b_fav, self.b_open, self.b_wiki, self.b_copy):
             row.addWidget(b)
         info.addSpacing(8)
         info.addLayout(row)
@@ -365,10 +374,11 @@ class GameDetail(QWidget):
         self.b_stop_locate = button("Stop", self.stop_locate)
         self.b_stop_locate.hide()
         self.b_map = button("Show map", self.show_map, "Show the located servers on a world map")
-        for w_ in (self.sort, self.order, self.b_servers, self.b_join_server, self.b_join_emptiest, self.b_more_servers, self.b_locate, self.b_stop_locate, self.b_map):
+        self.b_copy_link = button("Copy join link", self.copy_server_link, "Copy a link that opens Roblox on the selected server (anyone with Roblox can use it while the server is open)")
+        for w_ in (self.sort, self.order, self.b_servers, self.b_join_server, self.b_join_emptiest, self.b_more_servers, self.b_locate, self.b_stop_locate, self.b_map, self.b_copy_link):
             srow.addWidget(w_)
         lay.addLayout(srow)
-        self.server_table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server", "Location", "Running for"], [80, 60, 90, 60, 250, 170, 100], empty="Press Find servers.")
+        self.server_table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server", "Location", "Running for", "Version"], [80, 60, 90, 60, 250, 170, 100, 100], empty="Press Find servers.")
         self.server_table.setMinimumHeight(150)
         self.server_table.doubleClicked.connect(lambda _=None: self.join_selected())
         lay.addWidget(self.server_table)
@@ -501,7 +511,7 @@ class GameDetail(QWidget):
             return
         if reset:
             self.server_gen += 1
-            self.servers, self.server_cursor, self.places, self.started = [], "", {}, {}
+            self.servers, self.server_cursor, self.places, self.started, self.versions = [], "", {}, {}, {}
         elif self.server_busy or not self.server_cursor:
             return
         self.server_busy = True
@@ -531,7 +541,8 @@ class GameDetail(QWidget):
     def _show_servers(self):
         shown = sort_servers(self.servers, self.order.currentData(), self.started)
         rows = [[s["playing"], s["max"], int(s["ping"]) if s.get("ping") is not None else "-", int(s["fps"]) if s.get("fps") is not None else "-", s["id"],
-                 geo.label(self.places[s["id"]]) if s["id"] in self.places else "", age_text(self.started.get(s["id"]))] for s in shown]
+                 geo.label(self.places[s["id"]]) if s["id"] in self.places else "", age_text(self.started.get(s["id"])),
+                 version_text(self.versions.get(s["id"]), max(self.versions.values(), default=0))] for s in shown]
         self.server_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)         # (the order chosen above; click a header to sort by it instead)
         fill_table(self.server_table, rows, keys=[s["id"] for s in shown])
         self.b_more_servers.setEnabled(bool(self.server_cursor))
@@ -580,7 +591,7 @@ class GameDetail(QWidget):
         gen, place, client = self.server_gen, self.place_id, c.client
 
         def work():
-            found, when, problems = {}, {}, []
+            found, when, ver, problems = {}, {}, {}, []
             for k, sid in enumerate(ids):
                 if self._locate_stop:
                     break
@@ -588,6 +599,7 @@ class GameDetail(QWidget):
                 try:
                     info = client.server_info(place, sid)
                     when[sid] = info["started_ms"] or 0
+                    ver[sid] = info["place_version"] or 0
                     found[sid] = geo.resolve(info, use_roseal, use_ipwho)
                 except rbx.Cancelled:
                     break
@@ -597,7 +609,7 @@ class GameDetail(QWidget):
                         break
                 except (geo.GeoError, ValueError) as e:
                     problems.append(str(e))
-            return found, when, len(ids), problems
+            return found, when, ver, len(ids), problems
 
         c.async_.run(work, lambda res: self._located(gen, *res), lambda e: (self._locate_done(), c.error(e)))
 
@@ -613,17 +625,50 @@ class GameDetail(QWidget):
         self.b_stop_locate.setEnabled(True)
         self.ctx.client.clear_cancel()
 
-    def _located(self, gen, found, when, tried, problems):
+    def _located(self, gen, found, when, ver, tried, problems):
         self._locate_done()
         if gen != self.server_gen:
             return                                            # (another game, or a new search: this answer is old)
         self.places.update(found)
         self.started.update(when)
+        self.versions.update(ver)
         self._show_servers()
         text = f"Looked up {len(when)} of {tried} server(s), {len(found)} located."
         if problems:
             text += f" {len(problems)} could not be located: {problems[0]}"
         self.server_note.setText(text)
+
+    def copy_server_link(self):
+        rows = selected_rows(self.server_table)
+        if not rows or not self.place_id:
+            self.ctx.status("Select a server first.")
+            return
+        job = row_key(self.server_table, rows[0])
+        if not rbx.safe_code(job):
+            self.ctx.status("That server id looks odd, so no link was made.")
+            return
+        copy_text(rbx.join_link(self.place_id, job_id=job))
+        self.ctx.status("Join link copied.")
+
+    def open_wiki(self):
+        """The game's community wiki from RoSeal's list of game links. Nothing is contacted before the person agrees (the same permission as the data centre list)."""
+        c = self.ctx
+        uid = (self.card or {}).get("universeId")
+        if not uid:
+            return
+        if not settings.get("geo.roseal"):
+            if not c.confirm("Game wiki", "To find the game's wiki, the app downloads RoSeal's public list of game links (data.roseal.live). It is one plain download: nothing about you or "
+                             "the game you look at is sent. This service is run by RoSeal, not by Roblox or by this app.\n\nAllow this? (You can change it later in Settings.)"):
+                return
+            settings.set("geo.roseal", True)
+
+        def done(links):
+            if not links:
+                c.status("RoSeal's list has no wiki for this game.")
+                return
+            open_url(links[0]["url"])
+            c.status("Opened " + links[0]["url"])
+        c.async_.run(lambda: roseal_links.links_for(uid), done, lambda e: c.status(f"The wiki could not be found: {e}") if isinstance(e, geo.GeoError) else c.error(e))
 
     def show_map(self):
         dlg = ServerMapDialog(self, self.servers, self.places, self._join_server, self.started)

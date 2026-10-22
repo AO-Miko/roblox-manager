@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -45,6 +46,8 @@ import app.robloxmanager.Services
 import app.robloxmanager.core.AlertRules
 import app.robloxmanager.core.Backup
 import app.robloxmanager.core.BackupException
+import app.robloxmanager.core.Features
+import app.robloxmanager.core.profileInsights
 import app.robloxmanager.core.JoinRequest
 import app.robloxmanager.core.Person
 import app.robloxmanager.core.RobloxApi
@@ -52,6 +55,20 @@ import app.robloxmanager.core.answerJoinRequests
 import app.robloxmanager.core.joinRequestsOfAll
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
+
+// ======================================================================== what you share with a person
+@Composable
+fun PersonInfoDialog(sv: Services, p: Person, onClose: () -> Unit) {
+    var text by remember(p.id) { mutableStateOf("Looking up…") }
+    LaunchedEffect(p.id) {
+        text = try { Features.describe(sv.api.profileInsights(listOf(p.id))[p.id], p.title) } catch (e: CancellationException) { throw e } catch (e: Exception) { errorText(e) }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose, title = { Text("You and ${p.title}") },
+        text = { Text(text, fontSize = 13.sp, modifier = Modifier.verticalScroll(rememberScrollState())) },          // (plain text: a name from Roblox is never read as markup)
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onClose) { Text("Close") } },
+    )
+}
 
 // ======================================================================== the switch for friend alerts (People > Alerts and Settings)
 @Composable

@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import app.robloxmanager.Services
 import app.robloxmanager.core.GameCard
 import app.robloxmanager.core.GameDetails
+import app.robloxmanager.core.Features
 import app.robloxmanager.core.FriendGame
 import app.robloxmanager.core.GeoException
 import app.robloxmanager.core.Place
@@ -393,6 +394,8 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     var order by remember { mutableStateOf("roblox") }
     val places = remember(card.universeId) { mutableStateMapOf<String, Place>() }
     val started = remember(card.universeId) { mutableStateMapOf<String, Long>() }
+    val versions = remember(card.universeId) { mutableStateMapOf<String, Long>() }
+    var askWiki by remember { mutableStateOf(false) }
     var locating by remember { mutableStateOf(false) }
     val stopLocate = remember { booleanArrayOf(false) }
     var askGeo by remember { mutableStateOf(false) }
@@ -410,7 +413,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         val p = place ?: return
         if (srvBusy || (!reset && cursor.isEmpty())) return                         // one page at a time: pressing again meanwhile does nothing
         srvBusy = true; srvNote = "Looking for servers…"
-        if (reset) { places.clear(); started.clear(); mapFilter = null }
+        if (reset) { places.clear(); started.clear(); versions.clear(); mapFilter = null }
         val s0 = sort
         scope.launch {
             try {
@@ -419,6 +422,16 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 cursor = n
                 srvNote = if (servers.isEmpty()) "No public servers are open right now." else "${servers.size} servers" + if (n.isNotEmpty()) "  (more available)" else ""
             } catch (e: CancellationException) { throw e } catch (e: Exception) { srvNote = "The servers could not be loaded: ${errorText(e)}" } finally { srvBusy = false }
+        }
+    }
+
+    /** The game's community wiki from RoSeal's list of game links (only after the person allowed RoSeal's data service). */
+    fun openWiki() {
+        scope.launch {
+            try {
+                val links = sv.rosealLinks.linksFor(card.universeId)
+                if (links.isEmpty()) note = "RoSeal's list has no wiki for this game." else openUrl(ctx, links[0].url)
+            } catch (e: CancellationException) { throw e } catch (e: GeoException) { note = "The wiki could not be found: ${e.message}" } catch (e: Exception) { note = errorText(e) }
         }
     }
 
@@ -443,7 +456,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                     srvNote = "Looking up servers: $k/${todo.size}…"
                     try {
                         val info = sv.api.serverInfo(p, s.id)
-                        started[s.id] = info.startedMs ?: 0; looked++
+                        started[s.id] = info.startedMs ?: 0; versions[s.id] = info.placeVersion ?: 0; looked++
                         places[s.id] = sv.geo.resolve(info, useRoseal, useIpwho, sv.rosealList); located++
                     }
                     catch (e: CancellationException) { throw e }
@@ -477,6 +490,8 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         } catch (e: RobloxException) { note = errorText(e) }
     }
 
+    if (askWiki) Confirm("Game wiki", "To find the game's wiki, the app downloads RoSeal's public list of game links (data.roseal.live). It is one plain download: nothing about you or the game you look at is sent. " +
+        "This service is run by RoSeal, not by Roblox or by this app. You can change this later in Settings.", "Allow", false, { askWiki = false; sv.prefs.put("geo.roseal", true); openWiki() }, { askWiki = false })
     if (askGeo) androidx.compose.material3.AlertDialog(
         onDismissRequest = { askGeo = false }, title = { Text("Where should server locations come from?") },
         text = {
@@ -523,6 +538,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuietButton("Open on roblox.com") { openUrl(ctx, Games.pageUrl(place)) }
+                QuietButton("Game wiki") { if (sv.prefs.bool("geo.roseal", false)) openWiki() else askWiki = true }
                 QuietButton("Copy link") {
                     (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.setPrimaryClip(ClipData.newPlainText("game", Games.pageUrl(place)))
                     note = "Game link copied."
@@ -597,8 +613,15 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                     Games.sortServers(servers, order, started).filter { s -> mapFilter?.let { s.id in it } ?: true }.forEach { s ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${s.playing}/${s.max}", Modifier.width(64.dp), fontWeight = FontWeight.Medium)
-                            Text(listOfNotNull(s.ping?.let { "$it ms" } ?: "-", s.fps?.let { "$it fps" }, places[s.id]?.label, started[s.id]?.takeIf { it > 0 }?.let { "running ${Games.ageText(it)}" }).joinToString("  ·  "),
+                            Text(listOfNotNull(s.ping?.let { "$it ms" } ?: "-", s.fps?.let { "$it fps" }, places[s.id]?.label, started[s.id]?.takeIf { it > 0 }?.let { "running ${Games.ageText(it)}" },
+                                versions[s.id]?.takeIf { it > 0 }?.let { Features.versionText(it, versions.values.maxOrNull() ?: 0) }).joinToString("  ·  "),
                                 Modifier.weight(1f), color = C.muted, fontSize = 12.sp)
+                            TextButton(onClick = {
+                                place?.let { p -> Games.serverLink(p, s.id)?.let { link ->
+                                    (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager)?.setPrimaryClip(android.content.ClipData.newPlainText("Join link", link))
+                                    srvNote = "Join link copied."
+                                } }
+                            }) { Text("Link") }
                             TextButton(onClick = { place?.let { launchRoblox(ctx, it, jobId = s.id) { askInstall = true } } }) { Text("Join") }
                         }
                     }

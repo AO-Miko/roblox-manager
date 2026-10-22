@@ -295,7 +295,7 @@ class SettingsTab(QWidget):
         form.addRow(self.c_alerts)
         self.ctx.alerts_changed.connect(self._alerts_synced)
         self.ctx.data_restored.connect(self._alerts_synced)
-        form.addRow(self._check("geo.roseal", "Allow downloading RoSeal's list of Roblox data centres (data.roseal.live) to show where servers are. Nothing about you is sent."))
+        form.addRow(self._check("geo.roseal", "Allow downloading RoSeal's public data files (data.roseal.live): its list of Roblox data centres, to show where servers are, and its links to game wikis. Nothing about you is sent."))
         form.addRow(self._check("geo.allowed", "Allow asking ipwho.is which city a server's public address is in. The address of the server is sent there, nothing else."))
         form.addRow(self._check("ui.remember_window", "Remember the window size and the tab you were on"))
         form.addRow(self._lab("Ask me to type the number when I change"), self._spin("confirm.typed_from", " people or groups or more at once"))

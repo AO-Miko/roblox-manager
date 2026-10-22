@@ -18,6 +18,26 @@ TOTAL_NAMES = {"salesTotal": "Sales", "purchasesTotal": "Purchases", "affiliateS
                "adImpressionPayoutsTotal": "Ad payouts", "groupPremiumPayoutsTotal": "Group premium payouts"}
 
 
+def devex_text(d):
+    """The Developer Exchange line from rbx.devex_status(): what can be cashed out and what stands in the way. No money value is guessed (the rate is Roblox's to set)."""
+    if d.get("eligible_robux") is None and d.get("min_cash_out") is None:
+        return "DevEx: not available for this account."
+    parts = []
+    if d.get("eligible_robux") is not None:
+        parts.append(f"{d['eligible_robux']:,} Robux can be cashed out" + (f" (as of {d['updated'][:10]})" if d.get("updated") else ""))
+    if d.get("min_cash_out"):
+        parts.append(f"minimum {d['min_cash_out']:,}")
+    if d.get("suspended"):
+        parts.append("DevEx is SUSPENDED")
+    elif d.get("at_risk"):
+        parts.append("at risk of suspension")
+    if d.get("can_cash_out") is True:
+        parts.append("you can cash out now")
+    elif d.get("can_cash_out") is False and not d.get("suspended"):
+        parts.append("cashing out is not open to you right now")
+    return "DevEx: " + "; ".join(parts) + "."
+
+
 def total_label(key):
     if key in TOTAL_NAMES:
         return TOTAL_NAMES[key]
@@ -48,6 +68,9 @@ class MoneyTab(QWidget):
             top.addWidget(button("Pending details...", show_pending, "Where your pending Robux comes from, sale by sale"))
         top.addWidget(button("Refresh", self.load))
         lay.addLayout(top)
+        self.devex = hint("DevEx: -")
+        self.devex.setWordWrap(True)
+        lay.addWidget(self.devex)
 
         row = QHBoxLayout()
         row.addWidget(QLabel("Totals for:"))
@@ -87,6 +110,7 @@ class MoneyTab(QWidget):
         self.loaded = False
         self.balance.setText("Robux: -")
         self.pending.setText("Pending: -")
+        self.devex.setText("DevEx: -")
         for t in (self.totals, self.table):
             fill_table(t, [])
         self.info.setText("Sign in on the Home tab to see your Robux.")
@@ -102,6 +126,7 @@ class MoneyTab(QWidget):
         self.loaded = True
         c.async_.run(c.client.robux, lambda r: self.balance.setText(f"Robux: {r:,}" if r is not None else "Robux: -"), lambda e: self.balance.setText("Robux: (not available)"))
         c.async_.run(c.client.pending_total, lambda r: self.pending.setText(f"Pending: {r:,}"), lambda e: self.pending.setText("Pending: (not available)"))
+        c.async_.run(c.client.devex_status, lambda d: self.devex.setText(devex_text(d)), lambda e: self.devex.setText("DevEx: (not available)"))
         self.load_totals()
         self.load_transactions()
 

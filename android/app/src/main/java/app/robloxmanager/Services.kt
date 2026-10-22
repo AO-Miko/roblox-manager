@@ -15,6 +15,8 @@ import app.robloxmanager.core.KeystoreVault
 import app.robloxmanager.core.NameCache
 import app.robloxmanager.core.Geo
 import app.robloxmanager.core.GeoBook
+import app.robloxmanager.core.RoSealLinkList
+import app.robloxmanager.core.RoSealLinks
 import app.robloxmanager.core.RoSealList
 import app.robloxmanager.core.Prefs
 import app.robloxmanager.core.PolicyStatus
@@ -62,6 +64,8 @@ class Services(app: Application) {
     val geo = GeoBook(File(dir, "server_places.json"), Geo.httpFetch())
     /** RoSeal's public list of Roblox data centres (data.roseal.live), only downloaded when the person allowed it. */
     val rosealList = RoSealList(File(dir, "roseal_datacenters.json"), Geo.rosealFetch())
+    /** RoSeal's links to game wikis, only downloaded when the person allowed it and pressed Game wiki. */
+    val rosealLinks = RoSealLinkList(File(dir, "roseal_links.json"), Geo.rosealFetch(max = RoSealLinks.MAX_BYTES))
     /** Shows one piece of friend news (set by the activity, which has the Android context). */
     var notifier: (String) -> Unit = {}
     /** Whether friend alerts are on (shown by the switch in People > Alerts and in Settings). */
