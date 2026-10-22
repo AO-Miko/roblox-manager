@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime
 
-from PySide6.QtCore import QDate, QItemSelectionModel, Qt
+from PySide6.QtCore import QDate, QItemSelectionModel, Qt, QTimer
 from PySide6.QtWidgets import (
     QComboBox, QDateEdit, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QSplitter, QTableWidget, QTabWidget,
     QVBoxLayout, QWidget,
@@ -29,6 +29,12 @@ class GroupsTab(QWidget):
         self.requests, self.requests_cursor = [], None
         self.audit, self.audit_cursor = [], None
         self.bans = []
+        self._gen, self._busy = {}, {}                 # per list: which load is the current one, and whether a page is being fetched
+        self.search_hits, self._search_gen = [], 0     # members found by Roblox's own search (they may not be loaded yet)
+        self._search_timer = QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(450)
+        self._search_timer.timeout.connect(self.search_server)
         self.created = {}        # group id -> ISO creation time
 
         outer = QHBoxLayout(self)
@@ -141,7 +147,7 @@ class GroupsTab(QWidget):
         self.member_filter = QLineEdit()
         self.member_filter.setPlaceholderText("Filter members...")
         self.member_filter.setMinimumWidth(150)
-        self.member_filter.textChanged.connect(self.show_members)
+        self.member_filter.textChanged.connect(lambda _=None: (self.show_members(), self._search_timer.start()))
         top.addWidget(QLabel("Role:"))
         top.addWidget(self.role_pick)
         top.addWidget(self.member_filter, 1)
@@ -245,6 +251,10 @@ class GroupsTab(QWidget):
         """Empty the right-hand side (overview, members, roles ...) so it no longer shows a group."""
         self.gid = None
         self.membership, self.roles = {}, []
+        for key in ("members", "requests", "audit"):
+            self._gen[key] = self._gen.get(key, 0) + 1
+            self._busy[key] = False
+        self.search_hits, self._search_gen = [], self._search_gen + 1
         for t in (self.mtable, self.rtable, self.roletable, self.atable, self.btable):
             fill_table(t, [])
         self.title.setText("Select a group")
@@ -524,38 +534,113 @@ class GroupsTab(QWidget):
         c.async_.run(lambda: c.client.lookup_names(missing), done, lambda e: None)
 
     # ============================================================ members
+    # ---- paged lists: one page at a time, never the same page twice
+    def _begin(self, key, reset):
+        """Start loading a page of a list. Returns this load's number, or None if a page of this list is already on its way: pressing 'Load more' again
+        meanwhile would ask Roblox for the same page (the cursor has not moved yet) and everybody on it would be listed twice. A reset (other group or
+        role) starts a new load and the answers of the old one are thrown away."""
+        if reset:
+            self._gen[key] = self._gen.get(key, 0) + 1
+        elif self._busy.get(key):
+            return None
+        self._busy[key] = True
+        return self._gen.get(key, 0)
+
+    def _current(self, key, gen):
+        """True if the answer belongs to the load that is current (and then the list may take another page)."""
+        if gen != self._gen.get(key, 0):
+            return False
+        self._busy[key] = False
+        return True
+
+    def _failed(self, key, gen, label, e):
+        if self._current(key, gen):
+            label.setText("Could not load: " + str(e))
+
     def load_members(self, reset=True):
         c = self.ctx
         gid = self.gid
         if not gid:
             return
+        gen = self._begin("members", reset)
+        if gen is None:
+            return
         if reset:
             self.members, self.members_cursor = [], None
+            self.search_hits = []
+        self.b_more_m.setEnabled(False)                  # (until this page is here)
         role_id = self.role_pick.currentData()
         cursor = self.members_cursor
-        c.async_.run(lambda: c.client.group_members(gid, role_id, cursor), lambda d: self._members(gid, role_id, d))
+        c.async_.run(lambda: c.client.group_members(gid, role_id, cursor), lambda d: self._members(gid, role_id, gen, d),
+                     lambda e: (self._failed("members", gen, self.mcount, e), self.b_more_m.setEnabled(bool(self.members_cursor))))
 
-    def _members(self, gid, role_id, d):
-        if gid != self.gid:
+    def _member_row(self, m, role_by_id, role_id=None):
+        u = m.get("user") or m
+        role = m.get("role") or role_by_id.get(role_id) or {}
+        return {"id": u.get("userId") or u.get("id"), "username": u.get("username") or u.get("name", ""),
+                "display": u.get("displayName") or u.get("username", ""), "role": role.get("name", ""),
+                "role_id": role.get("id"), "rank": role.get("rank", 0)}
+
+    def _members(self, gid, role_id, gen, d):
+        if gid != self.gid or not self._current("members", gen):
             return
         role_by_id = {r["id"]: r for r in self.roles}
+        have = {m["id"] for m in self.members}
         for m in d.get("data", []):
-            u = m.get("user") or m
-            role = m.get("role") or role_by_id.get(role_id) or {}
-            self.members.append({"id": u.get("userId") or u.get("id"), "username": u.get("username") or u.get("name", ""),
-                                 "display": u.get("displayName") or u.get("username", ""), "role": role.get("name", ""),
-                                 "role_id": role.get("id"), "rank": role.get("rank", 0)})
+            row = self._member_row(m, role_by_id, role_id)
+            if row["id"] not in have:                          # (never the same person twice)
+                have.add(row["id"])
+                self.members.append(row)
         self.members_cursor = d.get("nextPageCursor")
         self.b_more_m.setEnabled(bool(self.members_cursor))
         self.show_members()
         self._resolve(self.members, self.show_members)
+        if self.member_filter.text().strip():
+            self._search_timer.start()                         # a name is typed: search again for people that are not loaded
+
+    # ---- search: also finds members that 'Load more' has not reached
+    def search_server(self):
+        """Ask Roblox for the members that match what is typed in the filter box (loaded or not) and show them with the loaded ones."""
+        q = self.member_filter.text().strip()
+        gid = self.gid
+        if not gid or len(q) < 2:
+            if self.search_hits:
+                self.search_hits = []
+                self.show_members()
+            return
+        self._search_gen += 1
+        gen, c = self._search_gen, self.ctx
+
+        def work():
+            try:
+                return c.client.group_search_members(gid, q).get("data", [])
+            except rbx.RobloxError:                            # (the search is not available: look the exact username up instead)
+                u = c.client.user_by_name(q)
+                if not u:
+                    return []
+                groups = c.client.get(f"https://groups.roblox.com/v1/users/{u['id']}/groups/roles", auth=False).get("data", [])
+                g = next((x for x in groups if x["group"]["id"] == gid), None)
+                return [{"user": {"userId": u["id"], "username": u["name"], "displayName": u.get("displayName", "")}, "role": g["role"]}] if g else []
+
+        def done(rows):
+            if gen != self._search_gen or gid != self.gid or q != self.member_filter.text().strip():
+                return                                         # (the box changed meanwhile: this answer is old)
+            role_by_id = {r["id"]: r for r in self.roles}
+            self.search_hits = [self._member_row(m, role_by_id) for m in rows]
+            self.show_members()
+            self._resolve(self.search_hits, self.show_members)
+        c.async_.run(work, done, lambda e: self.mcount.setText("Search failed: " + str(e)))
 
     def show_members(self):
         q = self.member_filter.text().strip().lower()
-        self.mview = [m for m in self.members if not q or q in m["username"].lower() or q in m["display"].lower()]
+        role_id = self.role_pick.currentData()
+        loaded = {m["id"] for m in self.members}
+        extra = [m for m in self.search_hits if m["id"] not in loaded and (not role_id or m["role_id"] == role_id)] if q else []
+        self.mview = [m for m in self.members if not q or q in m["username"].lower() or q in m["display"].lower()] + extra
         fill_table(self.mtable, [[m["display"] or m["username"] or f"User {m['id']}", m["username"], m["role"], m["rank"], m["id"]] for m in self.mview],
                    keys=[m["id"] for m in self.mview])
-        self.mcount.setText(f"{len(self.members)} loaded" + ("  (more available: Load more)" if self.members_cursor else ""))
+        self.mcount.setText(f"{len(self.members)} loaded" + ("  (more available: Load more)" if self.members_cursor else "")
+                            + (f"  +  {len(extra)} found by search" if extra else ""))
 
     def _member_selected(self):
         rows = selected_rows(self.mtable)
@@ -563,7 +648,7 @@ class GroupsTab(QWidget):
             self.ctx.status("Select a member first.")
             return None
         uid = row_key(self.mtable, rows[0])
-        return next((m for m in self.members if m["id"] == uid), None)
+        return next((m for m in self.members + self.search_hits if m["id"] == uid), None)
 
     def _open_profile(self, table, col):
         rows = selected_rows(table)
@@ -642,16 +727,25 @@ class GroupsTab(QWidget):
         if not gid or not (self.can("groupMembershipPermissions", "inviteMembers") or self.can("groupMembershipPermissions", "removeMembers")):
             fill_table(self.rtable, [])
             return
+        gen = self._begin("requests", reset)
+        if gen is None:
+            return
         if reset:
             self.requests, self.requests_cursor = [], None
+        self.b_more_r.setEnabled(False)
         cursor = self.requests_cursor
-        c.async_.run(lambda: c.client.group_join_requests(gid, cursor), lambda d: self._requests(gid, d), lambda e: self.rcount.setText("Could not load: " + str(e)))
+        c.async_.run(lambda: c.client.group_join_requests(gid, cursor), lambda d: self._requests(gid, gen, d),
+                     lambda e: (self._failed("requests", gen, self.rcount, e), self.b_more_r.setEnabled(bool(self.requests_cursor))))
 
-    def _requests(self, gid, d):
-        if gid != self.gid:
+    def _requests(self, gid, gen, d):
+        if gid != self.gid or not self._current("requests", gen):
             return
+        have = {r["id"] for r in self.requests}
         for r in d.get("data", []):
             u = r.get("requester") or {}
+            if u.get("userId") in have:
+                continue
+            have.add(u.get("userId"))
             self.requests.append({"id": u.get("userId"), "username": u.get("username", ""), "display": u.get("displayName", ""), "created": r.get("created")})
         self.requests_cursor = d.get("nextPageCursor")
         self.b_more_r.setEnabled(bool(self.requests_cursor))
@@ -704,19 +798,30 @@ class GroupsTab(QWidget):
         if not gid or not self.can("groupManagementPermissions", "viewAuditLogs"):
             fill_table(self.atable, [])
             return
+        gen = self._begin("audit", reset)
+        if gen is None:
+            return
         if reset:
             self.audit, self.audit_cursor = [], None
+        self.b_more_a.setEnabled(False)
         cursor = self.audit_cursor
-        c.async_.run(lambda: c.client.audit_log(gid, cursor), lambda d: self._audit(gid, d), lambda e: self.acount.setText("Could not load: " + str(e)))
+        c.async_.run(lambda: c.client.audit_log(gid, cursor), lambda d: self._audit(gid, gen, d),
+                     lambda e: (self._failed("audit", gen, self.acount, e), self.b_more_a.setEnabled(bool(self.audit_cursor))))
 
-    def _audit(self, gid, d):
-        if gid != self.gid:
+    def _audit(self, gid, gen, d):
+        if gid != self.gid or not self._current("audit", gen):
             return
+        seen = {(a["time"], a["who"], a["action"], a["detail"]) for a in self.audit}
         for e in d.get("data", []):
             actor = ((e.get("actor") or {}).get("user") or {}).get("username", "")
             desc = e.get("description") or {}
             detail = ", ".join(f"{k}: {v}" for k, v in desc.items() if v not in (None, "", 0)) if isinstance(desc, dict) else str(desc)
-            self.audit.append({"time": e.get("created"), "who": actor, "action": e.get("actionType", ""), "detail": detail})
+            entry = {"time": e.get("created"), "who": actor, "action": e.get("actionType", ""), "detail": detail}
+            key = (entry["time"], entry["who"], entry["action"], entry["detail"])
+            if key in seen:                                    # (never the same entry twice)
+                continue
+            seen.add(key)
+            self.audit.append(entry)
         self.audit_cursor = d.get("nextPageCursor")
         self.b_more_a.setEnabled(bool(self.audit_cursor))
         kinds = sorted({a["action"] for a in self.audit})

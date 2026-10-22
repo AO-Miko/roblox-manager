@@ -405,6 +405,82 @@ check("...and nothing was sent to Roblox", not client.calls or all(c[0] == "GET"
 QInputDialog.getItem, QMessageBox.information = saved_getitem, saved_info
 w.groups.select(88); wait(lambda: w.groups.title.text() == "Other Club")
 
+# ---- 'Load more' pressed again and again, and a name that 'Load more' has not reached
+w.groups.select(77)
+wait(lambda: w.groups.title.text() == "Cool Club" and w.groups.mtable.rowCount() == 2)
+real_members, real_search = client.group_members, getattr(client, "group_search_members", None)
+asked_pages = []
+PAGES = {"p2": ([U(41, "frank"), U(42, "gina")], "p3"), "p3": ([U(43, "hank"), U(21, "dave")], None)}          # (page 3 repeats dave: he must not be listed twice)
+
+
+def slow_members(gid, role_id=None, cursor=None, limit=50, sort="Asc"):
+    asked_pages.append(cursor)
+    time.sleep(0.4)                                          # the page is 'on its way' while the person presses Load more again
+    users, nxt = PAGES.get(cursor, ([], None))
+    return {"data": [{"user": u, "role": ROLES[1]} for u in users], "nextPageCursor": nxt}
+
+
+client.group_members = slow_members
+w.groups.members_cursor = "p2"; w.groups.b_more_m.setEnabled(True)
+for _ in range(6):
+    w.groups.b_more_m.click(); w.groups.load_members(reset=False); spin(0.02)
+check("pressing Load more again and again asks Roblox for the page only once", asked_pages == ["p2"], asked_pages)
+check("...the button is off while the page is on its way", not w.groups.b_more_m.isEnabled())
+check("...and the page arrives once: frank and gina are listed one time each", wait(lambda: len(w.groups.members) == 4 and w.groups.b_more_m.isEnabled()) and sorted(m["username"] for m in w.groups.members) == ["dave", "erin", "frank", "gina"], [m["username"] for m in w.groups.members])
+w.groups.b_more_m.click(); spin(0.1)
+w.groups.b_more_m.click()
+check("the next page is asked for after the first one, once", wait(lambda: asked_pages == ["p2", "p3"] and not w.groups.b_more_m.isEnabled()), asked_pages)
+check("a person who is on two pages (dave) is listed once, the rows are not multiplied", wait(lambda: sorted(m["username"] for m in w.groups.members) == ["dave", "erin", "frank", "gina", "hank"]) and w.groups.mtable.rowCount() == 5, (sorted(m["username"] for m in w.groups.members), w.groups.mtable.rowCount()))
+check("...no more pages: the button stays off", not w.groups.b_more_m.isEnabled() and w.groups.members_cursor is None)
+
+# a new list (reset) while a page is on its way: the old answer is thrown away
+asked_pages.clear(); w.groups.members_cursor = "p2"; w.groups.load_members(reset=False); spin(0.05)
+client.group_members = real_members
+w.groups.load_members(reset=True)
+check("an answer that comes after the list was reset does not mix into the new list", wait(lambda: len(w.groups.members) == 2 and w.groups.mtable.rowCount() == 2) and (spin(0.6) or True) and len(w.groups.members) == 2 and
+      sorted(m["username"] for m in w.groups.members) == ["dave", "erin"], [m["username"] for m in w.groups.members])
+
+# the search finds members that are not loaded
+searched = []
+
+
+def fake_search(gid, keyword, cursor=None, limit=100):
+    searched.append(keyword)
+    return {"data": [{"user": U(55, "zelda"), "role": ROLES[1]}] if "zelda".startswith(keyword.lower()) else []}
+
+
+client.group_search_members = fake_search
+w.groups.member_filter.setText("zel")
+check("a username that Load more has not reached is found by Roblox's search and shown", wait(lambda: any(w.groups.mtable.item(r, 1).text() == "zelda" for r in range(w.groups.mtable.rowCount()))) and searched == ["zel"], (searched, w.groups.mtable.rowCount()))
+check("...it says how many came from the search", "found by search" in w.groups.mcount.text(), w.groups.mcount.text())
+check("...the loaded members are not in the way (nothing else matches)", w.groups.mtable.rowCount() == 1)
+w.groups.mtable.selectRow(0)
+check("...and the found member can be selected for an action", (w.groups._member_selected() or {}).get("id") == 55)
+w.groups.member_filter.setText("")
+check("clearing the box brings back the loaded members only", wait(lambda: w.groups.mtable.rowCount() == 2 and not w.groups.search_hits), w.groups.mtable.rowCount())
+searched.clear()
+w.groups.member_filter.setText("d"); spin(0.8)
+check("one letter is not searched (too many results), it only filters the loaded ones", not searched and w.groups.mtable.rowCount() == 1)
+w.groups.member_filter.setText("da"); spin(0.8)
+check("...a member that is both loaded and found is listed once", searched == ["da"] and w.groups.mtable.rowCount() == 1 and w.groups.mtable.item(0, 1).text() == "dave", (searched, w.groups.mtable.rowCount()))
+w.groups.member_filter.setText("zel")
+w.groups.member_filter.setText("zelx"); spin(0.9)
+check("typing on: only the answer for what is in the box now is used", w.groups.mtable.rowCount() == 0, [w.groups.mtable.item(r, 1).text() for r in range(w.groups.mtable.rowCount())])
+
+# the search is not available (Roblox refuses it): the exact username is looked up instead
+def refuse(*a, **k): raise rbx.RobloxError("not available", 404)
+
+
+client.group_search_members = refuse
+real_by_name, real_get = client.user_by_name, client.get
+client.user_by_name = lambda name: {"id": 66, "name": "yoshi", "displayName": "Yoshi"} if name == "yoshi" else None
+client.get = lambda url, params=None, **k: ({"data": [{"group": {"id": 77}, "role": ROLES[1]}]} if "/users/66/groups/roles" in url else real_get(url, params, **k))
+w.groups.member_filter.setText("yoshi"); spin(0.9)
+check("without the search, the exact username is looked up and its membership checked", [w.groups.mtable.item(r, 1).text() for r in range(w.groups.mtable.rowCount())] == ["yoshi"], [w.groups.mtable.item(r, 1).text() for r in range(w.groups.mtable.rowCount())])
+client.user_by_name, client.get = real_by_name, real_get
+client.group_search_members = real_search
+w.groups.member_filter.setText(""); spin(0.2)
+
 # ---------------------------------------------------------------- VIP servers
 import tab_vip
 check("ALL my VIP servers load by themselves on sign-in", wait(lambda: w.vip.mtable.rowCount() == 3))

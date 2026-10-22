@@ -849,6 +849,13 @@ class Client:
             params["cursor"] = cursor
         return self.get(url, params)
 
+    def group_search_members(self, gid, keyword, cursor=None, limit=100):
+        """Members of a group whose username or display name matches `keyword`, searched by Roblox (so people that 'Load more' has not reached yet are found)."""
+        params = {"keyword": keyword, "limit": limit, "sortOrder": "Asc"}
+        if cursor:
+            params["cursor"] = cursor
+        return self.get(f"https://groups.roblox.com/v1/groups/{int(gid)}/search-members", params)
+
     def group_join_requests(self, gid, cursor=None, limit=50):
         params = {"limit": limit, "sortOrder": "Asc"}
         if cursor:
