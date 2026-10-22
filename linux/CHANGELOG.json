@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.13.3.2.3",
+    "date": "2026-10-22",
+    "changes": [
+      "Servers: sort by ping, FPS, players, and by how long a server has been running; a Running for column",
+      "Location and uptime on a game's page, with a world map of where the servers are (PC and phone). It asks Roblox about each server the way the Play button does; nothing is joined",
+      "Locations come from RoSeal's list of Roblox data centres or from ipwho.is, and nothing is contacted until you agree (asked once, switches in Settings)",
+      "Backups are written safely (no half-written file)"
+    ]
+  },
+  {
     "version": "1.12.3.2.3",
     "date": "2026-10-22",
     "changes": [
