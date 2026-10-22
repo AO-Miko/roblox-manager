@@ -20,7 +20,7 @@ Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/r
 | **API Explorer** (PC) | send any Roblox web API request and read the answer |
 | **Staff List** | who is on the staff, from the owner down, with their Roblox profiles (see [docs/ADMIN.md](docs/ADMIN.md)) |
 | **Admin** (PC; overview on the phone) | ban and unban Roblox user ids; only for accounts with the admin role or higher |
-| **Info** | settings, updates (with the Beta channel choice) and the update log: what changed in each version |
+| **Settings** | preferences, updates (with the Beta channel choice) and the update log: what changed in each version |
 
 ## About this project
 
@@ -68,7 +68,7 @@ This puts the app in `~/.local/share/roblox-manager`, the `roblox-manager` comma
 menu entry. Start it from the menu or with `roblox-manager`. Sign in on the **Home** page.
 
 **Updates:** every time you start it, the launcher checks this repository (a few seconds at most, never blocking) and installs a newer version if the
-commit is signed by the release key. *Info → Updates* shows the version, lets you check now, choose the **Stable or Beta channel**, and go back to the previous version.
+commit is signed by the release key. *Settings → Updates* shows the version, lets you check now, choose the **Stable or Beta channel**, and go back to the previous version.
 Uninstall: delete `~/.local/share/roblox-manager`, `~/.local/bin/roblox-manager` and `~/.local/share/applications/roblox-manager.desktop`
 (your settings stay in `~/.config/roblox-manager` until you delete them).
 
@@ -94,7 +94,7 @@ Windows 10 or 11 (64-bit). Nothing else needs to be installed: it brings its own
 
 **Updates:** every time you start it, the app asks GitHub for the newest release (a few seconds at most, never blocking). If there is one, it
 downloads the signed update package, checks that it is signed with the release key and is newer, and installs it; the next start uses it.
-*Info → Updates* shows the version, checks now, lets you choose the **Stable or Beta channel**, and goes back to the previous version. Re-running a newer setup also works.
+*Settings → Updates* shows the version, checks now, lets you choose the **Stable or Beta channel**, and goes back to the previous version. Re-running a newer setup also works.
 
 ## Install on Android
 
@@ -107,7 +107,7 @@ Android 8.0 or newer.
 
 **Updates:** at every start the app checks this repository for a newer build, downloads it, verifies its checksum and offers an **Install** button
 (Android always asks you to confirm an install; it only accepts an update signed with the same key as the installed app, so keep updating from this
-repository rather than from other copies). *Info → Updates* shows the status and the update address, and has the **Beta channel** switch.
+repository rather than from other copies). *Settings → Updates* shows the status and the update address, and has the **Beta channel** switch.
 
 To verify a download, compare it with `SHA256SUMS.txt` from the same release (`sha256sum -c SHA256SUMS.txt`).
 
@@ -118,7 +118,7 @@ To verify a download, compare it with `SHA256SUMS.txt` from the same release (`s
   does not fit scrolls instead of forcing the window wide.
 - **Ctrl+K** opens a search that jumps to any page, setting or account, and to any friend, group, VIP server or staff member that is loaded. **Ctrl+1 ... Ctrl+9** open the
   pages in order and **F5** (or the reload button in the page header) reloads the page you are on.
-- **Phone:** four main pages and **More** (Money, Request log, Staff List, Admin overview, Info) are in a bottom bar. The magnifier at the top searches pages and settings, the
+- **Phone:** four main pages and **More** (Money, Request log, Staff List, Admin overview, Settings) are in a bottom bar. The magnifier at the top searches pages and settings, the
   round button switches accounts from any page, sections have arrows that fold them (More, Settings, Home), and pages you have opened keep what they loaded.
 
 ## Versions
@@ -128,7 +128,7 @@ go down; only a complete rework (R) sets the other four back to 0. Details in [d
 
 ## Stable and Beta
 
-In *Info → Updates* (PC and phone) you can join the **Beta channel**: you get every new version before it goes to everybody else (less tested, may have bugs). Beta versions live on the
+In *Settings → Updates* (PC and phone) you can join the **Beta channel**: you get every new version before it goes to everybody else (less tested, may have bugs). Beta versions live on the
 `beta` branch and are published as GitHub pre-releases. You can go back to Stable at any time and keep your version until Stable catches up: nothing older is ever installed.
 
 ## How your data is handled
@@ -151,7 +151,7 @@ with me, no analytics, no telemetry and no ads.
 
 **What is saved on your device** (nothing is uploaded)
 - A list of your saved accounts (user id and name; the cookies are stored encrypted as above) and the app's settings.
-- A cache of names and profile pictures of people the app has shown, so it doesn't ask Roblox again (clear it any time under Info → Settings).
+- A cache of names and profile pictures of people the app has shown, so it doesn't ask Roblox again (clear it any time under Settings → Preferences).
 - A **request log** of what the app asked Roblox (address, answer code and timing). It never contains cookies, passwords, codes or request bodies, and
   secret-looking parts of an address are masked. It can be switched off and cleared in Settings.
 - On Linux, small records of bulk actions you ran (for example which friends you removed), so you can look back at what happened.
@@ -195,6 +195,12 @@ Pull requests from forks are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Th
 The apps update from two other branches that only receive signed release commits: `release` (Stable) and `beta` (Beta). To report a security problem privately, see
 [SECURITY.md](SECURITY.md). Everyone is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## License
+
+Roblox Manager is free software under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)). Copyright (C) 2026 AO-Miko.
+You may use, study, share and change it. If you share a changed version, you must keep the copyright notices and publish its source under the same license.
+It comes with **no warranty**. The license covers the code, not the name or Roblox's own trademarks.
+
 ## For maintainers
 
 ```
@@ -205,5 +211,5 @@ tools/roles.sh set|remove|list ...                                     the signe
 ```
 
 `release.sh` works out the next version from the kind of change, builds and signs everything, updates `dist/update.json`, pushes the branch and publishes a GitHub release (a
-**pre-release** with `--beta`, from the `beta` branch). The `|` splits the bullets of the update log shown in the apps under **Info → Updates**. See
+**pre-release** with `--beta`, from the `beta` branch). The `|` splits the bullets of the update log shown in the apps under **Settings → Updates**. See
 [docs/UPDATES.md](docs/UPDATES.md) for how updates, channels and keys work, and [docs/ADMIN.md](docs/ADMIN.md) for roles and bans.

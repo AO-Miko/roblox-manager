@@ -7,7 +7,7 @@ One GitHub repository is the update server for all three apps. Everything is pub
 | Reads | the `linux/` folder of the newest commit (needs `git`) | the newest GitHub release: `roblox-manager-app-X.Y.Z.F.D.tar.gz` + `.sig` | `dist/update.json` and `dist/roblox-manager.apk` |
 | When | every launch (`roblox-manager` launcher runs `updater.py --boot`) | every launch (`launcher.py` runs the same updater) | every start of the app |
 | Trust | the commit must be SSH-signed by the key in `tools/trust/allowed_signers`, and descend from the installed one (no rollbacks) | the package must be SSH-signed (`ssh-keygen -Y sign -n roblox-manager-release`) by that key, checked in plain Python (`sshsig.py`), must be newer, and its `VERSION` must match the release | APK SHA-256 must match `update.json`; Android only installs it if signed with the same key as the installed app |
-| Install | automatic, previous version kept for rollback (Info → Updates → Go back) | automatic, previous version kept for rollback | Android always asks the user to confirm the install (one-time "allow installs from this app") |
+| Install | automatic, previous version kept for rollback (Settings → Updates → Go back) | automatic, previous version kept for rollback | Android always asks the user to confirm the install (one-time "allow installs from this app") |
 
 The Linux and Windows apps are the same code (`linux/` folder). The differences are isolated in `linux/plat.py` (folders), `linux/vault.py` (DPAPI instead of
 a Secret Service wallet) and `linux/updater.py` (release backend instead of git).
@@ -27,7 +27,7 @@ a Secret Service wallet) and `linux/updater.py` (release backend instead of git)
 tools/release.sh small "one change|another change" --push        # KIND: rework | big | small | fix | design (see "Version numbers")
 ```
 
-It works out the next version from KIND and bumps it, adds the entry to the update log (`CHANGELOG.json`, shown in the apps under Info → Updates), runs the Android unit tests, builds the
+It works out the next version from KIND and bumps it, adds the entry to the update log (`CHANGELOG.json`, shown in the apps under Settings → Updates), runs the Android unit tests, builds the
 signed APK, writes `dist/update.json`, makes a signed commit and tag, builds the signed app package and the Windows zip (`tools/build_windows.py`, no Windows
 machine needed), pushes, and publishes the GitHub Release with the APK, the Linux package, the Windows zip, the signed app package and `SHA256SUMS.txt`.
 The release starts as a draft and is published after all files are uploaded; publishing starts the `Windows` workflow, which tests the Windows package on a
@@ -69,9 +69,9 @@ The program is not signed with a paid code-signing certificate, so Windows Smart
 The server is the public GitHub repository `AO-Miko/roblox-manager`, branch `release` (`origin`). The old local bare repository is kept as the
 `local` remote.
 
-- Linux: Info → Updates → *Update server* = `https://github.com/AO-Miko/roblox-manager.git`.
+- Linux: Settings → Updates → *Update server* = `https://github.com/AO-Miko/roblox-manager.git`.
 - Windows: the same field, `https://github.com/AO-Miko/roblox-manager` (set on first start).
-- Android: built in as `https://raw.githubusercontent.com/AO-Miko/roblox-manager/release/dist/` (Info → Updates). The first APK is installed by hand.
+- Android: built in as `https://raw.githubusercontent.com/AO-Miko/roblox-manager/release/dist/` (Settings → Updates). The first APK is installed by hand.
 
 The repository is public, so it contains only source, the signed APK and public keys, never cookies or secrets. Never commit anything from
 `~/.config/roblox-manager-release/`.
@@ -113,7 +113,7 @@ It is checked at every start and every ten minutes.
 
 ## Beta channel
 
-Settings > Updates (PC) and Info > Updates (phone) have a **Beta channel** choice. Beta gets every update **before** it goes to everybody else:
+Settings > Updates (PC and phone) have a **Beta channel** choice. Beta gets every update **before** it goes to everybody else:
 
 | | Stable (default) | Beta |
 |---|---|---|

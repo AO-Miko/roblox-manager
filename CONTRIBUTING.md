@@ -67,6 +67,6 @@ passwords or account details in a test, a log or a pull request.
 - User-visible changes are described in the pull request so the maintainer can add them to the update log (`CHANGELOG.json` is written at release time; please
   don't edit it).
 
-By contributing you agree that your contribution can be distributed under the same terms as the rest of the project.
+By contributing you agree that your contribution is licensed under the project license, the GNU GPL v3.0 (see [LICENSE](LICENSE)). You keep the copyright on what you wrote.
 
 Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
