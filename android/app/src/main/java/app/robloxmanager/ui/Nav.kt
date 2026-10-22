@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Groups
@@ -106,10 +108,13 @@ fun matchHits(hits: List<Hit>, query: String): List<Hit> {
 }
 
 @Composable
-fun TopBar(title: String, onBack: (() -> Unit)?, accounts: List<Account>, me: Account?, onSwitch: (Account) -> Unit, onAdd: () -> Unit, onSearch: () -> Unit) {
+fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: List<Account>, me: Account?, onSwitch: (Account) -> Unit, onAdd: () -> Unit, onSearch: () -> Unit) {
     Row(Modifier.fillMaxWidth().background(C.bg).statusBarsPadding().padding(start = if (onBack != null) 4.dp else 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
-        Text(title, Modifier.weight(1f), fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (subtitle.isNotEmpty()) Text(subtitle, color = C.muted, fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
         IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "Search") }
         var open by remember { mutableStateOf(false) }
         Box {
@@ -149,17 +154,27 @@ fun BottomBar(current: String, counts: Map<String, Int>, onPick: (Dest) -> Unit)
     }
 }
 
+/** More: the rest of the pages in groups (Tools, Staff, App); a group folds with its arrow. */
 @Composable
 fun MoreScreen(admin: Boolean, onOpen: (Dest) -> Unit) {
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        IN_MORE.filter { admin || it != ADMIN }.forEach { d ->
-            Card(onClick = { onOpen(d) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3), Alignment.Center) { Icon(d.icon, null, tint = C.accent) }
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(d.title, fontWeight = FontWeight.SemiBold)
-                        Text(d.hint, color = C.muted, fontSize = 12.sp)
+    val groups = listOf("TOOLS" to listOf(MONEY, LOG), "STAFF" to listOf(STAFF, ADMIN), "APP" to listOf(INFO))
+    Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 8.dp)) {
+        groups.forEach { (name, dests) ->
+            val shown = dests.filter { admin || it != ADMIN }
+            if (shown.isNotEmpty()) Section(name, collapsible = true) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    shown.forEach { d ->
+                        Card(onClick = { onOpen(d) }) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3), Alignment.Center) { Icon(d.icon, null, tint = C.accent) }
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(d.title, fontWeight = FontWeight.SemiBold)
+                                    Text(d.hint, color = C.muted, fontSize = 12.sp)
+                                }
+                                Icon(androidx.compose.material.icons.Icons.Outlined.ChevronRight, null, tint = C.muted)
+                            }
+                        }
                     }
                 }
             }

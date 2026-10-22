@@ -131,7 +131,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
     key(me?.id) {
         Column(Modifier.fillMaxSize()) {
             TopBar(
-                title = ALL.firstOrNull { it.id == dest }?.title ?: MORE.title, onBack = if (inMore) ({ open(MORE.id) }) else null,
+                title = (ALL.firstOrNull { it.id == dest } ?: MORE).title, subtitle = (ALL.firstOrNull { it.id == dest } ?: MORE).hint, onBack = if (inMore) ({ open(MORE.id) }) else null,
                 accounts = accounts, me = me, onAdd = addAccount, onSearch = { searching = true },
                 onSwitch = { a -> sv.scope.launch { try { sv.switchTo(a.id) } catch (_: Exception) { } } },
             )

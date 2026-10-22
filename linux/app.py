@@ -83,11 +83,14 @@ class MainWindow(QMainWindow):
         self.acct_combo.setToolTip("The account in use. Pick another to switch to it, or add one.")
         self.acct_combo.activated.connect(self._account_picked)
         import updater
-        self.sidebar = nav.Sidebar(self.tabs, self.acct_combo, f"Version {updater.version()}")
+        self.sidebar = nav.Sidebar(self.tabs, self.acct_combo, f"Version {updater.version()}" + ("  (beta)" if updater.load_config().get("channel") == "beta" else ""))
         self.sidebar.picked.connect(self.tabs.setCurrentIndex)
         self.sidebar.search_requested.connect(self.open_search)
         self.header = nav.PageHeader()
+        self.header.reload_requested.connect(self.reload_page)
+        self.sidebar.layout_changed.connect(self._save_state)
         self.tabs.currentChanged.connect(lambda i: self.header.show_page(self.tabs.tabText(i)))
+        self.tabs.currentChanged.connect(lambda i: self.header.set_reloadable(self._reloadable(self.tabs.widget(i).page)))
         self.tabs.currentChanged.connect(lambda i: self.setWindowTitle(f"{nav.base_title(self.tabs.tabText(i))[0]} - Roblox Manager"))
         right = QWidget()
         rl = QVBoxLayout(right)
@@ -130,9 +133,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
-        compact = self.width() < 1000            # a narrow window keeps only the icons, so the pages get the room
-        if compact != (self.sidebar.width() == self.sidebar.COMPACT):
-            self.sidebar.set_compact(compact)
+        self.sidebar.set_auto_compact(self.width() < 1000)            # a narrow window keeps only the icons, so the pages get the room
 
     # ---- search (Ctrl+K) and reload (F5)
     def current_page(self):
@@ -187,10 +188,16 @@ class MainWindow(QMainWindow):
             if self.staff.list.item(i).data(Qt.ItemDataRole.UserRole) == uid:
                 self.staff.list.setCurrentRow(i)
 
+    RELOADERS = ("load", "load_groups", "load_mine")
+
+    def _reloadable(self, page):
+        inner = page.tabs.currentWidget() if page is self.people else page
+        return any(callable(getattr(inner, name, None)) for name in self.RELOADERS)
+
     def reload_page(self):
         page = self.current_page()
         inner = page.tabs.currentWidget() if page is self.people else page
-        for name in ("load", "load_groups", "load_mine"):
+        for name in self.RELOADERS:
             fn = getattr(inner, name, None)
             if callable(fn) and self.ctx.client.has_cookie:
                 fn()
@@ -268,6 +275,7 @@ class MainWindow(QMainWindow):
             st = json.loads(self.STATE_FILE.read_text())
             if st.get("geometry"):
                 self.restoreGeometry(QByteArray.fromBase64(st["geometry"].encode()))
+            self.sidebar.restore(st)
             self.tabs.setCurrentIndex(min(int(st.get("tab", 0)), self.tabs.count() - 1))
             self.people.tabs.setCurrentIndex(min(int(st.get("people_tab", 0)), self.people.tabs.count() - 1))
             for k, cb in self.vip.hide.items():
@@ -282,7 +290,8 @@ class MainWindow(QMainWindow):
             return
         st = {"geometry": bytes(self.saveGeometry().toBase64()).decode(), "tab": self.tabs.currentIndex(),
               "people_tab": self.people.tabs.currentIndex(), "vip_hide": {k: cb.isChecked() for k, cb in self.vip.hide.items()},
-              "vip_columns": bytes(self.vip.mtable.horizontalHeader().saveState().toBase64()).decode(), "vip_columns_version": self.COLUMNS_VERSION}
+              "vip_columns": bytes(self.vip.mtable.horizontalHeader().saveState().toBase64()).decode(), "vip_columns_version": self.COLUMNS_VERSION,
+              **self.sidebar.state()}
         try:
             self.STATE_FILE.write_text(json.dumps(st))
         except OSError:

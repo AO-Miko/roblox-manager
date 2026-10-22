@@ -66,7 +66,7 @@ fun HomeScreen(sv: Services, onAddAccount: () -> Unit) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box2("Robux", robux.value?.let { "R$ ${fmt.format(it)}" } ?: "…", Modifier.weight(1f))
+            Box2("Robux", robux.value?.let { "R$ ${fmt.format(it)}" } ?: "…", Modifier.weight(1f), accent = true)
             Box2("Pending", pending.value?.let { fmt.format(it) } ?: "…", Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -77,7 +77,7 @@ fun HomeScreen(sv: Services, onAddAccount: () -> Unit) {
         }
         QuietButton("↻ Refresh") { avatar.load(); robux.load(); pending.load(); counts.load(); premium.load() }
 
-        Section("ACCOUNTS") {
+        Section("ACCOUNTS", collapsible = true) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 accounts.forEach { a ->
                     Card {
@@ -109,8 +109,8 @@ fun HomeScreen(sv: Services, onAddAccount: () -> Unit) {
 }
 
 @Composable
-private fun Box2(title: String, value: String, modifier: Modifier) = Card(modifier) {
-    Column { Text(title, color = C.muted, fontSize = 12.sp); Text(value, fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
+private fun Box2(title: String, value: String, modifier: Modifier, accent: Boolean = false) = Card(modifier) {
+    Column { Text(title, color = C.muted, fontSize = 12.sp); Text(value, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = if (accent) C.accent else C.text) }
 }
 
 @Composable
@@ -127,7 +127,7 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
     var confirmSignOut by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        if (part == "updates") Section("UPDATES") {
+        if (part == "updates") Section("UPDATES", collapsible = true) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})", fontWeight = FontWeight.Medium)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -148,14 +148,14 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
             }
         }
         if (part == "updates") UpdateLog()
-        if (part == "settings") Section("RATE LIMITS") {
+        if (part == "settings") Section("RATE LIMITS", collapsible = true) {
             Column {
                 Text("How much of a route's limit a read may use at once: ${(burst * 100).toInt()}%", fontSize = 13.sp)
                 Slider(burst, { burst = it }, valueRange = 0.1f..1f, onValueChangeFinished = { sv.client.readBurst = burst.toDouble(); sv.prefs.put("readBurst", burst.toDouble()) })
                 Text("Changes (unfriend, leave, switch on …) are always spread out evenly. Lower = gentler on Roblox, slower lists.", color = C.muted, fontSize = 12.sp)
             }
         }
-        if (part == "settings") Section("LOGS AND CACHE") {
+        if (part == "settings") Section("LOGS AND CACHE", collapsible = true) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(logFile, { logFile = it; sv.log.writeFile = it; sv.prefs.put("logToFile", it) }); Spacer(Modifier.width(8.dp)); Text("Keep the request log in a file")
@@ -167,7 +167,7 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
                 Text("The log never contains your cookie, passwords, codes or request bodies.", color = C.muted, fontSize = 12.sp)
             }
         }
-        if (part == "settings") Section("ACCOUNT") { DangerButton("Sign out") { confirmSignOut = true } }
+        if (part == "settings") Section("ACCOUNT", collapsible = true) { DangerButton("Sign out") { confirmSignOut = true } }
         if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)
     }
     if (askBeta) Confirm("Beta versions", "Beta versions get every update before it goes to everybody else. They are less tested and may have bugs.\n\nYou can go back to Stable at any time: you then keep the version you have until Stable catches up.", "Join the beta", false,
@@ -182,7 +182,7 @@ fun UpdateLog() {
     val entries = remember {
         try { app.robloxmanager.core.Changelog.parse(ctx.assets.open("changelog.json").bufferedReader().use { it.readText() }) } catch (_: Exception) { emptyList() }
     }
-    Section("UPDATE LOG") {
+    Section("UPDATE LOG", collapsible = true) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (entries.isEmpty()) Text("No update log is available.", color = C.muted)
             entries.forEach { e ->

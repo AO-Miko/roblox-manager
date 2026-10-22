@@ -74,6 +74,17 @@ def icon_path(name):
         p.lineTo(4.5, 6.5); p.closeSubpath(); p.moveTo(9, 12); p.lineTo(11.2, 14.2); p.lineTo(15.2, 9.8)
     elif name == "Info":
         p.moveTo(4, 7); p.lineTo(20, 7); p.moveTo(4, 17); p.lineTo(20, 17); p.addEllipse(QPointF(9, 7), 2.2, 2.2); p.addEllipse(QPointF(15, 17), 2.2, 2.2)
+    elif name == "chevron_down":
+        p.moveTo(6, 9.5); p.lineTo(12, 15.5); p.lineTo(18, 9.5)
+    elif name == "chevron_right":
+        p.moveTo(9.5, 6); p.lineTo(15.5, 12); p.lineTo(9.5, 18)
+    elif name == "menu_close":             # the side bar is open: arrows pointing in
+        p.moveTo(11, 7); p.lineTo(6, 12); p.lineTo(11, 17); p.moveTo(18, 7); p.lineTo(13, 12); p.lineTo(18, 17)
+    elif name == "menu_open":              # the side bar is closed: arrows pointing out
+        p.moveTo(6, 7); p.lineTo(11, 12); p.lineTo(6, 17); p.moveTo(13, 7); p.lineTo(18, 12); p.lineTo(13, 17)
+    elif name == "reload":
+        p.moveTo(19, 12); p.cubicTo(19, 16, 15.5, 19, 12, 19); p.cubicTo(8, 19, 5, 16, 5, 12); p.cubicTo(5, 8, 8, 5, 12, 5); p.cubicTo(14.5, 5, 16.8, 6.3, 18, 8.2)
+        p.moveTo(18.5, 4.5); p.lineTo(18.5, 8.5); p.lineTo(14.5, 8.5)
     elif name == "search":
         p.addEllipse(QPointF(10.5, 10.5), 5.8, 5.8); p.moveTo(15, 15); p.lineTo(20, 20)
     return p
@@ -183,6 +194,88 @@ class NavItem(QAbstractButton):
         p.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, fm.elidedText(self.title, Qt.TextElideMode.ElideRight, int(text_rect.width())))
 
 
+class IconButton(QAbstractButton):
+    """A small round-cornered button with a line icon (collapse the menu, reload)."""
+
+    def __init__(self, icon, tip="", size=30, parent=None):
+        super().__init__(parent)
+        self.icon_name = icon
+        self.setToolTip(tip)
+        self.setAccessibleName(tip or icon)
+        self.setFixedSize(size, size)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._hover = False
+
+    def set_icon(self, name, tip=None):
+        self.icon_name = name
+        if tip is not None:
+            self.setToolTip(tip)
+            self.setAccessibleName(tip)
+        self.update()
+
+    def enterEvent(self, ev):
+        self._hover = True; self.update()
+
+    def leaveEvent(self, ev):
+        self._hover = False; self.update()
+
+    def paintEvent(self, ev):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if self._hover or self.isDown():
+            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["surface2"]))
+            p.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
+        s = min(self.width(), self.height()) - 12
+        draw_icon(p, self.icon_name, QRectF((self.width() - s) / 2, (self.height() - s) / 2, s, s), T["text"] if self._hover else T["muted"], 1.8)
+
+
+class GroupHeader(QAbstractButton):
+    """The name of a group of pages (SOCIAL, ROBLOX ...) with an arrow: press it to hide or show the pages of the group."""
+
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        self.setText(text)
+        self.collapsed = False
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setAccessibleName(text)
+        self._hover = False
+        self._tip()
+
+    def _tip(self):
+        self.setToolTip(f"Show {self.text().title()}" if self.collapsed else f"Hide {self.text().title()}")
+
+    def set_collapsed(self, v):
+        self.collapsed = bool(v)
+        self._tip()
+        self.update()
+
+    def sizeHint(self):
+        return QSize(190, 26)
+
+    def minimumSizeHint(self):
+        return QSize(60, 26)
+
+    def enterEvent(self, ev):
+        self._hover = True; self.update()
+
+    def leaveEvent(self, ev):
+        self._hover = False; self.update()
+
+    def paintEvent(self, ev):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(2, 1, -2, -1)
+        if self._hover:
+            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["surface"])); p.drawRoundedRect(r, 6, 6)
+        f = self.font(); f.setPixelSize(10); f.setWeight(f.Weight.Bold); f.setLetterSpacing(f.SpacingType.PercentageSpacing, 104)
+        p.setFont(f)
+        p.setPen(QColor(T["text"] if self._hover else T["muted"]))
+        p.drawText(QRectF(r.x() + 8, r.y(), r.width() - 34, r.height()), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, self.text())
+        draw_icon(p, "chevron_right" if self.collapsed else "chevron_down", QRectF(r.right() - 22, r.center().y() - 8, 16, 16), T["muted"], 2.0)
+
+
 class SearchButton(QAbstractButton):
     """The 'Search ... Ctrl+K' box at the top of the side bar."""
 
@@ -222,9 +315,11 @@ class SearchButton(QAbstractButton):
 
 
 class Sidebar(QFrame):
-    """The side bar: the account in use, a search box, the pages in groups, and the version at the bottom."""
+    """The side bar: the account in use, a search box, the pages in groups, and the version at the bottom.
+    It can be made narrow (icons only) with the button at the top or by a narrow window, and every group can be folded with its arrow."""
     picked = Signal(int)
     search_requested = Signal()
+    layout_changed = Signal()            # the person folded a group or collapsed the menu (the window remembers it)
     FULL, COMPACT = 224, 62
 
     def __init__(self, tabs, account_combo, version=""):
@@ -233,12 +328,18 @@ class Sidebar(QFrame):
         self.setProperty("sidebar", True)
         self.setFixedWidth(self.FULL)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 12, 10, 10)
+        lay.setContentsMargins(10, 10, 10, 10)
         lay.setSpacing(2)
+        top = QHBoxLayout()
+        top.setContentsMargins(0, 0, 0, 0)
         self.brand = QLabel("Roblox Manager")
         self.brand.setProperty("role", "brand")
-        lay.addWidget(self.brand)
-        lay.addSpacing(8)
+        self.toggle = IconButton("menu_close", "Collapse the menu")
+        self.toggle.clicked.connect(self.toggle_menu)
+        top.addWidget(self.brand, 1)
+        top.addWidget(self.toggle)
+        lay.addLayout(top)
+        lay.addSpacing(6)
         self.account = account_combo
         lay.addWidget(self.account)
         lay.addSpacing(6)
@@ -247,8 +348,11 @@ class Sidebar(QFrame):
         lay.addWidget(self.search)
         lay.addSpacing(8)
         self.items = []
-        self.group_labels = []
+        self.group_labels = []           # the GroupHeader buttons
         self.compact = False
+        self.manual_compact = False      # chosen with the button
+        self.auto_compact = False        # forced by a narrow window
+        self.collapsed = set()           # names of the folded groups, upper case
         last, label = None, None
         for i in range(tabs.count()):
             title = base_title(tabs.tabText(i))[0]
@@ -259,14 +363,15 @@ class Sidebar(QFrame):
             if group != last:
                 label = None
                 if group:
-                    label = QLabel(group.upper())
-                    label.setProperty("role", "group")
-                    lay.addSpacing(8)
+                    label = GroupHeader(group.upper())
+                    label.clicked.connect(lambda _=False, lab=label: self.toggle_group(lab.text()))
+                    lay.addSpacing(6)
                     lay.addWidget(label)
                     self.group_labels.append(label)
                 last = group
             it = NavItem(title)
             it.group_label = label
+            it.allowed = True            # False: the page is not for this account (Admin)
             it.set_title(tabs.tabText(i))
             it.clicked.connect(lambda _=False, n=i: self.picked.emit(n))
             lay.addWidget(it)
@@ -278,24 +383,53 @@ class Sidebar(QFrame):
         tabs.currentChanged.connect(self.sync)
         self.sync()
 
+    # ---- what is shown
     def sync(self, *_):
         cur = self.tabs.currentIndex()
         for i, it in enumerate(self.items):
             it.set_title(self.tabs.tabText(i))
             it.setChecked(i == cur)
+        self._apply()
+
+    def _apply(self):
+        """Show what should be shown: a page that is not for this account is hidden; the pages of a folded group are hidden (except the one in view)."""
+        for it in self.items:
+            folded = it.group_label is not None and it.group_label.text() in self.collapsed and not self.compact and not it.isChecked()
+            it.setVisible(it.allowed and not folded)
+        for lab in self.group_labels:
+            lab.setVisible(not self.compact and any(it.group_label is lab and it.allowed for it in self.items))
+            lab.set_collapsed(lab.text() in self.collapsed)
 
     def set_page_visible(self, title, visible):
         """Show or hide the entry of a page (the Admin page only exists for admins); a group name goes when all its pages are hidden."""
         for it in self.items:
             if it.title == title:
-                it.setVisible(visible)
-        self._sync_labels()
+                it.allowed = visible
+        self._apply()
 
-    def _sync_labels(self):
-        for lab in self.group_labels:
-            lab.setVisible(not self.compact and any(it.group_label is lab and not it.isHidden() for it in self.items))
+    # ---- fold a group
+    def toggle_group(self, name):
+        self.collapsed ^= {name}
+        self._apply()
+        self.layout_changed.emit()
+
+    # ---- narrow / wide
+    def toggle_menu(self):
+        self.manual_compact = not self.manual_compact
+        self._update_compact()
+        self.layout_changed.emit()
+
+    def set_auto_compact(self, narrow):
+        self.auto_compact = narrow
+        self._update_compact()
 
     def set_compact(self, compact):
+        """(kept for callers that set it directly) icons only or the full menu."""
+        self.auto_compact = compact
+        self._update_compact()
+
+    def _update_compact(self):
+        compact = self.manual_compact or self.auto_compact
         self.compact = compact
         self.setFixedWidth(self.COMPACT if compact else self.FULL)
         for w in [*self.items, self.search]:
@@ -303,27 +437,48 @@ class Sidebar(QFrame):
             w.update()
         for w in [self.brand, self.account, self.version]:
             w.setVisible(not compact)
-        self._sync_labels()
+        self.toggle.set_icon("menu_open" if compact else "menu_close", "Expand the menu" if compact else "Collapse the menu")
+        self._apply()
         for it in self.items:
             it.setToolTip(it.title + (f" ({it.badge})" if it.badge else ""))
 
+    # ---- remembered between runs
+    def state(self):
+        return {"menu_collapsed": self.manual_compact, "groups_collapsed": sorted(self.collapsed)}
+
+    def restore(self, st):
+        self.manual_compact = bool(st.get("menu_collapsed", False))
+        self.collapsed = {g for g in st.get("groups_collapsed", []) if isinstance(g, str)}
+        self._update_compact()
+
 
 class PageHeader(QWidget):
-    """Title and one line of help for the page in view."""
+    """Title and one line of help for the page in view, and a reload button for the pages that can be reloaded."""
+    reload_requested = Signal()
 
     def __init__(self):
         super().__init__()
         self.setProperty("header", True)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 12, 10, 8)
-        lay.setSpacing(0)
+        row = QHBoxLayout(self)
+        row.setContentsMargins(10, 12, 10, 8)
+        row.setSpacing(8)
+        col = QVBoxLayout()
+        col.setSpacing(0)
         self.title = QLabel()
         self.title.setProperty("role", "title")
         self.sub = QLabel()
         self.sub.setProperty("role", "hint")
         self.sub.setWordWrap(True)
-        lay.addWidget(self.title)
-        lay.addWidget(self.sub)
+        col.addWidget(self.title)
+        col.addWidget(self.sub)
+        row.addLayout(col, 1)
+        self.reload = IconButton("reload", "Reload this page (F5)", 34)
+        self.reload.clicked.connect(self.reload_requested)
+        self.reload.hide()
+        row.addWidget(self.reload, 0, Qt.AlignmentFlag.AlignTop)
+
+    def set_reloadable(self, on):
+        self.reload.setVisible(bool(on))
 
     def show_page(self, name):
         base = base_title(name)[0]

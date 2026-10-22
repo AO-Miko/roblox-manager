@@ -23,7 +23,7 @@ QToolTip { background: $surface3; color: $text; border: 1px solid $border2; padd
 
 /* tabs */
 QTabWidget::pane { border: none; border-top: 1px solid $border; background: $bg; top: -1px; }
-QTabBar { background: transparent; }
+QTabBar { background: transparent; qproperty-drawBase: 0; }
 QTabBar::tab { background: transparent; color: $muted; padding: 10px 16px; margin-right: 2px; border: none; border-bottom: 2px solid transparent; font-weight: 600; }
 QTabBar::tab:hover { color: $text; background: $surface; }
 QTabBar::tab:selected { color: $text; border-bottom: 2px solid $accent; }

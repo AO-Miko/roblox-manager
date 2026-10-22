@@ -38,6 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.outlined.ExpandMore
+import app.robloxmanager.services
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -140,12 +143,25 @@ fun <T> LoadView(l: Loader<T>, content: @Composable (T) -> Unit) {
     }
 }
 
+/** A titled block. With [collapsible] the title has an arrow: press it to hide or show what is inside (remembered between runs). */
 @Composable
-fun Section(title: String, content: @Composable () -> Unit) {
+fun Section(title: String, collapsible: Boolean = false, content: @Composable () -> Unit) {
+    val prefs = androidx.compose.ui.platform.LocalContext.current.services.prefs
+    var open by remember(title) { mutableStateOf(!collapsible || !prefs.bool("fold.$title", false)) }
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 0f else -90f, label = "arrow")
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(title, color = C.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(6.dp))
-        content()
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).let { if (collapsible) it.clickable { open = !open; prefs.put("fold.$title", !open) } else it }.padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, Modifier.weight(1f), color = C.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            if (collapsible) androidx.compose.material3.Icon(
+                androidx.compose.material.icons.Icons.Outlined.ExpandMore, if (open) "Hide $title" else "Show $title", Modifier.size(20.dp).rotate(turn), tint = C.muted,
+            )
+        }
+        androidx.compose.animation.AnimatedVisibility(open) {
+            Column { Spacer(Modifier.height(4.dp)); content() }
+        }
     }
 }
 

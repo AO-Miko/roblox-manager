@@ -108,5 +108,52 @@ check("a wide window brings the full side bar back", w.sidebar.width() == nav.Si
 # every page has an icon and a description
 check("every page has an icon, a group and a help line", all(not nav.icon_path(t).isEmpty() and nav.PAGES[t][1] for t in titles), titles)
 
+
+# ---- the menu can be collapsed, and every group can be folded
+import json
+sb = w.sidebar
+w.tabs.setCurrentIndex(0); spin(0.1)
+check("the menu has a collapse button at the top", sb.toggle.isVisible() and "Collapse" in sb.toggle.toolTip())
+sb.toggle.click(); spin(0.1)
+check("pressing it collapses the menu to icons (also in a wide window) and the button says Expand", sb.compact and sb.width() == nav.Sidebar.COMPACT and "Expand" in sb.toggle.toolTip() and sb.toggle.isVisible() and not sb.brand.isVisible())
+w.resize(1300, 760); spin(0.1)
+check("...and it stays collapsed when the window is wide", sb.width() == nav.Sidebar.COMPACT)
+sb.toggle.click(); spin(0.1)
+check("pressing again opens the menu", not sb.compact and sb.width() == nav.Sidebar.FULL and sb.brand.isVisible())
+heads = {h.text(): h for h in sb.group_labels}
+check("the groups have headers with an arrow: SOCIAL, ROBLOX, TOOLS, STAFF", list(heads) == ["SOCIAL", "ROBLOX", "TOOLS", "STAFF"], list(heads))
+social = [i for i in sb.items if i.group_label is heads["SOCIAL"]]
+check("all pages of a group are shown", all(i.isVisible() for i in social) and len(social) == 2)
+heads["SOCIAL"].click(); spin(0.1)
+check("pressing a group header hides its pages (and the header says so)", not any(i.isVisible() for i in social) and heads["SOCIAL"].collapsed and "Show" in heads["SOCIAL"].toolTip() and heads["ROBLOX"].isVisible())
+check("...the other groups are untouched", all(i.isVisible() for i in sb.items if i.group_label is heads["ROBLOX"]))
+w.tabs.setCurrentIndex(1); spin(0.1)
+check("a folded group still shows the page you are on", social[0].isVisible() and not social[1].isVisible(), [i.isVisible() for i in social])
+w.tabs.setCurrentIndex(0); spin(0.1)
+check("...and hides it again when you leave", not social[0].isVisible())
+w.resize(820, 700); spin(0.1)
+check("in the icon-only menu nothing is hidden by a fold (there are no headers to open it again)", all(i.isVisible() for i in social) and not heads["SOCIAL"].isVisible())
+w.resize(1180, 760); spin(0.1)
+heads["TOOLS"].click(); spin(0.1)
+w._state_on = True; w._save_state()
+saved = json.loads(w.STATE_FILE.read_text())
+check("which groups are folded and whether the menu is collapsed are remembered", saved["groups_collapsed"] == ["SOCIAL", "TOOLS"] and saved["menu_collapsed"] is False, saved.get("groups_collapsed"))
+sb.collapsed.clear(); sb._apply()
+sb.restore(saved); spin(0.1)
+check("...and come back after a restart", sb.collapsed == {"SOCIAL", "TOOLS"} and not social[0].isVisible())
+heads["SOCIAL"].click(); heads["TOOLS"].click(); spin(0.1)
+check("pressing the header again shows the pages", all(i.isVisible() for i in social) and not sb.collapsed)
+
+# ---- the reload button in the page header
+w.tabs.setCurrentIndex(0); spin(0.1)
+check("the header has a reload button only on pages that can be reloaded (not on Home)", not w.header.reload.isVisible())
+w.tabs.setCurrentIndex(w.tabs.indexOf(w.holders[w.vip])); spin(0.1)
+check("...it is there on VIP servers", w.header.reload.isVisible() and "F5" in w.header.reload.toolTip())
+reloaded = []
+w.reload_page = lambda: reloaded.append(1)
+w.header.reload_requested.disconnect()
+w.header.reload_requested.connect(w.reload_page)
+w.header.reload.click()
+check("...and it reloads the page", reloaded == [1])
 print(f"{sum(res)}/{len(res)} checks passed")
 sys.exit(0 if all(res) else 1)
