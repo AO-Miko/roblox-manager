@@ -1,7 +1,7 @@
 {
-  "versionName": "1.9.0.1.1",
-  "versionCode": 20,
+  "versionName": "1.9.1.1.1",
+  "versionCode": 21,
   "apk": "roblox-manager.apk",
-  "sha256": "251b600476af1f9084360cdd5bcafef3e960bc731d0b1f6e6e79f15f01ee4166",
-  "notes": "PC: a button collapses the side bar to icons, and every group (Social, Roblox, Tools, Staff) folds with an arrow; both are remembered|PC: a reload button in the page header, the beta label in the side bar, a stray line under the sub tabs is gone|Phone: sections fold with an arrow (More, Settings, Home accounts), More is grouped, the top bar says what the page is for, the Robux tile stands out"
+  "sha256": "3e3282e499f1c5c8d77793c1308119adffb3916ca9180f9f4d1ca22262859839",
+  "notes": "Admin: a ban needs a reason, and before banning the person's Roblox profile (picture, names, joined, followers, following, friends, description) is shown with the reason and an Are you sure question; only Yes bans, Cancel changes nothing|Fixed text that was cut off with wider Windows fonts (Updates channel names, Admin hints)"
 }

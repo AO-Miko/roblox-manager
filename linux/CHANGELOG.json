@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.9.1.1.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Admin: a ban needs a reason, and before banning the person's Roblox profile (picture, names, joined, followers, following, friends, description) is shown with the reason and an Are you sure question; only Yes bans, Cancel changes nothing",
+      "Fixed text that was cut off with wider Windows fonts (Updates channel names, Admin hints)"
+    ]
+  },
+  {
     "version": "1.9.0.1.1",
     "date": "2026-10-22",
     "changes": [
