@@ -9,6 +9,7 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -385,6 +386,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     var fav by remember(card.universeId) { mutableStateOf<Boolean?>(null) }
     var favBusy by remember { mutableStateOf(false) }
     var sort by remember { mutableStateOf("Asc") }
+    var order by remember { mutableStateOf("roblox") }
     var servers by remember(card.universeId) { mutableStateOf<List<ServerInfo>>(emptyList()) }
     var cursor by remember(card.universeId) { mutableStateOf("") }
     var srvBusy by remember(card.universeId) { mutableStateOf(false) }
@@ -497,6 +499,11 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 androidx.compose.material3.FilterChip(selected = sort == "Asc", onClick = { sort = "Asc" }, label = { Text("Fewest first") })
                 androidx.compose.material3.FilterChip(selected = sort == "Desc", onClick = { sort = "Desc" }, label = { Text("Most first") })
             }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Sort:", color = C.muted, fontSize = 12.sp)
+                Games.SERVER_ORDERS.forEach { (key, label) -> androidx.compose.material3.FilterChip(selected = order == key, onClick = { order = key }, label = { Text(label) }) }
+            }
+            Text("Sorts the servers loaded so far. Roblox does not say how long a server has been running.", color = C.muted, fontSize = 11.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuietButton(if (srvBusy) "Looking…" else "Find servers", enabled = !srvBusy && place != null) { findServers(true) }
                 QuietButton("Join the emptiest", enabled = place != null) {
@@ -512,7 +519,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
             if (srvNote.isNotEmpty()) Text(srvNote, color = C.muted, fontSize = 12.sp)
             if (servers.isNotEmpty()) Card {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    servers.forEach { s ->
+                    Games.sortServers(servers, order).forEach { s ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("${s.playing}/${s.max}", Modifier.width(64.dp), fontWeight = FontWeight.Medium)
                             Text((s.ping?.let { "$it ms" } ?: "-") + "   " + (s.fps?.let { "$it fps" } ?: ""), Modifier.weight(1f), color = C.muted, fontSize = 12.sp)

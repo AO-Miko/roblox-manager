@@ -465,6 +465,17 @@ check("Join selected without a selection asks to select one and opens nothing", 
 det.server_table.selectRow(1)
 det.join_selected()
 check("Join selected opens the launcher on that server (place id + server id)", launched[-1] == "roblox://experiences/start?placeId=11&gameInstanceId=aaaaaaaa-0000-0000-0000-000000000002", launched[-1])
+real_servers = det.servers
+det.servers = [{"id": "a", "playing": 5, "max": 12, "ping": 90, "fps": 30.0}, {"id": "b", "playing": 2, "max": 12, "ping": 40, "fps": 59.0},
+               {"id": "c", "playing": 9, "max": 12, "ping": None, "fps": None}, {"id": "d", "playing": 1, "max": 12, "ping": 40, "fps": 60.0}]
+check("the sort box has Roblox's order, ping, FPS and the player counts", [det.order.itemData(i) for i in range(det.order.count())] == ["roblox", "ping", "fps", "most", "fewest"])
+for mode, expect in (("roblox", "abcd"), ("ping", "bdac"), ("fps", "dbac"), ("most", "cabd"), ("fewest", "dbac")):
+    det.order.setCurrentIndex(det.order.findData(mode)); det._show_servers()
+    got = "".join(det.server_table.item(r, 4).text() for r in range(det.server_table.rowCount()))
+    check(f"sorting the loaded servers by '{mode}'" + (" (a server without a value goes last, ties keep Roblox's order)" if mode == "ping" else ""), got == expect, got)
+check("an unknown mode keeps Roblox's order", [s["id"] for s in tab_discover.sort_servers(det.servers, "nonsense")] == list("abcd"))
+det.servers = real_servers
+det.order.setCurrentIndex(0)
 det.sort.setCurrentIndex(1)
 det.b_servers.click()
 check("sorting by most players asks for Desc and starts the list again", wait(lambda: [c for c in log if "/servers/Public" in c[0]][-1][1].get("sortOrder") == "Desc" and det.server_table.rowCount() == 5), det.server_table.rowCount())

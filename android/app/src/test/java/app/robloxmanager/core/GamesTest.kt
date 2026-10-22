@@ -146,6 +146,18 @@ class GamesTest {
         assertTrue(RecentGames.load(Prefs(f)).isEmpty())
     }
 
+    @Test fun serversCanBeSortedByPingFpsAndPlayers() {
+        val a = ServerInfo("a", 5, 12, 90, 30); val b = ServerInfo("b", 2, 12, 40, 59); val c = ServerInfo("c", 9, 12, null, null); val d = ServerInfo("d", 1, 12, 40, 60)
+        val all = listOf(a, b, c, d)
+        assertEquals(listOf("a", "b", "c", "d"), Games.sortServers(all, "roblox").map { it.id })
+        assertEquals(listOf("b", "d", "a", "c"), Games.sortServers(all, "ping").map { it.id })          // a server without a ping is last, ties keep Roblox's order
+        assertEquals(listOf("d", "b", "a", "c"), Games.sortServers(all, "fps").map { it.id })
+        assertEquals(listOf("c", "a", "b", "d"), Games.sortServers(all, "most").map { it.id })
+        assertEquals(listOf("d", "b", "a", "c"), Games.sortServers(all, "fewest").map { it.id })
+        assertEquals(listOf("a", "b", "c", "d"), Games.sortServers(all, "nonsense").map { it.id })
+        assertEquals(listOf("roblox", "ping", "fps", "most", "fewest"), Games.SERVER_ORDERS.map { it.first })
+    }
+
     @Test fun launcherLinkWithAServerId() {
         assertEquals("roblox://experiences/start?placeId=5&gameInstanceId=aaaaaaaa-0000-0000-0000-000000000001", Games.launcherUrl(5, null, "aaaaaaaa-0000-0000-0000-000000000001"))
         for (bad in listOf("x&y=1", "a b", "A/B", "é")) try { Games.launcherUrl(5, null, bad); org.junit.Assert.fail("accepted: $bad") } catch (_: IllegalArgumentException) { }

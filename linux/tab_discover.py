@@ -58,6 +58,18 @@ def launch_roblox(ctx, place_id, link_code=None, web_url=None, job_id=None):
     return False
 
 
+SERVER_ORDERS = [("roblox", "Roblox's order"), ("ping", "Lowest ping first"), ("fps", "Highest FPS first"), ("most", "Most players first"), ("fewest", "Fewest players first")]
+
+
+def sort_servers(servers, mode):
+    """The servers in the order asked for. A server without a ping or FPS value (Roblox leaves it out sometimes) goes last; ties keep Roblox's order."""
+    def last(value, flip=1):
+        return (value is None, 0 if value is None else value * flip)
+    keys = {"ping": lambda s: last(s.get("ping")), "fps": lambda s: last(s.get("fps"), -1),
+            "most": lambda s: -s["playing"], "fewest": lambda s: s["playing"]}
+    return sorted(servers, key=keys[mode]) if mode in keys else list(servers)
+
+
 class RatioBar(QWidget):
     """The likes/dislikes bar of a game: the green part is the likes."""
 
@@ -267,11 +279,16 @@ class GameDetail(QWidget):
         self.sort = QComboBox()
         self.sort.addItem("Fewest players first", "Asc")
         self.sort.addItem("Most players first", "Desc")
+        self.order = QComboBox()
+        for key, label in SERVER_ORDERS:
+            self.order.addItem("Sort: " + label, key)
+        self.order.setToolTip("Sorts the servers loaded so far (Load more brings in more). Roblox does not tell how long a server has been running, so that cannot be sorted.")
+        self.order.currentIndexChanged.connect(lambda _=None: self._show_servers())
         self.b_servers = button("Find servers", lambda: self.find_servers(True), "List the public servers of this game")
         self.b_join_server = button("Join selected", self.join_selected, "Open the Roblox launcher on the selected server")
         self.b_join_emptiest = button("Join the emptiest", self.join_emptiest, "Open the launcher on the server with the fewest players (not full)")
         self.b_more_servers = button("Load more", lambda: self.find_servers(False))
-        for w_ in (self.sort, self.b_servers, self.b_join_server, self.b_join_emptiest, self.b_more_servers):
+        for w_ in (self.sort, self.order, self.b_servers, self.b_join_server, self.b_join_emptiest, self.b_more_servers):
             srow.addWidget(w_)
         lay.addLayout(srow)
         self.server_table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server"], [80, 60, 90, 60, 260], empty="Press Find servers.")
@@ -434,9 +451,10 @@ class GameDetail(QWidget):
         self.ctx.async_.run(lambda: c.game_servers(place, sort, cursor), done, failed)
 
     def _show_servers(self):
-        rows = [[s["playing"], s["max"], int(s["ping"]) if s.get("ping") is not None else "-", int(s["fps"]) if s.get("fps") is not None else "-", s["id"]] for s in self.servers]
-        self.server_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)         # (the order Roblox gave; click a header to sort by it)
-        fill_table(self.server_table, rows, keys=[s["id"] for s in self.servers])
+        shown = sort_servers(self.servers, self.order.currentData())
+        rows = [[s["playing"], s["max"], int(s["ping"]) if s.get("ping") is not None else "-", int(s["fps"]) if s.get("fps") is not None else "-", s["id"]] for s in shown]
+        self.server_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)         # (the order chosen above; click a header to sort by it instead)
+        fill_table(self.server_table, rows, keys=[s["id"] for s in shown])
         self.b_more_servers.setEnabled(bool(self.server_cursor))
         self.server_note.setText(f"{len(self.servers)} servers" + ("  (more available: Load more)" if self.server_cursor else "") if self.servers else "No public servers are open right now (or the game has none).")
 

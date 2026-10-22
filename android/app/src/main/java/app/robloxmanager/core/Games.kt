@@ -82,6 +82,18 @@ object Games {
         FriendGame(id, f?.name ?: "", f?.displayName ?: "", place, p.str("gameId")?.takeIf { validCode(it) }, p.long("universeId"), p.str("lastLocation") ?: "")
     } ?: emptyList()
 
+    /** How the loaded servers can be ordered on the phone: key -> label. Roblox does not say how long a server has been running, so that is not one of them. */
+    val SERVER_ORDERS = listOf("roblox" to "Roblox's order", "ping" to "Lowest ping", "fps" to "Highest FPS", "most" to "Most players", "fewest" to "Fewest players")
+
+    /** The servers in the order asked for. A server without a ping or FPS value goes last; ties keep Roblox's order (the sort is stable). */
+    fun sortServers(servers: List<ServerInfo>, mode: String): List<ServerInfo> = when (mode) {
+        "ping" -> servers.sortedWith(compareBy<ServerInfo> { it.ping == null }.thenBy { it.ping ?: 0 })
+        "fps" -> servers.sortedWith(compareBy<ServerInfo> { it.fps == null }.thenByDescending { it.fps ?: 0 })
+        "most" -> servers.sortedByDescending { it.playing }
+        "fewest" -> servers.sortedBy { it.playing }
+        else -> servers
+    }
+
     /** Whole percent of the votes that are likes, or null when nobody voted. */
     fun likePercent(up: Long, down: Long): Int? = if (up + down <= 0) null else Math.round(100.0 * up / (up + down)).toInt()
 
