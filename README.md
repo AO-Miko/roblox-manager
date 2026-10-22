@@ -13,8 +13,8 @@ Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/r
 |---|---|
 | **Home** | sign in (password + 2-step, built-in browser, or cookie), your account at a glance, several accounts side by side |
 | **People** | friends, requests, followers, following, blocked users, find a user, all with bulk actions |
-| **Groups** | your groups: members and ranks, join requests, roles, audit log, bans, shout; leave several at once |
-| **VIP servers** | every private server you have: switch on/off, renew, duplicates, bulk actions |
+| **Groups** | your groups: members and ranks, join requests, roles, audit log, bans, shout; leave several at once. Only what your role in a group allows is shown, and it is checked again when you act: you can only change, remove or ban members ranked below you, and only give roles below your own |
+| **VIP servers** | every private server you have: switch on/off, renew, duplicates, bulk actions; a second page, **Look up a game**, shows any game's VIP servers and which are your friends' |
 | **Money** | Robux balance, pending, totals per period, transaction history, CSV export |
 | **Request log** | every request the app sends to Roblox and how Roblox answered |
 | **API Explorer** (PC) | send any Roblox web API request and read the answer |

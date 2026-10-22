@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QFormLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QMessageBox, QPlainTextEdit,
-    QProgressBar, QPushButton, QSpinBox, QSplitter, QTableWidgetItem, QVBoxLayout, QWidget,
+    QProgressBar, QPushButton, QSpinBox, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 from PySide6.QtCore import QItemSelectionModel, Qt, QTimer, Signal
 
@@ -294,8 +294,9 @@ class VipTab(QWidget):
         self.loaded_once = False
 
         lay = QVBoxLayout(self)
-        split = QSplitter(Qt.Orientation.Vertical)
-        lay.addWidget(split)
+        self.tabs = QTabWidget()                       # two pages: your servers, and the look-up of any game (it used to be a bar that covered half of the page)
+        self.tabs.setProperty("sub", True)
+        lay.addWidget(self.tabs)
 
         # ---------------------------------------------------------------- my servers (the default view)
         top = QWidget()
@@ -402,16 +403,14 @@ class VipTab(QWidget):
         self.stop_flag = False
         self.running = False
         self.progress.connect(self._show_progress)
-        split.addWidget(top)
+        self.tabs.addTab(top, "My servers")
 
         # ---------------------------------------------------------------- look up any game
         bottom = QWidget()
         bl = QVBoxLayout(bottom)
         bl.setContentsMargins(0, 0, 0, 0)
         head2 = QHBoxLayout()
-        t2 = QLabel("Look up a game (see its VIP servers, and which are your friends')")
-        t2.setStyleSheet("font-weight: bold;")
-        head2.addWidget(t2)
+        head2.addWidget(hint("See a game's VIP servers, and which of them are your friends'."))
         bl.addLayout(head2)
         look = QHBoxLayout()
         self.entry = QLineEdit()
@@ -426,8 +425,7 @@ class VipTab(QWidget):
         bl.addWidget(self.table, 1)
         self.gnote = hint("")
         bl.addWidget(self.gnote)
-        split.addWidget(bottom)
-        split.setSizes([520, 200])
+        self.tabs.addTab(bottom, "Look up a game")
 
         ctx.signed_in.connect(self.load_mine)
         ctx.signed_out.connect(self.clear)

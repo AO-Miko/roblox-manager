@@ -173,7 +173,7 @@ def wait(cond, t=8):
             if cond(): return True
         except Exception: pass
     return False
-def check(n, ok, e=""): results.append(ok); print(("PASS " if ok else "FAIL ") + n + (("  " + str(e)[:300]) if e else ""))
+def check(n, ok, e=""): ok = bool(ok); results.append(ok); print(("PASS " if ok else "FAIL ") + n + (("  " + str(e)[:300]) if e else ""))
 def calls(method=None, part=None): return [c for c in client.calls if (method is None or c[0] == method) and (part is None or part in c[1])]
 def ask_yes(answer=True):
     ctx.confirm = lambda title, text, danger=False: (asked.append((title, text)), answer)[1]
@@ -276,7 +276,9 @@ w.groups._groups([{"group": {"id": 77, "name": "Cool Club", "memberCount": 44}, 
                   {"group": {"id": 88, "name": "Other Club", "memberCount": 900}, "role": {"id": 2, "name": "Member", "rank": 1}}]); w.groups.gid = None
 w.groups.select(77)
 check("selecting a group loads its details", wait(lambda: w.groups.title.text() == "Cool Club" and w.groups.mtable.rowCount() == 2))
-check("an owner can change ranks, remove, ban and accept", all(b.isEnabled() for b in (w.groups.b_rank, w.groups.b_kick, w.groups.b_ban, w.groups.b_accept)))
+check("an owner can change ranks, remove, ban and accept", all(b.isEnabled() and not b.isHidden() for b in (w.groups.b_rank, w.groups.b_kick, w.groups.b_ban, w.groups.b_accept)))
+check("...and sees every page of the group (join requests, roles, audit log, bans)", all(w.groups.tabs.isTabVisible(i) for i in range(6)))
+check("...and every button (shout, description, unban)", not any(b.isHidden() for b in (w.groups.b_shout, w.groups.b_desc, w.groups.b_unban, w.groups.b_decline, w.groups.b_accept_all)))
 check("join requests are listed", wait(lambda: w.groups.rtable.rowCount() == 2))
 check("the audit log is shown", wait(lambda: w.groups.atable.rowCount() == 1 and w.groups.atable.item(0, 2).text() == "Change Rank"))
 check("bans are shown", wait(lambda: w.groups.btable.rowCount() == 1))
@@ -307,9 +309,101 @@ QInputDialog.getText = staticmethod(lambda *a, **k: ("Welcome!", True)); client.
 check("posting a shout sends the message", wait(lambda: calls("PATCH", "/status")) and calls("PATCH", "/status")[0][3] == {"message": "Welcome!"})
 # a group where you have no permissions: everything is locked
 w.groups.select(88)
-check("with no permissions the management buttons are disabled", wait(lambda: not w.groups.b_rank.isEnabled() and not w.groups.b_kick.isEnabled() and not w.groups.b_accept.isEnabled() and not w.groups.b_shout.isEnabled()))
-check("...and the join-request, audit and ban tabs are hidden", not w.groups.tabs.isTabEnabled(2) and not w.groups.tabs.isTabEnabled(4) and not w.groups.tabs.isTabEnabled(5))
+check("with no permissions the management buttons are not there at all", wait(lambda: all(b.isHidden() for b in (w.groups.b_rank, w.groups.b_kick, w.groups.b_ban, w.groups.b_accept, w.groups.b_decline, w.groups.b_accept_all, w.groups.b_shout, w.groups.b_desc, w.groups.b_unban))))
+check("...nor the join-request, roles, audit and ban pages (only Overview and Members remain)", [w.groups.tabs.isTabVisible(i) for i in range(6)] == [True, True, False, False, False, False], [w.groups.tabs.isTabVisible(i) for i in range(6)])
+check("...the buttons everybody may use stay", not w.groups.b_open.isHidden() and not w.groups.b_copy.isHidden() and not w.groups.b_profile.isHidden())
 check("...and it tells you what you can do", "only look" in w.groups.perms.text(), w.groups.perms.text())
+# partial permissions: only what each permission allows is shown
+def only(**yes):
+    perms = {"groupMembershipPermissions": {"changeRank": yes.get("rank", False), "inviteMembers": yes.get("invite", False), "removeMembers": yes.get("remove", False)},
+             "groupManagementPermissions": {"manageRelationships": False, "manageClan": False, "viewAuditLogs": yes.get("audit", False)},
+             "groupPostsPermissions": {"viewWall": True, "postToWall": False, "deleteFromWall": False, "viewStatus": True, "postToStatus": yes.get("shout", False)}}
+    w.groups.membership = {"permissions": perms, "canConfigure": yes.get("conf", False)}
+    w.groups.apply_permissions()
+    return [w.groups.tabs.isTabVisible(i) for i in range(6)], {n: not getattr(w.groups, n).isHidden() for n in ("b_rank", "b_kick", "b_ban", "b_accept", "b_shout", "b_desc", "b_unban")}
+tabs_v, btns = only(rank=True)
+check("someone who may only change ranks sees that button and the Roles page, nothing else", tabs_v == [True, True, False, True, False, False] and btns == {"b_rank": True, "b_kick": False, "b_ban": False, "b_accept": False, "b_shout": False, "b_desc": False, "b_unban": False}, (tabs_v, btns))
+tabs_v, btns = only(remove=True)
+check("someone who may only remove members sees Remove, Ban, Unban and the Join requests and Bans pages", tabs_v == [True, True, True, False, False, True] and btns["b_kick"] and btns["b_ban"] and btns["b_unban"] and not btns["b_rank"] and not btns["b_accept"], (tabs_v, btns))
+tabs_v, btns = only(invite=True)
+check("someone who may only accept join requests sees the Join requests page and the accept buttons, but no Bans page", tabs_v == [True, True, True, False, False, False] and btns["b_accept"] and not btns["b_kick"] and not btns["b_ban"], (tabs_v, btns))
+tabs_v, btns = only(audit=True)
+check("someone who may only view the audit log sees that page and no button", tabs_v == [True, True, False, False, True, False] and not any(btns.values()), (tabs_v, btns))
+tabs_v, btns = only(shout=True)
+check("someone who may only post the shout sees Set shout and no extra page", tabs_v == [True, True, False, False, False, False] and btns["b_shout"] and not btns["b_desc"], (tabs_v, btns))
+tabs_v, btns = only(conf=True)
+check("someone who may configure the group sees Edit description and the Roles page", tabs_v == [True, True, False, True, False, False] and btns["b_desc"] and not btns["b_shout"], (tabs_v, btns))
+w.groups.tabs.setCurrentIndex(4); only(audit=False)
+check("if the page you are on is taken away you land on the Overview", w.groups.tabs.currentIndex() == 0)
+w.groups.clear_details()
+check("with no group selected nothing that needs a permission is shown", [w.groups.tabs.isTabVisible(i) for i in range(6)] == [True, True, False, False, False, False] and w.groups.b_rank.isHidden() and w.groups.b_shout.isHidden())
+
+
+# ---- the permission and the rank are checked again at the moment of the action
+w.groups.select(77)
+wait(lambda: w.groups.title.text() == "Cool Club" and w.groups.mtable.rowCount() == 2)
+people = {m["username"]: m for m in w.groups.members}
+saved_getitem, saved_info = QInputDialog.getItem, QMessageBox.information
+offered = []
+QInputDialog.getItem = staticmethod(lambda parent, title, label, items, *a, **k: (offered.append(list(items)) or items[0], True))
+denied = []
+QMessageBox.information = staticmethod(lambda *a, **k: denied.append(str(a[2])))
+
+
+def as_rank(my, **perms):
+    base = {"groupMembershipPermissions": {"changeRank": True, "inviteMembers": True, "removeMembers": True},
+            "groupManagementPermissions": {"viewAuditLogs": True}, "groupPostsPermissions": {"postToStatus": True}}
+    for k, v in perms.items():
+        if k == "conf":
+            continue
+        base[{"rank": "groupMembershipPermissions", "invite": "groupMembershipPermissions", "remove": "groupMembershipPermissions",
+              "shout": "groupPostsPermissions"}[k]][{"rank": "changeRank", "invite": "inviteMembers", "remove": "removeMembers", "shout": "postToStatus"}[k]] = v
+    w.groups.membership = {"userRole": {"role": {"id": 3, "name": "Moderator", "rank": my}}, "permissions": base, "canConfigure": perms.get("conf", True)}
+    w.groups.apply_permissions()
+
+
+def pick_member(name):
+    w.groups.mtable.clearSelection()
+    w.groups.mtable.selectRow(next(r for r in range(w.groups.mtable.rowCount()) if w.groups.mtable.item(r, 1).text() == name))
+
+
+# the roles you may give are only those below your own rank (Guest never)
+as_rank(255)
+check("the owner (rank 255) can give Member and Moderator, not Owner or Guest", [r["name"] for r in w.groups.assignable_roles()] == ["Member", "Moderator"])
+as_rank(100)
+check("a rank-100 moderator can only give Member (not Moderator, not Owner)", [r["name"] for r in w.groups.assignable_roles()] == ["Member"])
+as_rank(1)
+check("a rank-1 member has no role they could give", w.groups.assignable_roles() == [])
+as_rank(100)
+pick_member("dave"); offered.clear(); client.calls.clear(); denied.clear()
+w.groups.change_rank()
+check("the rank dialog of a rank-100 moderator offers only roles below 100", offered == [["Member (rank 1)"]], offered)
+pick_member("erin"); offered.clear(); denied.clear(); client.calls.clear()
+w.groups.change_rank()
+check("a member of the same rank (erin, Moderator) cannot be changed: explained, no dialog, nothing sent", not offered and denied and "same as yours or higher" in denied[0] and not calls("PATCH", "/users/"), (offered, denied))
+denied.clear(); w.groups.kick()
+check("...nor removed", denied and "cannot remove" in denied[0] and not calls("DELETE", "/groups/77/users/"), denied)
+denied.clear(); w.groups.ban()
+check("...nor banned", denied and "cannot ban" in denied[0] and not calls("POST", "/bans/"), denied)
+as_rank(255)
+offered.clear(); denied.clear(); pick_member("erin")
+w.groups.change_rank()
+check("the owner may change a Moderator, and is offered Member and Moderator", offered == [["Member (rank 1)", "Moderator (rank 100)"]] and not denied, (offered, denied))
+as_rank(1)
+pick_member("dave"); offered.clear(); denied.clear()
+w.groups.change_rank()
+check("someone with the permission but no role below theirs is told so", not offered and denied, denied)
+
+# the permission itself is checked again: calling the action without it is refused and sends nothing
+as_rank(255, rank=False, invite=False, remove=False, shout=False, conf=False)
+denied.clear(); client.calls.clear(); pick_member("dave")
+for name, fn in (("change ranks", w.groups.change_rank), ("remove members", w.groups.kick), ("ban members", w.groups.ban), ("accept or decline join requests", lambda: w.groups.answer(True)),
+                 ("post the shout", w.groups.set_status), ("edit the group settings", w.groups.edit_description), ("unban members", w.groups.unban)):
+    denied.clear(); fn()
+    check(f"without the permission to {name} the action is refused, with a reason", len(denied) == 1 and "do not have permission to " + name in denied[0], denied)
+check("...and nothing was sent to Roblox", not client.calls or all(c[0] == "GET" for c in client.calls), [c for c in client.calls if c[0] != "GET"])
+QInputDialog.getItem, QMessageBox.information = saved_getitem, saved_info
+w.groups.select(88); wait(lambda: w.groups.title.text() == "Other Club")
 
 # ---------------------------------------------------------------- VIP servers
 import tab_vip

@@ -155,5 +155,17 @@ w.header.reload_requested.disconnect()
 w.header.reload_requested.connect(w.reload_page)
 w.header.reload.click()
 check("...and it reloads the page", reloaded == [1])
+
+# ---- VIP servers: the look-up of a game is a page of its own, not a bar across the bottom
+w.tabs.setCurrentIndex(w.tabs.indexOf(w.holders[w.vip])); spin(0.1)
+check("VIP servers has two pages: My servers and Look up a game", [w.vip.tabs.tabText(i) for i in range(w.vip.tabs.count())] == ["My servers", "Look up a game"])
+check("...the look-up box is on its own page (it no longer covers the list of servers)", w.vip.tabs.indexOf(w.vip.entry.parentWidget()) == 1 and w.vip.tabs.indexOf(w.vip.mtable.parentWidget()) == 0)
+w.vip.tabs.setCurrentIndex(0); spin(0.1)
+check("...and with My servers open the look-up is not on screen", not w.vip.entry.isVisible() and w.vip.mtable.isVisible() and w.vip.mtable.height() > 200, w.vip.mtable.height())
+w.open_search(); w.palette_box.edit.setText("look up"); spin(0.05)
+r = [w.palette_box.list.item(i).text() for i in range(w.palette_box.list.count())]
+check("the search finds the page (Ctrl+K > 'look up')", any(x.startswith("Look up a game") for x in r), r[:3])
+QTest.keyClick(w.palette_box.edit, Qt.Key.Key_Return); spin(0.2)
+check("...and opens it", w.current_page() is w.vip and w.vip.tabs.currentIndex() == 1 and w.vip.entry.isVisible())
 print(f"{sum(res)}/{len(res)} checks passed")
 sys.exit(0 if all(res) else 1)

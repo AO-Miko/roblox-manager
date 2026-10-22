@@ -139,7 +139,8 @@ class GroupsTab(QWidget):
         self.role_pick = QComboBox()
         self.role_pick.activated.connect(lambda _: self.load_members(reset=True))
         self.member_filter = QLineEdit()
-        self.member_filter.setPlaceholderText("Filter loaded members...")
+        self.member_filter.setPlaceholderText("Filter members...")
+        self.member_filter.setMinimumWidth(150)
         self.member_filter.textChanged.connect(self.show_members)
         top.addWidget(QLabel("Role:"))
         top.addWidget(self.role_pick)
@@ -249,6 +250,7 @@ class GroupsTab(QWidget):
         self.title.setText("Select a group")
         self.facts.setText("")
         self.desc.setPlainText("")
+        self.apply_permissions()               # no group: nothing that needs a permission is shown
         self.perms.setText("")
         self.role_pick.clear()
         self.set_enabled(False)
@@ -256,7 +258,38 @@ class GroupsTab(QWidget):
     def can(self, section, key):
         return perm(self.membership.get("permissions"), section, key)
 
+    def my_rank(self):
+        """Your rank in this group (0 to 255; the owner has 255). Unknown counts as 0, so nothing that needs a rank is allowed."""
+        try:
+            return int(((self.membership.get("userRole") or {}).get("role") or {}).get("rank") or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def assignable_roles(self):
+        """The roles you may give: only those BELOW your own rank (and never Guest). You cannot give a role as high as yours or higher."""
+        mine = self.my_rank()
+        return [r for r in self.roles if 0 < r["rank"] < mine]
+
+    def may_manage(self, m):
+        """You may change, remove or ban a member only if their rank is below yours."""
+        return int(m.get("rank") or 0) < self.my_rank()
+
+    def _deny(self, text):
+        self.ctx.status(text)
+        QMessageBox.information(self, "Not allowed", text)
+        return False
+
+    def _allowed(self, ok, what):
+        """The permission is checked again at the moment of the action (what is shown is only a convenience)."""
+        return True if ok else self._deny(f"You do not have permission to {what} in this group.")
+
+    def _may_act_on(self, m, what):
+        if self.may_manage(m):
+            return True
+        return self._deny(f"You cannot {what} {m['username'] or m['id']}: their role ({m['role']}) is the same as yours or higher.")
+
     def apply_permissions(self):
+        """Show only what this person may do in this group: a button or a page they have no permission for is not there at all (not just greyed out)."""
         can_rank = self.can("groupMembershipPermissions", "changeRank")
         can_remove = self.can("groupMembershipPermissions", "removeMembers")
         can_invite = self.can("groupMembershipPermissions", "inviteMembers")
@@ -266,10 +299,13 @@ class GroupsTab(QWidget):
         for b, ok in ((self.b_rank, can_rank), (self.b_kick, can_remove), (self.b_ban, can_remove), (self.b_accept, can_invite),
                       (self.b_decline, can_invite), (self.b_accept_all, can_invite), (self.b_shout, can_shout),
                       (self.b_desc, can_conf), (self.b_unban, can_remove)):
+            b.setVisible(ok)
             b.setEnabled(ok)
-        self.tabs.setTabEnabled(2, can_invite or can_remove)
-        self.tabs.setTabEnabled(4, can_audit)
-        self.tabs.setTabEnabled(5, can_remove)
+        # the pages: Overview (0) and Members (1) are for everybody; the rest only for who may use them
+        for index, ok in ((2, can_invite or can_remove), (3, can_conf or can_rank), (4, can_audit), (5, can_remove)):
+            self.tabs.setTabVisible(index, ok)
+        if not self.tabs.isTabVisible(self.tabs.currentIndex()):
+            self.tabs.setCurrentIndex(0)
         names = [("change ranks", can_rank), ("remove members", can_remove), ("accept join requests", can_invite),
                  ("view the audit log", can_audit), ("post the shout", can_shout), ("edit group settings", can_conf)]
         yes = [n for n, ok in names if ok]
@@ -466,7 +502,6 @@ class GroupsTab(QWidget):
         for r in self.roles:
             self.role_pick.addItem(f"{r['name']} ({r.get('memberCount', 0)})", r["id"])
         fill_table(self.roletable, [[r["rank"], r["name"], r.get("memberCount", 0), r["id"]] for r in self.roles], keys=[r["id"] for r in self.roles])
-        self.my_rank = me.get("rank", 0)
         self.load_members(reset=True)
         self.load_requests(reset=True)
         self.load_audit(reset=True)
@@ -561,14 +596,23 @@ class GroupsTab(QWidget):
         c.async_.run(work, done)
 
     def change_rank(self):
-        m = self._member_selected()
-        if not m:
+        if not self._allowed(self.can("groupMembershipPermissions", "changeRank"), "change ranks"):
             return
-        names = [f"{r['name']} (rank {r['rank']})" for r in self.roles if r["rank"] > 0]
+        m = self._member_selected()
+        if not m or not self._may_act_on(m, "change the rank of"):
+            return
+        roles = self.assignable_roles()
+        if not roles:
+            self._deny("There is no role below yours that you could give.")
+            return
+        names = [f"{r['name']} (rank {r['rank']})" for r in roles]
         pick, ok = QInputDialog.getItem(self, "Change rank", f"New role for {m['username']} (now {m['role']}):", names, 0, False)
         if not ok:
             return
-        role = [r for r in self.roles if r["rank"] > 0][names.index(pick)]
+        role = roles[names.index(pick)]
+        if role["rank"] >= self.my_rank():                  # (cannot happen: only lower roles are offered)
+            self._deny("You cannot give a role as high as yours or higher.")
+            return
         if role["id"] == m["role_id"]:
             return
         if not self.ctx.confirm("Change rank", f"Change {m['username']} from {m['role']} to {role['name']}?"):
@@ -577,14 +621,18 @@ class GroupsTab(QWidget):
         c.async_.run(lambda: c.client.set_rank(gid, m["id"], role["id"]), lambda _: (c.status(f"{m['username']} is now {role['name']}."), self.load_members(True)))
 
     def kick(self):
+        if not self._allowed(self.can("groupMembershipPermissions", "removeMembers"), "remove members"):
+            return
         m = self._member_selected()
-        if m and self.ctx.confirm("Remove from group", f"Remove {m['username']} from the group?\n\nThey can join again unless you also ban them.", danger=True):
+        if m and self._may_act_on(m, "remove") and self.ctx.confirm("Remove from group", f"Remove {m['username']} from the group?\n\nThey can join again unless you also ban them.", danger=True):
             c, gid = self.ctx, self.gid
             c.async_.run(lambda: c.client.kick(gid, m["id"]), lambda _: (c.status(f"Removed {m['username']}."), self.load_members(True)))
 
     def ban(self):
+        if not self._allowed(self.can("groupMembershipPermissions", "removeMembers"), "ban members"):
+            return
         m = self._member_selected()
-        if m and self.ctx.confirm("Ban from group", f"Ban {m['username']}? They are removed and cannot rejoin until you unban them.", danger=True):
+        if m and self._may_act_on(m, "ban") and self.ctx.confirm("Ban from group", f"Ban {m['username']}? They are removed and cannot rejoin until you unban them.", danger=True):
             c, gid = self.ctx, self.gid
             c.async_.run(lambda: c.client.ban(gid, m["id"]), lambda _: (c.status(f"Banned {m['username']}."), self.load_members(True), self.load_bans()))
 
@@ -616,6 +664,8 @@ class GroupsTab(QWidget):
                    keys=[r["id"] for r in self.requests])
 
     def answer(self, accept, everyone=False):
+        if not self._allowed(self.can("groupMembershipPermissions", "inviteMembers"), "accept or decline join requests"):
+            return
         if everyone:
             rows = list(range(self.rtable.rowCount()))
         else:
@@ -703,6 +753,8 @@ class GroupsTab(QWidget):
                    keys=[b["id"] for b in self.bans])
 
     def unban(self):
+        if not self._allowed(self.can("groupMembershipPermissions", "removeMembers"), "unban members"):
+            return
         rows = selected_rows(self.btable)
         if not rows:
             return
@@ -714,12 +766,16 @@ class GroupsTab(QWidget):
 
     # ============================================================ overview actions
     def edit_description(self):
+        if not self._allowed(bool(self.membership.get("canConfigure")), "edit the group settings"):
+            return
         text, ok = QInputDialog.getMultiLineText(self, "Group description", "New description:", self.desc.toPlainText())
         if ok and self.ctx.confirm("Change description", "Replace the group's description?"):
             c, gid = self.ctx, self.gid
             c.async_.run(lambda: c.client.set_group_description(gid, text), lambda _: (c.status("Description updated."), self.desc.setPlainText(text)))
 
     def set_status(self):
+        if not self._allowed(self.can("groupPostsPermissions", "postToStatus"), "post the shout"):
+            return
         text, ok = QInputDialog.getText(self, "Group shout", "Shout (leave empty to clear it):")
         if ok and self.ctx.confirm("Post shout", "Post this shout to the group?\n\n" + (text or "(clear the shout)")):
             c, gid = self.ctx, self.gid

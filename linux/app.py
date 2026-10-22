@@ -171,6 +171,9 @@ class MainWindow(QMainWindow):
                 for j in range(page.tabs.count()):
                     sub = nav.base_title(page.tabs.tabText(j))[0]
                     out.append((sub, "People", "", lambda page=page, j=j: self._go(page, j)))
+            if page is self.vip:
+                for j in range(page.tabs.count()):
+                    out.append((page.tabs.tabText(j), "VIP servers", "game place id link friends servers lookup" if j else "my servers", lambda page=page, j=j: self._go(page, j)))
             if page is self.info_tab:
                 for j in range(page.count()):
                     sub = page.tabText(j)
