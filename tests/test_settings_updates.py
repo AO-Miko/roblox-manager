@@ -101,4 +101,19 @@ check("going back asks first", ctx.asked[-1][0] == "Go back" and "Back to versio
 ctx.answers = True
 tab.roll_back()
 check("...and then goes back and offers a restart", "Back to version 1.2.3" in tab.upd_status.text() and not tab.b_upd_restart.isHidden())
+
+# ---- the channel
+check("the Updates box has a Channel choice: Stable (the default) and Beta", [tab.upd_channel.itemData(i) for i in range(tab.upd_channel.count())] == ["stable", "beta"]
+      and tab.upd_channel.currentData() == "stable" and updater.load_config()["channel"] == "stable")
+ctx.answers, ctx.asked = False, []
+tab.upd_channel.setCurrentIndex(1); tab.channel_changed()
+check("choosing Beta asks first (less tested; you can go back), and 'no' keeps Stable", ctx.asked and ctx.asked[-1][0] == "Beta versions" and tab.upd_channel.currentData() == "stable" and updater.load_config()["channel"] == "stable")
+ctx.answers = True
+tab.upd_channel.setCurrentIndex(1); tab.channel_changed()
+check("'yes' joins the beta: saved, explained", updater.load_config()["channel"] == "beta" and "first" in tab.upd_channel_note.text() and "Channel changed" in tab.upd_status.text())
+tab.load_update_settings()
+check("...and it is still Beta after the box is loaded again", tab.upd_channel.currentData() == "beta")
+ctx.asked = []
+tab.upd_channel.setCurrentIndex(0); tab.channel_changed()
+check("going back to Stable does not ask and is saved", not ctx.asked and updater.load_config()["channel"] == "stable" and "released to everybody" in tab.upd_channel_note.text())
 print("\n%d/%d checks passed" % (sum(res), len(res)))

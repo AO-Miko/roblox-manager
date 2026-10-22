@@ -119,7 +119,9 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
     val upd by Updates.state.collectAsState()
     var burst by remember { mutableStateOf(sv.client.readBurst.toFloat()) }
     var logFile by remember { mutableStateOf(sv.log.writeFile) }
-    var url by remember { mutableStateOf(Updates.url(sv)) }
+    var url by remember { mutableStateOf(Updates.savedUrl(sv)) }
+    var beta by remember { mutableStateOf(Updates.isBeta(sv)) }
+    var askBeta by remember { mutableStateOf(false) }
     var auto by remember { mutableStateOf(sv.prefs.bool("autoUpdate", true)) }
     var msg by remember { mutableStateOf("") }
     var confirmSignOut by remember { mutableStateOf(false) }
@@ -128,7 +130,12 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
         if (part == "updates") Section("UPDATES") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})", fontWeight = FontWeight.Medium)
-                OutlinedTextField(url, { url = it }, label = { Text("Update server address") }, supportingText = { Text("The raw address of the repository's dist/ folder, ending in /dist/") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(beta, { on -> if (on) askBeta = true else { beta = false; sv.prefs.put("channel", "stable"); msg = "Back on Stable. You keep this version until Stable catches up."; Updates.check(sv, ctx) } })
+                    Spacer(Modifier.width(8.dp))
+                    Column { Text("Beta channel"); Text(if (beta) "You get every new version first. Less tested." else "Get new versions before everybody else (less tested).", color = C.muted, fontSize = 12.sp) }
+                }
+                OutlinedTextField(url, { url = it }, label = { Text("Update server address") }, supportingText = { Text("The raw address of the repository's dist/ folder, ending in /dist/. The beta channel uses the beta branch of the same repository.") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(auto, { auto = it; sv.prefs.put("autoUpdate", it) }); Spacer(Modifier.width(8.dp)); Text("Check at every start") }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     QuietButton("Save and check", enabled = !upd.busy) { sv.prefs.put("updateUrl", url.trim()); Updates.check(sv, ctx) }
@@ -163,6 +170,8 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
         if (part == "settings") Section("ACCOUNT") { DangerButton("Sign out") { confirmSignOut = true } }
         if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)
     }
+    if (askBeta) Confirm("Beta versions", "Beta versions get every update before it goes to everybody else. They are less tested and may have bugs.\n\nYou can go back to Stable at any time: you then keep the version you have until Stable catches up.", "Join the beta", false,
+        { askBeta = false; beta = true; sv.prefs.put("channel", "beta"); Updates.check(sv, ctx) }, { askBeta = false })
     if (confirmSignOut) Confirm("Sign out", "Sign out and remove this account from the phone?", "Sign out", true, { confirmSignOut = false; sv.signOut(true) }, { confirmSignOut = false })
 }
 

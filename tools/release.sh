@@ -3,6 +3,8 @@
 #
 #   tools/release.sh KIND "one change|another change"   build, sign and commit (stays local); "|" separates the update-log bullets
 #   tools/release.sh KIND "what changed" --push  ... and push to the `origin` remote
+#   tools/release.sh KIND "what changed" --beta [--push]   a BETA release: from the `beta` branch, published as a GitHub pre-release; people who chose the
+#       beta channel in Settings get it, everybody else does not. Later `tools/promote.sh` makes exactly that build the stable one.
 #
 # The version has five numbers, R.B.S.F.D = complete rework . big feature change . small feature change . bug fix . design rework (see tools/version.py).
 # KIND says which one this update raises by 1: rework | big | small | fix | design. The numbers never go down; only a rework sets the other four back to 0.
@@ -17,9 +19,15 @@
 # installed phones can never be updated again).
 set -euo pipefail
 
-KIND="${1:?usage: tools/release.sh rework|big|small|fix|design \"notes\" [--push]}"
+KIND="${1:?usage: tools/release.sh rework|big|small|fix|design \"notes\" [--push] [--beta]}"
 NOTES="${2:-}"
-PUSH="${3:-}"
+PUSH=""
+BETA=""
+for a in "${@:3}"; do
+  case "$a" in --push) PUSH="--push" ;; --beta) BETA=1 ;; *) echo "Unknown option $a"; exit 1 ;; esac
+done
+BRANCH="release"
+[[ -n "$BETA" ]] && BRANCH="beta"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 . tools/android-env.sh
@@ -31,7 +39,7 @@ else
   python3 -I tools/version.py check "$VERSION" || { echo "Not a valid next version (rework, big, small, fix or design, or the full five numbers)"; exit 1; }
 fi
 echo "Version: $(cat linux/VERSION) -> $VERSION"
-[[ "$(git rev-parse --abbrev-ref HEAD)" == "release" ]] || { echo "Run this on the 'release' branch"; exit 1; }
+[[ "$(git rev-parse --abbrev-ref HEAD)" == "$BRANCH" ]] || { echo "Run this on the '$BRANCH' branch"; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit or stash your changes first"; exit 1; }
 [[ -f "$HOME/.config/roblox-manager-release/android-signing.properties" ]] || { echo "Missing the Android signing properties"; exit 1; }
 
@@ -98,11 +106,19 @@ rm -rf "$OUT/win"
 (cd "$OUT" && sha256sum roblox-manager-* Roblox-Manager-Setup-* 2>/dev/null > SHA256SUMS.txt)
 
 if [[ "$PUSH" == "--push" ]]; then
-  git push origin release "v$VERSION"
+  git push origin "$BRANCH" "v$VERSION"
   # created as a draft and published after the upload, so nothing sees a release with files still missing
-  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT"/Roblox-Manager-Setup-*.exe "$OUT/SHA256SUMS.txt" --draft --title "Roblox Manager $VERSION" --notes "$(printf '%s' "${NOTES:-Release $VERSION}" | tr '|' '\n' | sed 's/^ */- /')" --verify-tag
-  gh release edit "v$VERSION" --draft=false --latest
-  echo "Pushed and released. Linux, Android and Windows apps will pick it up at their next start."
+  gh release create "v$VERSION" "$OUT"/roblox-manager-* "$OUT"/Roblox-Manager-Setup-*.exe "$OUT/SHA256SUMS.txt" --draft ${BETA:+--prerelease} --title "Roblox Manager $VERSION${BETA:+ (beta)}" --notes "$(printf '%s' "${NOTES:-Release $VERSION}" | tr '|' '\n' | sed 's/^ */- /')" --verify-tag
+  if [[ -n "$BETA" ]]; then
+    gh release edit "v$VERSION" --draft=false --prerelease --latest=false
+  else
+    gh release edit "v$VERSION" --draft=false --latest
+  fi
+  if [[ -n "$BETA" ]]; then
+    echo "Pushed as a beta. The apps on the beta channel pick it up at their next start. Make it the stable version with: tools/promote.sh --push"
+  else
+    echo "Pushed and released. Linux, Android and Windows apps will pick it up at their next start."
+  fi
 else
-  echo "Done locally. Publish with:  git push origin release v$VERSION"
+  echo "Done locally. Publish with:  git push origin $BRANCH v$VERSION"
 fi

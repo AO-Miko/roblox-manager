@@ -45,7 +45,9 @@ LOG_FILE = STATE_DIR / "update.log"
 SUBDIR = "linux"                        # the folder of the repository that is the desktop app
 MAX_BYTES = 60 * 1024 * 1024            # an update larger than this is refused
 GIT_TIMEOUT = 25
-DEFAULTS = {"repo": "", "branch": "release", "auto": True, "require_signature": True}
+DEFAULTS = {"repo": "", "branch": "release", "auto": True, "require_signature": True, "channel": "stable"}
+CHANNELS = ("stable", "beta")           # beta: the `beta` branch / GitHub pre-releases, which get every update before it goes to stable
+BETA_BRANCH = "beta"
 
 
 class UpdateError(Exception):
@@ -59,7 +61,14 @@ def load_config():
         cfg.update({k: v for k, v in json.loads(CONFIG_FILE.read_text()).items() if k in DEFAULTS})
     except (OSError, ValueError):
         pass
+    if cfg.get("channel") not in CHANNELS:
+        cfg["channel"] = "stable"
     return cfg
+
+
+def branch_of(cfg):
+    """The branch to follow: `beta` on the beta channel, otherwise the configured branch (release)."""
+    return BETA_BRANCH if cfg.get("channel") == "beta" else cfg["branch"]
 
 
 def save_config(cfg):
@@ -119,12 +128,12 @@ def remote_head(cfg):
     """The newest commit of the configured branch on the server."""
     if not cfg["repo"]:
         raise UpdateError("no update server is set")
-    r = _git("ls-remote", "--", cfg["repo"], f"refs/heads/{cfg['branch']}")
+    r = _git("ls-remote", "--", cfg["repo"], f"refs/heads/{branch_of(cfg)}")
     if r.returncode != 0:
         raise UpdateError("could not reach the update server: " + _last_line(r))
     line = r.stdout.strip().split("\n")[0].split()
     if not line or len(line[0]) < 40:
-        raise UpdateError(f"the update server has no branch '{cfg['branch']}'")
+        raise UpdateError(f"the update server has no branch '{branch_of(cfg)}'")
     return line[0]
 
 
@@ -132,7 +141,7 @@ def _fetch(cfg, sha):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     if not (CACHE_DIR / "HEAD").exists():
         _git("init", "--bare", "-q", str(CACHE_DIR))
-    r = _git("fetch", "--quiet", "--no-tags", "--", cfg["repo"], f"+refs/heads/{cfg['branch']}:refs/remotes/update/{cfg['branch']}", cwd=CACHE_DIR, timeout=120)
+    r = _git("fetch", "--quiet", "--no-tags", "--", cfg["repo"], f"+refs/heads/{branch_of(cfg)}:refs/remotes/update/{branch_of(cfg)}", cwd=CACHE_DIR, timeout=120)
     if r.returncode != 0:
         raise UpdateError("could not download the update: " + _last_line(r))
     if _git("cat-file", "-e", f"{sha}^{{commit}}", cwd=CACHE_DIR).returncode != 0:
@@ -251,24 +260,42 @@ def version_key(v):
     return tuple(nums + [0] * (5 - len(nums)))
 
 
-def release_latest(cfg):
-    """{'version', 'tag', 'tar_url', 'sig_url'} of the newest GitHub release of the repository in cfg['repo']."""
-    m = re.search(r"github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?/?$", cfg["repo"] or "")
-    if not m:
-        raise UpdateError("the update server is not a GitHub repository address")
-    try:
-        d = json.loads(_http_get(f"{API}/repos/{m.group(1)}/{m.group(2)}/releases/latest", limit=2_000_000))
-    except ValueError:
-        raise UpdateError("the update server sent something unexpected")
+def _release_info(d):
+    """{'version', 'tag', 'tar_url', 'sig_url'} for one GitHub release (as the API describes it), or None if it has no usable signed package."""
     tag = str(d.get("tag_name") or "")
     ver = tag.lstrip("v")
-    if not re.fullmatch(r"\d+(\.\d+){1,3}", ver):
-        raise UpdateError("the newest release has no usable version")
+    if d.get("draft") or not re.fullmatch(r"\d+(\.\d+){1,4}", ver):               # (R.B.S.F.D has up to five numbers)
+        return None
     assets = {a.get("name"): a.get("browser_download_url") for a in d.get("assets", []) if isinstance(a, dict)}
     name = f"roblox-manager-app-{ver}.tar.gz"
     if name not in assets or name + ".sig" not in assets:
-        raise UpdateError(f"the newest release ({ver}) has no signed update package yet")
-    return {"version": ver, "tag": tag, "tar_url": assets[name], "sig_url": assets[name + ".sig"]}
+        return None
+    return {"version": ver, "tag": tag, "tar_url": assets[name], "sig_url": assets[name + ".sig"], "prerelease": bool(d.get("prerelease"))}
+
+
+def release_latest(cfg):
+    """The newest GitHub release of the repository in cfg['repo']: on the stable channel the one GitHub calls latest, on the beta channel the highest
+    version of all releases, pre-releases included."""
+    m = re.search(r"github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?/?$", cfg["repo"] or "")
+    if not m:
+        raise UpdateError("the update server is not a GitHub repository address")
+    base = f"{API}/repos/{m.group(1)}/{m.group(2)}/releases"
+    try:
+        if cfg.get("channel") == "beta":
+            found = [r for r in (_release_info(d) for d in json.loads(_http_get(base + "?per_page=20", limit=4_000_000)) if isinstance(d, dict)) if r]
+            if not found:
+                raise UpdateError("there is no beta release with a signed update package yet")
+            return max(found, key=lambda r: version_key(r["version"]))
+        d = json.loads(_http_get(base + "/latest", limit=2_000_000))
+    except ValueError:
+        raise UpdateError("the update server sent something unexpected")
+    info = _release_info(d)
+    if info is None:
+        tag = str(d.get("tag_name") or "")
+        if not re.fullmatch(r"\d+(\.\d+){1,4}", tag.lstrip("v")):
+            raise UpdateError("the newest release has no usable version")
+        raise UpdateError(f"the newest release ({tag.lstrip('v')}) has no signed update package yet")
+    return info
 
 
 # ------------------------------------------------------------------ the public steps
@@ -325,6 +352,8 @@ def apply(cfg=None):
             who = signer_of(head)
             if cfg["require_signature"] and not who:
                 raise UpdateError("the newest version is not signed with a key you trust, so it was NOT installed")
+            if old and _git("merge-base", "--is-ancestor", head, old, cwd=CACHE_DIR).returncode == 0:
+                return dict(res, status="up-to-date", message="You have a newer version than this channel has so far, so nothing was changed.")
             if not is_continuation(old, head):
                 raise UpdateError("the newest version does not continue the one you have (it would be a step back), so it was NOT installed")
             staging = Path(tempfile.mkdtemp(prefix=APP_DIR.name + ".new-", dir=APP_DIR.parent))

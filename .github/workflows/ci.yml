@@ -3,7 +3,7 @@ name: CI
 # Tests for every push and pull request: the desktop app on Linux and the Android app's unit tests (Windows has its own workflow).
 on:
   push:
-    branches: [main, release]
+    branches: [main, release, beta]
   pull_request:
   workflow_dispatch:
 
@@ -52,6 +52,8 @@ jobs:
         run: python tests/test_nav.py
       - name: Roles, staff list and admin page
         run: python tests/test_admin.py
+      - name: Update channels
+        run: python tests/test_channels.py
       - name: Version numbers
         run: python tests/test_versions.py
       - name: Updates box

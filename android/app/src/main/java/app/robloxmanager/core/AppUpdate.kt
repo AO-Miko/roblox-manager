@@ -22,6 +22,9 @@ class AppUpdate(private val baseUrl: String, private val http: OkHttpClient = Ro
     companion object {
         const val MAX_APK = 80L * 1024 * 1024
 
+        /** The beta channel is the `beta` branch of the same repository: .../release/dist/ becomes .../beta/dist/. Other addresses are left as they are. */
+        fun betaUrl(stableUrl: String): String = stableUrl.replace("/release/dist", "/beta/dist")
+
         fun parse(text: String): UpdateInfo {
             val o = try { AppJson.parseToJsonElement(text).obj } catch (_: Exception) { null } ?: throw UpdateError("The update information is not valid")
             return fromJson(o)

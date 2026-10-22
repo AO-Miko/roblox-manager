@@ -159,3 +159,7 @@ GitHub Release with the APK and the Linux package. See [docs/UPDATES.md](docs/UP
 ## Versions
 
 The version has five numbers, `R.B.S.F.D`: complete rework . big feature change . small feature change . bug fix . design rework. An update raises exactly one of them by 1; they never go down (only a complete rework sets the others back to 0). Details in [docs/UPDATES.md](docs/UPDATES.md).
+
+## Beta channel
+
+In Settings > Updates (PC) or Info > Updates (phone) you can join the **beta channel**: you get every new version before it goes to everybody else (less tested). You can go back to Stable at any time and keep your version until Stable catches up. Details in [docs/UPDATES.md](docs/UPDATES.md).

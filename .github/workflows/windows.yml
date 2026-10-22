@@ -3,7 +3,7 @@ name: Windows
 # Runs the tests on a real Windows machine, and checks the Windows package of every release.
 on:
   push:
-    branches: [main, release]
+    branches: [main, release, beta]
   pull_request:
   workflow_dispatch:
   release:
@@ -46,6 +46,9 @@ jobs:
       - name: Navigation and search
         if: ${{ !cancelled() }}
         run: python tests/test_nav.py
+      - name: Update channels
+        if: ${{ !cancelled() }}
+        run: python tests/test_channels.py
       - name: Version numbers
         if: ${{ !cancelled() }}
         run: python tests/test_versions.py

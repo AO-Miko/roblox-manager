@@ -61,4 +61,9 @@ class AppUpdateTest {
         assertFalse(File(dir, "update-8.apk").exists())
         s.shutdown(); tmp.delete()
     }
+
+    @Test fun betaChannelFollowsTheBetaBranch() {
+        assertEquals("https://raw.githubusercontent.com/AO-Miko/roblox-manager/beta/dist/", AppUpdate.betaUrl("https://raw.githubusercontent.com/AO-Miko/roblox-manager/release/dist/"))
+        assertEquals("https://example.test/updates/", AppUpdate.betaUrl("https://example.test/updates/"))          // an address that is not the release branch is left alone
+    }
 }

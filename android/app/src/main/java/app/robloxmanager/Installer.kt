@@ -21,7 +21,13 @@ object Updates {
     val state = MutableStateFlow(UpdateState())
     const val DEFAULT_URL = "https://raw.githubusercontent.com/AO-Miko/roblox-manager/release/dist/"      // the raw address of the repository's dist/ folder; can be changed in Settings
 
-    fun url(sv: Services) = sv.prefs.str("updateUrl", DEFAULT_URL)
+    /** The address saved in Settings (the stable channel's). */
+    fun savedUrl(sv: Services) = sv.prefs.str("updateUrl", DEFAULT_URL)
+
+    fun isBeta(sv: Services) = sv.prefs.str("channel", "stable") == "beta"
+
+    /** The address to ask: on the beta channel the beta branch of the same repository. */
+    fun url(sv: Services) = savedUrl(sv).let { if (isBeta(sv)) AppUpdate.betaUrl(it) else it }
 
     /** Looks for a newer build and, if there is one, downloads and verifies it so it is ready to install. Never throws. */
     fun check(sv: Services, ctx: Context, download: Boolean = true, quiet: Boolean = false) {

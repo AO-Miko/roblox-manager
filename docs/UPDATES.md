@@ -89,6 +89,34 @@ The repository is public, so it contains only source, the signed APK and public 
   Linux and Windows apps once (they only trust the key they were installed with).
 - `android-release.jks`, `android.pass`, `android-signing.properties`: sign the APK. **If lost, installed phones can never be updated** (Android rejects a different signing key); you would uninstall and reinstall.
 
+## Beta channel
+
+Settings > Updates (PC) and Info > Updates (phone) have a **Beta channel** choice. Beta gets every update **before** it goes to everybody else:
+
+| | Stable (default) | Beta |
+|---|---|---|
+| Linux | branch `release` | branch `beta` |
+| Windows | the GitHub release marked *latest* | the highest version of all GitHub releases, pre-releases included |
+| Android | `dist/` of branch `release` | `dist/` of branch `beta` |
+
+Everything is signed with the same release key on both channels. Joining the beta asks first (less tested, may have bugs). You can go back to Stable at any
+time: nothing older is installed (the numbers never go down), you keep your version until Stable catches up.
+
+For the maintainer:
+
+```
+git checkout beta                                        # work and test here first
+tools/release.sh big "what is new" --beta --push         # a beta release: GitHub pre-release + the beta branch
+git checkout release
+tools/promote.sh --push                                  # the same tested build becomes the stable version
+```
+
+`tools/promote.sh` fast-forwards `release` to the newest beta commit (no rebuild: same commit, same files) and turns its pre-release into the latest release.
+It refuses if `beta` does not contain everything on `release` (a fix that went to `release` directly must be merged into `beta` first).
+
+**Windows installs older than 1.9.0.0.0:** their updater only accepts release tags of up to four numbers. `tools/windows_bridge.sh 1.9.0.0.0 --push` publishes
+the same app as the four-number release `v1.9.0.0` (a version whose last number is 0 can be spelled with four numbers; the newer updater treats both as the same).
+
 ## Version numbers
 
 The version has five numbers, **R.B.S.F.D**:

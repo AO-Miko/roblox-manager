@@ -2,7 +2,7 @@
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QCheckBox, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
+    QCheckBox, QComboBox, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -243,15 +243,24 @@ class SettingsTab(QWidget):
         self.upd_repo.setPlaceholderText("Update repository address")
         self.upd_branch = QLineEdit()
         self.upd_branch.setMaximumWidth(200)
+        self.upd_channel = QComboBox()
+        self.upd_channel.addItem("Stable (recommended)", "stable")
+        self.upd_channel.addItem("Beta (new things first, may have bugs)", "beta")
+        self.upd_channel.setToolTip("Beta gets every update before it goes to Stable. You can go back to Stable at any time; you then keep the version you have until Stable catches up.")
+        self.upd_channel_note = hint("")
+        self.upd_channel_note.setWordWrap(True)
         self.upd_auto = WrapCheck("Look for updates and install them every time the app starts")
         self.upd_sig = WrapCheck("Only install updates signed with a key I trust (strongly recommended)")
         form.addRow(self._lab("Update server"), self.upd_repo)
-        form.addRow(self._lab("Branch"), self.upd_branch)
+        form.addRow(self._lab("Channel"), self.upd_channel)
+        form.addRow(self.upd_channel_note)
+        form.addRow(self._lab("Branch (stable)"), self.upd_branch)
         form.addRow(self.upd_auto)
         form.addRow(self.upd_sig)
         lay.addLayout(form)
         for w in (self.upd_repo, self.upd_branch):
             w.editingFinished.connect(self.save_update_settings)
+        self.upd_channel.activated.connect(lambda _=0: self.channel_changed())
         for w in (self.upd_auto, self.upd_sig):
             w.toggled.connect(lambda _=False: self.save_update_settings())
         row = FlowLayout()
@@ -277,6 +286,10 @@ class SettingsTab(QWidget):
             w.blockSignals(True)
             w.setText(v)
             w.blockSignals(False)
+        self.upd_channel.blockSignals(True)
+        self.upd_channel.setCurrentIndex(max(0, self.upd_channel.findData(cfg["channel"])))
+        self.upd_channel.blockSignals(False)
+        self._channel_note(cfg["channel"])
         for w, v in ((self.upd_auto, cfg["auto"]), (self.upd_sig, cfg["require_signature"])):
             w.blockSignals(True)
             w.setChecked(bool(v))
@@ -286,10 +299,31 @@ class SettingsTab(QWidget):
         self.upd_version.setText(f"Roblox Manager <b>{u.version()}</b>" + (f"  (commit {inst['commit'][:10]}{since})" if inst.get("commit") else ""))
         self.upd_version.setTextFormat(Qt.TextFormat.RichText)
 
+    def _channel_note(self, channel):
+        self.upd_channel_note.setText("You get every new version first, before it goes to Stable. Beta versions are less tested." if channel == "beta"
+                                      else "You get versions once they are released to everybody.")
+
+    def channel_changed(self):
+        """Switching to Beta asks first; switching back to Stable never installs an older version (the numbers never go down)."""
+        want = self.upd_channel.currentData()
+        before = self.updater.load_config()["channel"]
+        if want == before:
+            return
+        if want == "beta" and not self.ctx.confirm(
+                "Beta versions", "Beta versions get every update before it goes to everybody else. They are less tested and may have bugs.\n\n"
+                "You can go back to Stable at any time: you then keep the version you have until Stable catches up.\n\nJoin the beta?"):
+            self.upd_channel.blockSignals(True)
+            self.upd_channel.setCurrentIndex(self.upd_channel.findData(before))
+            self.upd_channel.blockSignals(False)
+            return
+        self.save_update_settings()
+        self._channel_note(want)
+        self.upd_status.setText("Channel changed. Press Check now to look for versions on it.")
+
     def save_update_settings(self):
         cfg = self.updater.load_config()
         cfg.update(repo=self.upd_repo.text().strip(), branch=self.upd_branch.text().strip() or "release", auto=self.upd_auto.isChecked(),
-                   require_signature=self.upd_sig.isChecked())
+                   require_signature=self.upd_sig.isChecked(), channel=self.upd_channel.currentData() or "stable")
         if not cfg["require_signature"] and not self.ctx.confirm(
                 "Updates without a signature", "Without the signature check, anyone who can write to the update repository can run programs "
                 "on this PC through an update.\n\nTurn the check off anyway?", danger=True):

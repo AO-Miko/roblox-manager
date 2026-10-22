@@ -63,7 +63,7 @@ def first_run_setup():
             trust.write_bytes(src.read_bytes())
         update = cfg / "update.json"
         if not update.exists():
-            update.write_text(json.dumps({"repo": "https://github.com/AO-Miko/roblox-manager", "branch": "release", "auto": True, "require_signature": True}, indent=1))
+            update.write_text(json.dumps({"repo": "https://github.com/AO-Miko/roblox-manager", "branch": "release", "auto": True, "require_signature": True, "channel": "stable"}, indent=1))
     except Exception:                                  # noqa: BLE001 - the app still starts
         pass
 
