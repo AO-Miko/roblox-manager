@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.14.4.2.3",
+    "date": "2026-10-22",
+    "changes": [
+      "New switch in Settings: servers are looked up by themselves (location, running time, version) as soon as they are listed, with no button to press. Needs one of the two location services allowed and a sign-in; off by default (PC and phone)"
+    ]
+  },
+  {
     "version": "1.14.3.2.3",
     "date": "2026-10-22",
     "changes": [

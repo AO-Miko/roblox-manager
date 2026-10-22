@@ -1,7 +1,7 @@
 {
-  "versionName": "1.14.3.2.3",
-  "versionCode": 31,
+  "versionName": "1.14.4.2.3",
+  "versionCode": 32,
   "apk": "roblox-manager.apk",
-  "sha256": "2260cb3063e9e17fe877073bd2e39dcacf993fd5d3432e9cb71adc954460804b",
-  "notes": "Mutual friends and since when you are friends, for any person in the friends, requests, followers, following and search lists (PC and phone)|Friend requests show when they were sent, where they came from and how many friends you share|Servers show the place version (marking older ones) and can copy a join link|Game wiki button, from RoSeal's list of game links: asked before RoSeal is contacted, links are checked before they open|Account page shows voice chat state and age verification; Money shows a Developer Exchange line"
+  "sha256": "73f61c93fa43d17255b0567f1d29f91f9faea136572df855e1d59fee8169528d",
+  "notes": "New switch in Settings: servers are looked up by themselves (location, running time, version) as soon as they are listed, with no button to press. Needs one of the two location services allowed and a sign-in; off by default (PC and phone)"
 }
