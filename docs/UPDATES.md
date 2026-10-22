@@ -89,6 +89,21 @@ The repository is public, so it contains only source, the signed APK and public 
   Linux and Windows apps once (they only trust the key they were installed with).
 - `android-release.jks`, `android.pass`, `android-signing.properties`: sign the APK. **If lost, installed phones can never be updated** (Android rejects a different signing key); you would uninstall and reinstall.
 
+## Forced updates (an app that is two updates behind)
+
+An app that has missed **two** updates cannot be used any more: a page covers the whole window (PC) or screen (phone), says which version it is and how far behind, and has an
+**Update now** button (and a link to the download page in case the update does not work). Nobody is signed out and nothing is deleted: after the update everything is as it was.
+It is checked at every start and every ten minutes.
+
+- `dist/policy.json` (signed with the release key as `policy.json.sig`) lists every version that was released to everybody, betas not included:
+  `{"serial": 12, "limit": 2, "stable": ["1.8.0.0.0", "1.9.0.0.0", ...]}`.
+- An app counts how many versions in that list are newer than itself (1.9.0.0 and 1.9.0.0.0 are one version). `limit` or more: locked. A beta that is newer than the list is never behind.
+- Like the ban list: only a valid signature is believed, a newer `serial` replaces an older one, the last good file is kept for offline use, and if it was never downloaded or the server cannot be
+  reached nobody is locked out.
+- `tools/policy.sh` writes and signs it from the stable GitHub releases. `release.sh` does that for every stable release and `promote.sh` after a promotion, so it needs no manual step;
+  `tools/policy.sh --limit 3 --commit --push` changes the limit (an emergency way to unlock or lock everybody).
+- Only versions that contain this feature enforce it; older apps ignore the file.
+
 ## Beta channel
 
 Settings > Updates (PC) and Info > Updates (phone) have a **Beta channel** choice. Beta gets every update **before** it goes to everybody else:

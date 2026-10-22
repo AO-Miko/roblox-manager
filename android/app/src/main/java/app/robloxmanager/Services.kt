@@ -10,6 +10,8 @@ import app.robloxmanager.core.BanStore
 import app.robloxmanager.core.KeystoreVault
 import app.robloxmanager.core.NameCache
 import app.robloxmanager.core.Prefs
+import app.robloxmanager.core.PolicyStatus
+import app.robloxmanager.core.PolicyStore
 import app.robloxmanager.core.RequestLog
 import app.robloxmanager.core.RoleStore
 import app.robloxmanager.core.RobloxApi
@@ -50,6 +52,9 @@ class Services(app: Application) {
     val prefs = Prefs(File(dir, "prefs.json"))
     val bans = BanStore(File(dir, "bans.cache.json"))
     val roles = RoleStore(File(dir, "roles.cache.json"))
+    val policy = PolicyStore(File(dir, "policy.cache.json"))
+    /** Not null while this version is too far behind (see PolicyStore): the whole app is covered by the update page. */
+    val updateRequired = MutableStateFlow<PolicyStatus?>(null)
     /** Counts up when the role list changed, so the screens look at it again. */
     val rolesVersion = MutableStateFlow(0)
     /** Set when an account was signed out because it is banned; the screen shows it once. */
@@ -65,6 +70,7 @@ class Services(app: Application) {
     init {
         client.readBurst = prefs.double("readBurst", 0.5)
         log.writeFile = prefs.bool("logToFile", true)
+        enforcePolicy()                       // from the last policy kept on the phone: a version that is too far behind is covered before anything is sent
         scope.launch { restore() }
         scope.launch {                         // the ban list: at the start and every ten minutes while the app is open
             while (true) {
@@ -73,6 +79,8 @@ class Services(app: Application) {
                     withContext(Dispatchers.IO) { bans.refresh() }
                     enforce()
                     if (withContext(Dispatchers.IO) { roles.refresh() } == true) rolesVersion.value++
+                    withContext(Dispatchers.IO) { policy.refresh() }
+                    enforcePolicy()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (_: Throwable) {
@@ -84,11 +92,17 @@ class Services(app: Application) {
 
     private fun refreshList() { accountList.value = accounts.all() }
 
+    /** Covers the app with the update page when this version has missed too many updates, and uncovers it when it has not (an update, a new policy). */
+    fun enforcePolicy() {
+        val st = try { policy.status(BuildConfig.VERSION_NAME) } catch (_: Throwable) { null }
+        updateRequired.value = if (st != null && st.blocked) st else null
+    }
+
     private suspend fun restore() {
         refreshList()
         val id = accounts.activeId
         val cookie = id?.let { accounts.cookie(it) }
-        if (cookie != null) try { signIn(cookie, save = false) } catch (_: Throwable) { }
+        if (cookie != null && updateRequired.value == null) try { signIn(cookie, save = false) } catch (_: Throwable) { }
         ready.value = true
     }
 

@@ -27,7 +27,8 @@ if [[ -n "$PUSH" ]]; then
   git push origin release
   gh release edit "$TAG" --prerelease=false --latest
   git push origin release:main
-  echo "Published: $VERSION is the stable version. Stable users get it at their next start."
+  tools/policy.sh --commit --push          # the newest stable version is now in the update policy (apps two updates behind are asked to update)
+  echo "Published: $VERSION is the stable version. Stable users get it at their next start. (Merge release into beta before the next promotion: git checkout beta && git merge release)"
 else
   echo "Done locally. Publish with: tools/promote.sh --push"
 fi

@@ -76,8 +76,15 @@ json.dump({"versionName": v, "versionCode": int(c), "apk": "roblox-manager.apk",
 open("dist/update.json", "a").write("\n")
 PY
 
+POLICY_FILES=""
+if [[ -z "$BETA" ]]; then
+  echo "== Update policy (which versions were released to everybody)"
+  tools/policy.sh --with "$VERSION"
+  POLICY_FILES="dist/policy.json dist/policy.json.sig"
+fi
+
 echo "== Commit and tag (signed)"
-git add linux/VERSION android/version.properties dist/roblox-manager.apk dist/update.json CHANGELOG.json linux/CHANGELOG.json android/app/src/main/assets/changelog.json linux/icon.ico
+git add $POLICY_FILES linux/VERSION android/version.properties dist/roblox-manager.apk dist/update.json CHANGELOG.json linux/CHANGELOG.json android/app/src/main/assets/changelog.json linux/icon.ico
 git commit -q -m "Release $VERSION" -m "${NOTES}"
 git tag -s "v$VERSION" -m "Release $VERSION"
 git verify-commit HEAD

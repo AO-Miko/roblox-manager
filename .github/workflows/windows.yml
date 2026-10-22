@@ -49,6 +49,9 @@ jobs:
       - name: Update channels
         if: ${{ !cancelled() }}
         run: python tests/test_channels.py
+      - name: Forced updates
+        if: ${{ !cancelled() }}
+        run: python tests/test_policy.py
       - name: Version numbers
         if: ${{ !cancelled() }}
         run: python tests/test_versions.py

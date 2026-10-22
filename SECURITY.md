@@ -25,7 +25,7 @@ Especially welcome:
 - anything that lets someone other than the maintainer get code onto a user's device through an update (the signature checks, the downloaded packages,
   the update server addresses, unpacking of archives);
 - a way to make the app spend Robux, or change an account, without the user asking for it;
-- a way around the signed ban list or role list (`dist/bans.json`, `dist/roles.json`), for example to ban someone without the release key, or to get the Admin page without a role.
+- a way around the signed ban list, role list or update policy (`dist/bans.json`, `dist/roles.json`, `dist/policy.json`), for example to ban someone without the release key, or to get the Admin page without a role.
 
 Not in scope: Roblox's own website or API, problems that need an attacker who already controls the device or the user's operating-system account, and the
 fact that the Windows program has no paid code-signing certificate (SmartScreen warns about it; the README explains how to check the download).

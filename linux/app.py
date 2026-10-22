@@ -22,11 +22,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PySide6.QtCore import QByteArray, QLockFile, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QLabel, QMainWindow, QMessageBox, QStackedWidget, QTabWidget, QVBoxLayout, QWidget
 
 import accounts
 import bans
 import nav
+import policy
 import roles
 import plat
 import rbx
@@ -35,6 +36,7 @@ import theme
 from tab_account import AccountTab
 from tab_admin import AdminTab
 from tab_staff import StaffTab
+from update_required import UpdateRequiredPage
 from tab_explorer import ExplorerTab
 from tab_groups import GroupsTab
 from tab_money import MoneyTab
@@ -104,7 +106,12 @@ class MainWindow(QMainWindow):
         sl.setSpacing(0)
         sl.addWidget(self.sidebar)
         sl.addWidget(right, 1)
-        self.setCentralWidget(shell)
+        self.stack = QStackedWidget()                     # page 0: the app; page 1: 'update required' (see policy.py), which covers everything
+        self.lock_page = UpdateRequiredPage(self.ctx, restart=lambda: self.settings_tab.restart_app())
+        self.stack.addWidget(shell)
+        self.stack.addWidget(self.lock_page)
+        self.locked = False
+        self.setCentralWidget(self.stack)
         self.palette_box = nav.Palette(self, self._search_entries)
         self._shortcuts = nav.install_shortcuts(self)
         self.header.show_page(self.tabs.tabText(0))
@@ -123,7 +130,9 @@ class MainWindow(QMainWindow):
         self.ctx.signed_in.connect(lambda: self.who.setText(f"Signed in as {self.ctx.me['name']}"))
         self.ctx.signed_out.connect(lambda: self.who.setText("Not signed in"))
         self.statusBar().showMessage("Sign in on the Home tab to unlock friends, groups and VIP servers. The API Explorer works without one.")
-        if auto_login and self.ctx.client.has_cookie:
+        if auto_login:
+            self.enforce_policy()                          # a version that is too far behind is locked before anything is sent
+        if auto_login and self.ctx.client.has_cookie and not self.locked:
             QTimer.singleShot(200, self.account.sign_in)
         if auto_login:                                   # the ban list: now, and every ten minutes while the app is open
             self._ban_timer = QTimer(self)
@@ -140,7 +149,8 @@ class MainWindow(QMainWindow):
         return self.tabs.currentWidget().page
 
     def open_search(self):
-        self.palette_box.open()
+        if not self.locked:
+            self.palette_box.open()
 
     def _go(self, page, sub=None, row=None, table=None):
         self.tabs.setCurrentIndex(self.tabs.indexOf(self.holders[page]))
@@ -205,7 +215,24 @@ class MainWindow(QMainWindow):
                 return
 
     def _check_bans(self):
-        self.ctx.async_.run(lambda: (bans.refresh(), roles.refresh()), lambda _: (self.account.enforce_bans(), self.update_admin()))
+        self.ctx.async_.run(lambda: (bans.refresh(), roles.refresh(), policy.refresh()), lambda _: (self.account.enforce_bans(), self.update_admin(), self.enforce_policy()))
+
+    def enforce_policy(self):
+        """Lock the whole window when this version is too far behind the newest released one (see policy.py), unlock it when it is not (an update, a new policy).
+        Returns True while locked."""
+        st = policy.status()
+        lock = bool(st["blocked"])
+        if lock:
+            self.lock_page.show_status(st)
+        if lock != self.locked:
+            self.locked = lock
+            self.stack.setCurrentIndex(1 if lock else 0)
+            for s in self._shortcuts:
+                s.setEnabled(not lock)
+            if lock:
+                self.palette_box.close()
+                self.statusBar().showMessage("Update required: this version is too far behind.")
+        return self.locked
 
     def update_admin(self):
         """The Admin page exists only for an account with the admin role or higher (see roles.py); for everybody else it is hidden and cannot be opened."""

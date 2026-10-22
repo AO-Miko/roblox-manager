@@ -181,6 +181,10 @@ or a higher role, and a ban needs a reason). See [docs/ADMIN.md](docs/ADMIN.md).
 **Spending**: the apps never buy anything by themselves. The Android app has no purchase feature, and the Linux app always shows the price and asks first
 before anything that costs Robux.
 
+**Forced updates**: a version that has missed two updates cannot be used until it is updated. A page covers the app and has an **Update now** button; nobody is signed out and nothing is
+deleted. This is decided by a third small signed file in this repository (`dist/policy.json`, the list of versions released to everybody), downloaded like the ban list. See
+[docs/UPDATES.md](docs/UPDATES.md).
+
 **Updates are verified**: Linux only installs commits signed with the release key (and never an older version), Windows only installs an update package
 signed with that key (and never an older version), Android only installs an APK whose checksum matches and that is signed with the same key as the
 installed app. See [docs/UPDATES.md](docs/UPDATES.md).

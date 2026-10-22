@@ -56,6 +56,7 @@ import app.robloxmanager.ui.MoreScreen
 import app.robloxmanager.ui.PEOPLE
 import app.robloxmanager.ui.SearchDialog
 import app.robloxmanager.ui.TopBar
+import app.robloxmanager.ui.UpdateRequiredScreen
 import app.robloxmanager.ui.VIP
 import app.robloxmanager.ui.C
 import app.robloxmanager.ui.GroupsScreen
@@ -83,6 +84,7 @@ private fun Root(sv: Services) {
     val me by sv.current.collectAsState()
     var adding by remember { mutableStateOf(false) }
     val notice by sv.banNotice.collectAsState()
+    val lock by sv.updateRequired.collectAsState()
     notice?.let { n ->
         AlertDialog(
             onDismissRequest = { sv.banNotice.value = null }, title = { Text("Account not allowed") },
@@ -92,6 +94,7 @@ private fun Root(sv: Services) {
     }
     Box(Modifier.fillMaxSize().background(C.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
         when {
+            lock != null -> UpdateRequiredScreen(sv, lock!!)                    // too far behind: nothing else can be used
             !ready -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
             me == null || adding -> {
                 LaunchedEffect(me) { if (me != null) adding = false }

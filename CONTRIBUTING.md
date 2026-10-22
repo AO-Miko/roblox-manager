@@ -41,6 +41,7 @@ python tests/test_nav.py                  # side bar, search, shortcuts
 python tests/test_admin.py                # roles, staff list, admin page (needs git, bash, ssh-keygen)
 python tests/test_versions.py             # the five-number version R.B.S.F.D
 python tests/test_channels.py             # stable / beta update channels
+python tests/test_policy.py               # forced updates (the 'update required' page)
 python tests/test_settings_updates.py
 python tests/test_text_fit.py             # no cut-off text on any tab
 python tests/test_gui_full.py             # the whole app against a fake Roblox

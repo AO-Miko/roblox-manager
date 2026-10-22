@@ -12,7 +12,10 @@
 /docs/ADMIN.md         @AO-Miko
 /linux/bans.py         @AO-Miko
 /linux/roles.py        @AO-Miko
+/linux/policy.py       @AO-Miko
+/linux/update_required.py @AO-Miko
 /linux/adminops.py     @AO-Miko
 /linux/tab_admin.py    @AO-Miko
 /android/app/src/main/java/app/robloxmanager/core/Bans.kt  @AO-Miko
 /android/app/src/main/java/app/robloxmanager/core/Roles.kt @AO-Miko
+/android/app/src/main/java/app/robloxmanager/core/Policy.kt @AO-Miko
