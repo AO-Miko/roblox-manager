@@ -77,8 +77,8 @@ def ban(user_id, reason, actor_id, push=True, repo=None):
     return run(args + (["--push"] if push else []), repo)
 
 
-def unban(user_id, actor_id, push=True, repo=None):
-    args = ["unban", str(int(user_id)), "--by", str(int(actor_id))]
+def unban(user_id, actor_id, note="", push=True, repo=None):
+    args = ["unban", str(int(user_id)), note[:200], "--by", str(int(actor_id))]
     return run(args + (["--push"] if push else []), repo)
 
 

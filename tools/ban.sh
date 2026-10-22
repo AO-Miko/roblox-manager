@@ -3,7 +3,7 @@
 # the apps check it at every start, every sign-in and every ten minutes, and sign a banned account out and forget it at once.
 #
 #   tools/ban.sh ban 12345678 "reason shown to the person"     (the reason is optional, at most 200 characters)
-#   tools/ban.sh unban 12345678
+#   tools/ban.sh unban 12345678 ["why, optional"]
 #   tools/ban.sh list [--json]
 #   --by ID     the Roblox user id of whoever does this (the Admin tab passes it); the roles in dist/roles.json decide what is allowed:
 #               nobody bans themselves, nobody bans someone with the same or a higher role, an unban needs at least the role of the ban's author.
@@ -100,7 +100,7 @@ PY
 rm -f dist/bans.json.sig
 ssh-keygen -q -Y sign -f "$KEY" -n roblox-manager-bans dist/bans.json
 git add dist/bans.json dist/bans.json.sig
-git commit -q -m "Ban list: $ACTION $ID${BY:+ (by $BY)}"
+git commit -q -m "Ban list: $ACTION $ID${BY:+ (by $BY)}${REASON:+: $REASON}"
 git verify-commit HEAD
 if [[ -n "$PUSH" ]]; then
   git push origin release

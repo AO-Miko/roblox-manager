@@ -49,7 +49,10 @@ On the phone (under **More**) it shows what is in force: who is banned, by whom 
 On the PC it appears only when the signed-in account's user id has a role of admin or higher; for everybody else it is hidden and Ctrl+number skips it.
 It bans and unbans by user id or username. **A ban needs a reason.** Before anything is banned the page shows the person's Roblox profile (picture, display name, username,
 user id, joined date, followers, following, friends, description) together with the reason and asks **"Are you sure you want to ban this user?"**; only **Yes, ban** publishes it,
-**Cancel** (the default button) changes nothing. The page also shows who is banned, by whom and with which role.
+**Cancel** (the default button) changes nothing. **Unban** works the same way: press **Unban...** with someone selected in the list, or type their id or username (the reason box is then an optional note). The page shows their
+profile and what the ban says (when, by whom with which role, and why) and asks **"Are you sure you want to unban this user?"**; only **Yes, unban** lets them back in (the apps notice
+within about ten minutes), **Cancel** changes nothing. A ban can only be lifted by someone with at least the role of whoever placed it, and nobody unbans themselves. An account that no
+longer exists on Roblox can still be unbanned. The page also shows who is banned, by whom and with which role.
 The rules above are checked in the page, and again in `tools/ban.sh` (so they hold however a ban is started).
 
 **Publishing needs the release key.** A ban is only valid when signed with the release key, so the page publishes by running `tools/ban.sh` in your
@@ -61,7 +64,7 @@ pick the repository folder. Other people with a role can see the Admin page, but
 
 ```
 tools/ban.sh ban 12345678 "reason" --by 239345228 --push     # --by: the user id acting; without it the key holder acts as owner
-tools/ban.sh unban 12345678 --by 239345228 --push
+tools/ban.sh unban 12345678 "why, optional" --by 239345228 --push
 tools/ban.sh list
 ```
 

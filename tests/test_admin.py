@@ -300,6 +300,69 @@ w.admin.target.setText("")
 w.admin.ban(); spin(0.2)
 check("an empty box asks for an id or a name", "Type a user id" in w.admin.msg.text(), w.admin.msg.text())
 
+# ---------------------------------------------------------------- unban: the profile, what the ban says, and a question
+from ui_common import fill_table
+in_force = [{"id": 7777, "reason": "spamming", "since": "2026-10-20", "by": 2002, "rank": 2},
+            {"id": 5005, "reason": "by the owner", "since": "2026-10-19", "by": None, "rank": 5},
+            {"id": 3003, "reason": "myself", "since": "2026-10-18", "by": 2002, "rank": 2}]
+w.admin._entries = lambda: in_force
+unbanned = []
+adminops.unban = lambda uid, actor, note="", **k: unbanned.append((uid, actor, note)) or (True, "ok")
+shown_u = []
+answer_u = {"yes": False}
+w.admin.confirm_unban = lambda uid, profile, entry, note: shown_u.append((uid, profile, entry, note)) or answer_u["yes"]
+w.admin.target.setText(""); w.admin.reason.setText("")
+fill_table(w.admin.table, [[e["id"], e["reason"], e["since"], e["by"] or "owner", roles.label(e["rank"])] for e in in_force], keys=[e["id"] for e in in_force])
+w.admin.table.clearSelection()
+
+w.admin.unban(); spin(0.2)
+check("unban with nothing selected and nothing typed says what to do", "Select someone" in w.admin.msg.text() and not shown_u, w.admin.msg.text())
+w.admin.target.setText("4004")
+w.admin.unban()
+check("an id that is not banned says so", wait(lambda: "not banned" in w.admin.msg.text()) and not shown_u and not unbanned, w.admin.msg.text())
+w.admin.target.setText("5005")
+w.admin.unban()
+check("a ban placed by someone with a higher role cannot be lifted (nothing is shown)", wait(lambda: "higher role" in w.admin.msg.text()) and not shown_u and not unbanned, w.admin.msg.text())
+w.admin.target.setText("3003")
+w.admin.unban()
+check("nobody unbans themselves", wait(lambda: "yourself" in w.admin.msg.text()) and not shown_u and not unbanned, w.admin.msg.text())
+
+w.admin.target.setText("7777"); w.admin.reason.setText("it was a mistake")
+answer_u["yes"] = False
+w.admin.unban()
+check("a valid unban (typed id) shows the profile and the ban entry, and asks", wait(lambda: len(shown_u) == 1) and shown_u[0][0] == 7777 and shown_u[0][1]["info"]["displayName"] == "Plain Person"
+      and shown_u[0][2]["reason"] == "spamming" and shown_u[0][3] == "it was a mistake", shown_u)
+check("answering no cancels: nothing is published", wait(lambda: "Cancelled" in w.admin.msg.text()) and not unbanned, w.admin.msg.text())
+answer_u["yes"] = True
+w.admin.unban()
+check("answering yes publishes the unban once, with who did it and the note", wait(lambda: len(unbanned) == 1) and unbanned[0] == (7777, 3003, "it was a mistake"), unbanned)
+check("...and says so", wait(lambda: "unbanned" in w.admin.msg.text()), w.admin.msg.text())
+
+# by selecting a row in the list instead of typing
+w.admin.target.setText(""); w.admin.reason.setText("")
+w.admin.table.selectRow(0)
+w.admin.unban()
+check("an unban of the person selected in the list works the same way (the note is optional)", wait(lambda: len(unbanned) == 2) and unbanned[1] == (7777, 3003, ""), unbanned)
+
+# the account may be gone from Roblox: the ban can still be lifted
+w.ctx.client.user_detail = lambda uid: (_ for _ in ()).throw(rbx.RobloxError("gone", 404))
+w.admin.target.setText("7777")
+w.admin.unban()
+check("a Roblox account that no longer exists can still be unbanned (an empty profile is shown)", wait(lambda: len(unbanned) == 3) and shown_u[-1][1]["info"] == {}, unbanned)
+w.ctx.client.user_detail = user_detail
+
+# the question itself
+prof = tab_staff.fetch_profile(w.ctx.client, 7777)
+ud = tab_admin.UnbanDialog(w, 7777, prof, in_force[0], "it was a mistake")
+check("the question shows the profile, who banned them when and why, and your note", ud.display.text() == "Plain Person" and "3,456" in ud.facts.text() and "Are you sure you want to unban" in ud.ask.text()
+      and "2026-10-20" in ud.reason.text() and "admin 2002" in ud.reason.text() and "spamming" in ud.reason.text() and "it was a mistake" in ud.reason.text(), ud.reason.text())
+check("...Cancel is the default, the other says Yes, unban and is not the red ban style", ud.b_no.isDefault() and ud.b_yes.text() == "Yes, unban" and ud.windowTitle() == "Unban this user?" and not ud.b_yes.property("danger")
+      and "sign in again" in ud.warn.text())
+ud2 = tab_admin.UnbanDialog(w, 5005, prof, in_force[1])
+check("a ban placed by the key holder says 'the owner'", "the owner" in ud2.reason.text(), ud2.reason.text())
+ud.b_yes.click()
+check("Yes, unban accepts", ud.result() == tab_admin.QDialog.DialogCode.Accepted)
+
 # ---------------------------------------------------------------- the Staff List
 opened = []
 tab_staff.open_url = lambda url: opened.append(url)

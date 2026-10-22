@@ -22,9 +22,9 @@ class BanDialog(QDialog):
         self.setMinimumWidth(480)
         info = profile.get("info", {})
         lay = QVBoxLayout(self)
-        ask = QLabel("<b>Are you sure you want to ban this user?</b>")
-        ask.setProperty("role", "title")
-        lay.addWidget(ask)
+        self.ask = QLabel("<b>Are you sure you want to ban this user?</b>")
+        self.ask.setProperty("role", "title")
+        lay.addWidget(self.ask)
         card = QFrame()
         card.setProperty("card", True)
         cl = QVBoxLayout(card)
@@ -60,7 +60,8 @@ class BanDialog(QDialog):
         self.reason.setWordWrap(True)
         self.reason.setProperty("role", "notice")
         lay.addWidget(self.reason)
-        lay.addWidget(hint("They are signed out and removed from every PC and phone within about ten minutes."))
+        self.warn = hint("They are signed out and removed from every PC and phone within about ten minutes.")
+        lay.addWidget(self.warn)
         row = QHBoxLayout()
         row.addStretch()
         self.b_no = button("Cancel", self.reject)
@@ -69,6 +70,26 @@ class BanDialog(QDialog):
         row.addWidget(self.b_no)
         row.addWidget(self.b_yes)
         lay.addLayout(row)
+
+
+class UnbanDialog(BanDialog):
+    """The same question the other way round: the profile, what the ban says (when, by whom, why), and your note; only Yes, unban lets them back in."""
+
+    def __init__(self, parent, uid, profile, entry, note=""):
+        super().__init__(parent, uid, profile, note)
+        self.setWindowTitle("Unban this user?")
+        self.ask.setText("<b>Are you sure you want to unban this user?</b>")
+        by = entry.get("by")
+        who = f"{roles.label(int(entry.get('rank', 5))).lower()} {by}" if by else "the owner"
+        since = entry.get("since") or "an unknown date"
+        why = entry.get("reason") or "(no reason was given)"
+        self.reason.setText(f"<b>Banned</b> on {since} by {who}.<br><b>Ban reason:</b> {why}" + (f"<br><b>Your note:</b> {note}" if note else ""))
+        self.warn.setText("They can sign in again within about ten minutes.")
+        self.b_yes.setText("Yes, unban")
+        self.b_yes.setProperty("danger", False)
+        self.b_yes.setProperty("primary", True)
+        self.b_yes.style().unpolish(self.b_yes)
+        self.b_yes.style().polish(self.b_yes)
 
 
 class AdminTab(QWidget):
@@ -112,7 +133,7 @@ class AdminTab(QWidget):
         self.table = make_table(["User id", "Reason", "Since", "By", "Role"], [120, 300, 100, 120, 80], empty="Nobody is banned.")
         lay.addWidget(self.table, 1)
         row = QHBoxLayout()
-        self.b_unban = button("Unban selected", self.unban, "Lets them back in")
+        self.b_unban = button("Unban...", self.unban, "Unban the person selected in the list, or the id or username typed above (the reason box is then an optional note). Shows their profile and asks first.")
         row.addWidget(self.b_unban)
         row.addWidget(button("Refresh", self.refresh))
         row.addStretch()
@@ -143,14 +164,11 @@ class AdminTab(QWidget):
         self.setup.setText("Publishing is not ready on this PC:\n- " + "\n- ".join(probs) if probs else "")
         for b in (self.b_ban, self.b_unban):
             b.setEnabled(not probs and rank >= roles.MODERATOR)
-        entries = adminops.read_bans() if not probs else self._cached_entries()
+        entries = self._entries()
         fill_table(self.table, [[e["id"], e.get("reason", ""), e.get("since", ""), e.get("by") or "owner", roles.label(int(e.get("rank", 5)))] for e in entries],
                    keys=[e["id"] for e in entries])
         self.roles_table.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)          # keep the hierarchy order, not the id order
         fill_table(self.roles_table, [[uid, roles.LABELS[r]] for uid, r, _ in roles.staff()])
-
-    def _cached_entries(self):
-        return bans.entries()
 
     def choose_repo(self):
         folder = QFileDialog.getExistingDirectory(self, "Your Roblox Manager repository")
@@ -174,6 +192,14 @@ class AdminTab(QWidget):
         if not u:
             raise ValueError(f"No Roblox user is called '{text}'.")
         return int(u["id"]), u["name"]
+
+    def _entries(self):
+        """Every ban in force: from the repository when it is ready, else from the last signed list on this PC."""
+        return adminops.read_bans() if not adminops.problems() else bans.entries()
+
+    def confirm_unban(self, uid, profile, entry, note):
+        """Show the profile and what the ban says, and ask. True only if the answer is Yes (a separate method so it can be replaced in tests)."""
+        return UnbanDialog(self.window(), uid, profile, entry, note).exec() == QDialog.DialogCode.Accepted
 
     def confirm_ban(self, uid, profile, reason):
         """Show the profile and ask. True only if the answer is Yes (a separate method so it can be replaced in tests)."""
@@ -218,22 +244,46 @@ class AdminTab(QWidget):
         self.ctx.async_.run(work, decided, self._failed)
 
     def unban(self):
+        """Unban whoever is selected in the list, or the id or username typed in the box (the note is optional). The profile is shown and only Yes unbans."""
+        text, note = self.target.text().strip(), self.reason.text().strip()
         rows = selected_rows(self.table)
-        if not rows:
-            self._say("Select who to unban.", True)
+        if not text and not rows:
+            self._say("Select someone in the list, or type an id or username.", True)
             return
-        uid = row_key(self.table, rows[0])
-        entry = next((e for e in adminops.read_bans() if e["id"] == uid), {})
-        ok, note = roles.may_unban(self.my_rank(), int(entry.get("rank", 5)))
-        if int(uid) == int(self.my_id()):
-            ok, note = False, "You cannot unban yourself."
-        if not ok:
-            self._say(note, True)
-            return
-        if not self.ctx.confirm("Unban", f"Let {uid} back in?"):
-            return
-        self._say("Publishing...")
-        self.ctx.async_.run(lambda: adminops.unban(uid, self.my_id()), lambda r: self._done(r, "unbanned", str(uid)), self._failed)
+        actor = self.my_id()
+        picked = None if text else row_key(self.table, rows[0])
+        self._say("Looking the user up...")
+
+        def work():
+            uid, name = self._resolve(text) if text else (int(picked), None)
+            entry = next((e for e in self._entries() if int(e["id"]) == uid), None)
+            if entry is None:
+                return uid, name, False, f"{name or uid} is not banned.", None, None
+            ok, why = roles.may_unban(self.my_rank(), int(entry.get("rank", 5)))
+            if uid == int(actor):
+                ok, why = False, "You cannot unban yourself."
+            if not ok:
+                return uid, name, False, why, None, None
+            try:
+                profile = tab_staff.fetch_profile(self.ctx.client, uid)
+            except rbx.RobloxError:
+                profile = {"info": {}, "counts": {}, "avatar": b""}            # (the account may be gone from Roblox: it can still be unbanned)
+            return uid, name, True, "", profile, entry
+
+        def decided(res):
+            uid, name, ok, why, profile, entry = res
+            if not ok:
+                self._say(why, True)
+                return
+            info = profile["info"]
+            label = f"{info.get('name') or name or ''} ({uid})".strip()
+            if not self.confirm_unban(uid, profile, entry, note):
+                self._say("Cancelled. Nobody was unbanned.")
+                return
+            self._say("Publishing...")
+            self.ctx.async_.run(lambda: adminops.unban(uid, actor, note), lambda r: self._done(r, "unbanned", label), self._failed)
+
+        self.ctx.async_.run(work, decided, self._failed)
 
     def _done(self, result, verb, label):
         ok, text = result
