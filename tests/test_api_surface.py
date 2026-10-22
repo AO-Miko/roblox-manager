@@ -76,7 +76,7 @@ for p in files:
             problems.append(f"{p.name}:{node.lineno} ctx.{node.attr}: Context has no such name")
 
 check("every module.name the app uses exists, and every client method it calls exists", not problems, "\n  " + "\n  ".join(problems))
-check("the guard sees the calls (the app calls the client in many places)", sum(1 for p in files for n in ast.walk(ast.parse(p.read_text())) if isinstance(n, ast.Attribute)
+check("the guard sees the calls (the app calls the client in many places)", sum(1 for p in files for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"))) if isinstance(n, ast.Attribute)
                                                                                  and isinstance(n.value, ast.Attribute) and n.value.attr == "client") > 40)
 
 print(f"{sum(res)}/{len(res)} checks passed")

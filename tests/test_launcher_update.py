@@ -110,7 +110,7 @@ check("main(): when the app is already open no update is installed under it", le
 runpy.run_path = real_run
 
 # ---------------------------------------------------------------- stale modules from an old launcher
-src = (ROOT / "linux" / "app.py").read_text()
+src = (ROOT / "linux" / "app.py").read_text(encoding="utf-8")
 block = src[src.index("# --- forget stale modules"):src.index("# --- end")]
 folder = tmp / "appfolder"
 folder.mkdir()
