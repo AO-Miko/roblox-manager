@@ -1,7 +1,7 @@
 {
-  "versionName": "1.10.1.1.1",
-  "versionCode": 22,
+  "versionName": "1.10.2.1.1",
+  "versionCode": 23,
   "apk": "roblox-manager.apk",
-  "sha256": "71627e18b5f5f93655500ea649e0b67d22b2db1d41b7bd7838ebecec84d4e394",
-  "notes": "Forced updates: a version that has missed two updates cannot be used until it is updated; a page covers the app (PC and phone) with an Update now button, and nothing is signed out or deleted|The decision comes from a new signed file in the repository (the list of versions released to everybody); beta versions are never locked|Staff List and ban confirmation fixes carried over from the earlier betas"
+  "sha256": "3be982b3e4a35e7bb50ff0f4740d7ffe66275f189013f0649c269a44f3774a1f",
+  "notes": "Admin: unban works like ban: select someone in the list or type an id or username, see their profile and what the ban says (when, by whom, why), add an optional note and answer an Are you sure question; only Yes, unban lets them back in|A ban can only be lifted by someone with at least the role of whoever placed it, and nobody unbans themselves"
 }
