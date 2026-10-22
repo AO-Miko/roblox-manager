@@ -1,7 +1,7 @@
 {
-  "versionName": "1.11.3.2.3",
-  "versionCode": 28,
+  "versionName": "1.12.3.2.3",
+  "versionCode": 29,
   "apk": "roblox-manager.apk",
-  "sha256": "125f9a46cc5cf473b6c82621c7a72ef56ac03ac37a74d8686fcdd36138ac6d1a",
-  "notes": "The app is now free software under the GNU GPL v3 (LICENSE added, shown in Settings on PC and phone)"
+  "sha256": "00600742bd69ef8cb3d4629aa48bcfd6da44d77f1132f118f48107f92fae6f01",
+  "notes": "Friend alerts: a notification when friends you pick come online or join a game (PC and phone), with a switch in Settings and a check of the system's own notification settings|Join requests of all your groups in one list, to accept or decline in bulk (PC and phone)|Backup and restore of your settings, alerts and recent games, with an optional copy of your friends, followers, following and groups|The copyright holder is now Miko"
 }

@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.12.3.2.3",
+    "date": "2026-10-22",
+    "changes": [
+      "Friend alerts: a notification when friends you pick come online or join a game (PC and phone), with a switch in Settings and a check of the system's own notification settings",
+      "Join requests of all your groups in one list, to accept or decline in bulk (PC and phone)",
+      "Backup and restore of your settings, alerts and recent games, with an optional copy of your friends, followers, following and groups",
+      "The copyright holder is now Miko"
+    ]
+  },
+  {
     "version": "1.11.3.2.3",
     "date": "2026-10-22",
     "changes": [
