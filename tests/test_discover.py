@@ -506,6 +506,9 @@ def fake_geo(url):
 
 geo._fetch = fake_geo
 geo._fetch_roseal = lambda url: (LIST.append(url), ROSEAL_LIST)[1]
+import roseal_links
+LINK_FETCHES = []                                     # (no test reaches the real RoSeal: the game page looks for a wiki by itself)
+roseal_links._fetch = lambda url: (LINK_FETCHES.append(url), [{"universeIds": [det.card["universeId"]], "links": [{"type": "communityWiki", "url": "alpha.fandom.com"}]}])[1]
 asked_source = []
 det.ask_geo_source = lambda: (asked_source.append(1), "roseal")[1]
 check("the table has Location, Running for and Version columns (after the server id, so the other columns keep their places)", det.server_table.columnCount() == 8
@@ -564,28 +567,34 @@ dlg.join_selected()
 check("Join selected in the map window opens the launcher on that server", len(launched) == launched_before + 1 and "gameInstanceId=aaaaaaaa-0000-0000-0000-00000000000" in launched[-1], launched[-1:])
 dlg.close()
 # the game's wiki, from RoSeal's list of game links
-import roseal_links
-LINK_FETCHES = []
+spin(0.5)                                             # (nothing of an earlier game page is still looking for a wiki)
+LINK_FETCHES.clear()
 roseal_links.FILE.unlink(missing_ok=True)
-roseal_links._fetch = lambda url: (LINK_FETCHES.append(url), [{"universeIds": [det.card["universeId"]], "links": [{"type": "communityWiki", "url": "alpha.fandom.com"}]}])[1]
-asked_wiki = []
 settings.set("geo.roseal", False)
-w.ctx.confirm = lambda title, text, danger=False: (asked_wiki.append(text), False)[1]
-det.b_wiki.click(); spin(0.2)
-check("the game wiki asks before contacting RoSeal, and a No contacts nothing", len(asked_wiki) == 1 and "data.roseal.live" in asked_wiki[0] and "nothing about you" in asked_wiki[0] and not LINK_FETCHES and settings.get("geo.roseal") is False, asked_wiki)
-w.ctx.confirm = lambda title, text, danger=False: (asked_wiki.append(text), True)[1]
+det.b_wiki.hide(); det.wiki_url = None
+det._check_wiki(); spin(0.2)
+check("without RoSeal's permission the wiki button stays hidden and nothing is downloaded", det.b_wiki.isHidden() and not LINK_FETCHES, LINK_FETCHES)
+settings.set("geo.roseal", True)
+det._check_wiki()
+check("with the permission a game that has a wiki shows the button (one download)", wait(lambda: not det.b_wiki.isHidden()) and LINK_FETCHES == ["https://data.roseal.live/v2/experience-links.json"], LINK_FETCHES)
 opened_urls.clear()
 det.b_wiki.click()
-check("after a Yes the list is downloaded once and the wiki opens in the browser", wait(lambda: opened_urls == ["https://alpha.fandom.com"]) and LINK_FETCHES == ["https://data.roseal.live/v2/experience-links.json"] and settings.get("geo.roseal") is True, (opened_urls, LINK_FETCHES))
-det.b_wiki.click()
-check("...the next time it does not ask again and does not download again", wait(lambda: len(opened_urls) == 2) and len(asked_wiki) == 2 and len(LINK_FETCHES) == 1, (len(asked_wiki), len(LINK_FETCHES)))
+check("the button opens the wiki in the browser", opened_urls == ["https://alpha.fandom.com"], opened_urls)
 real_card = det.card
 det.card = dict(real_card, universeId=999)
-opened_urls.clear()
-det.b_wiki.click()
-check("a game that has no wiki in the list says so and opens nothing", wait(lambda: "no wiki for this game" in w.statusBar().currentMessage()) and not opened_urls, w.statusBar().currentMessage())
+det.b_wiki.hide(); det.wiki_url = None
+det._check_wiki(); spin(0.3)
+check("a game that has no wiki in the list shows no button (and the list is not downloaded again)", det.b_wiki.isHidden() and len(LINK_FETCHES) == 1, LINK_FETCHES)
 det.card = real_card
-settings.set("geo.roseal", True)
+# the map looks the servers up by itself when it is opened
+det.places.clear(); det.started.clear(); det._show_servers()
+shown_maps = []
+tab_discover.ServerMapDialog.exec = lambda self: (shown_maps.append((len(self.map.dots), self.note.text())), 0)[1]
+det.show_map()
+check("Show map looks up the servers first, then opens the map with them", wait(lambda: len(shown_maps) == 1) and shown_maps[0][0] == 2 and "6 of 6" in shown_maps[0][1], shown_maps)
+n = len(JOIN_CALLS)
+det.show_map()
+check("with everything looked up the map opens at once, without asking Roblox again", len(shown_maps) == 2 and len(JOIN_CALLS) == n, (shown_maps, len(JOIN_CALLS) - n))
 # a server Roblox gives no information about
 det.places.clear(); det.started.clear(); det._show_servers()
 JOIN_FAIL.add("aaaaaaaa-0000-0000-0000-000000000002")
@@ -689,6 +698,7 @@ w.ctx.signed_in.emit()
 check("signed in: a 'Friends in games' row shows only the friends who are in a game", wait(lambda: not d.boxes["friends"].isHidden()) and len(d.boxes["friends"].findChildren(tab_discover.FriendCard)) == 1, len(d.boxes["friends"].findChildren(tab_discover.FriendCard)))
 fc = d.boxes["friends"].findChildren(tab_discover.FriendCard)[0]
 check("...with the friend's name and the game", fc.f["displayName"] == "Ann" and fc.f["game"] == "Alpha Game" and fc.f["job"] == "job-aaaa-1111")
+check("...and the friend's picture before the name", wait(lambda: fc.head.pixmap() is not None and not fc.head.pixmap().isNull()), "no picture")
 fc.b_join.click()
 check("Join opens the launcher on the friend's server", launched[-1] == "roblox://experiences/start?placeId=11&gameInstanceId=job-aaaa-1111", launched[-1])
 check("a 'Your favorites' row shows the account's favorite games", wait(lambda: not d.boxes["favorites"].isHidden()) and {c.card["name"] for c in d.boxes["favorites"].findChildren(tab_discover.GameCard)} == {"Alpha Game", "Favorite Eight"})

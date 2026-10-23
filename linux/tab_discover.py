@@ -197,9 +197,15 @@ class FriendCard(QFrame):
         pm.fill(QColor(T["surface3"]))
         self.icon.setPixmap(pm)
         lay.addWidget(self.icon)
+        name_row = QHBoxLayout()
+        name_row.setSpacing(6)
+        self.head = QLabel()                                  # (the friend's picture, before the name)
+        self.head.setFixedSize(24, 24)
+        name_row.addWidget(self.head)
         who = QLabel(f"<b>{esc(f.get('displayName') or f.get('name'))}</b>")
         who.setToolTip(f"@{f.get('name')}")
-        lay.addWidget(who)
+        name_row.addWidget(who, 1)
+        lay.addLayout(name_row)
         game = QLabel(f.get("game") or "In a game")
         game.setTextFormat(Qt.TextFormat.PlainText)
         game.setProperty("role", "hint")
@@ -213,6 +219,11 @@ class FriendCard(QFrame):
         pm = QPixmap()
         if data and pm.loadFromData(data):
             self.icon.setPixmap(pm.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation).copy(0, 0, 150, 150))
+
+    def set_head(self, data):
+        pm = QPixmap()
+        if data and pm.loadFromData(data):
+            self.head.setPixmap(pm.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
 
 
 # ------------------------------------------------------------------ a game's page
@@ -270,6 +281,7 @@ class GameDetail(QWidget):
         super().__init__()
         self.ctx = ctx
         self.places, self.started, self.versions, self._locating, self._locate_stop, self._auto_again = {}, {}, {}, False, False, False
+        self._map_after, self._wiki_for = False, None
         self.card = None
         self.place_id = None
         self.vip_servers_for = lambda universe_id, place_id: []        # the app connects this to the VIP servers page
@@ -310,7 +322,9 @@ class GameDetail(QWidget):
         self.b_vip = button("Join my VIP server", self.join_vip, "Open the Roblox launcher and join one of your own VIP servers of this game")
         self.b_vip.hide()
         self.b_open = button("Open on roblox.com", self.open_page)
-        self.b_wiki = button("Game wiki", self.open_wiki, "Open the game's community wiki, if RoSeal's list of game links has one (asks before it contacts RoSeal)")
+        self.b_wiki = button("Game wiki", self.open_wiki, "Open the game's community wiki (from RoSeal's list of game links)")
+        self.b_wiki.hide()                                    # (shown only for a game that has one)
+        self.wiki_url = None
         self.b_copy = button("Copy link", self.copy_link)
         self.b_fav = button("Favorite", self.toggle_favorite, "Add this game to (or remove it from) your Roblox favorites")
         self.b_fav.hide()
@@ -412,6 +426,9 @@ class GameDetail(QWidget):
         self.cover.setText("")
         self.note.setText("")
         self.b_play.setEnabled(bool(self.place_id))
+        self.b_wiki.hide()
+        self.wiki_url = None
+        self._check_wiki()
         self._servers = []
         self.b_vip.hide()
         self._offer_vip()
@@ -574,31 +591,38 @@ class GameDetail(QWidget):
         if geo.auto_wanted(settings.get("geo.auto"), settings.get("geo.roseal"), settings.get("geo.allowed"), self.ctx.logged_in):
             self.locate_servers(auto=True)
 
-    def locate_servers(self, auto=False):
+    def locate_servers(self, auto=False, map_after=False):
         """The selected servers (or, if none is selected, the loaded ones not looked up yet; 25 at a time): Roblox's join answer gives each one's data centre, address and start time;
         the place comes from RoSeal's list or ipwho.is, whichever the person allowed. With auto=True (by itself, after the list arrived) the selection is ignored and nothing is asked."""
         c = self.ctx
         if not self.place_id or (not auto and c.need_login()):
             return
         if self._locating:
+            self._map_after = self._map_after or map_after
             self._auto_again = self._auto_again or auto           # (the look-up of the old list is ending: this one follows)
             return
         picked = [] if auto else [row_key(self.server_table, r) for r in selected_rows(self.server_table)]
         ids = picked or [s["id"] for s in self.servers if s["id"] not in self.started]
-        ids = [i for i in ids if i not in self.started][:self.LOCATE_AT_ONCE]
+        ids = [i for i in ids if i not in self.started][:None if map_after else self.LOCATE_AT_ONCE]       # (the map wants every loaded server)
         if not ids:
-            if not auto:
+            if map_after:
+                self._open_map()
+            elif not auto:
                 c.status("Every loaded server is looked up already." if self.servers else "Press Find servers first.")
             return
         if not settings.get("geo.roseal") and not settings.get("geo.allowed"):
-            if auto:
+            if auto and not map_after:
                 return
             choice = self.ask_geo_source()
             if choice is None:
+                if map_after:
+                    self._open_map()                          # (nothing allowed: the map shows what is known)
                 return
             settings.set("geo.roseal" if choice == "roseal" else "geo.allowed", True)
+            self._check_wiki()
         use_roseal, use_ipwho = settings.get("geo.roseal"), settings.get("geo.allowed")
         self._locating, self._locate_stop = True, False
+        self._map_after = self._map_after or map_after
         self.b_locate.setEnabled(False)
         self.b_stop_locate.show()
         gen, place, client = self.server_gen, self.place_id, c.client
@@ -624,7 +648,7 @@ class GameDetail(QWidget):
                     problems.append(str(e))
             return found, when, ver, len(ids), problems
 
-        c.async_.run(work, lambda res: self._located(gen, *res), lambda e: (self._locate_done(), c.error(e)))
+        c.async_.run(work, lambda res: self._located(gen, *res), lambda e: (setattr(self, '_map_after', False), self._locate_done(), c.error(e)))
 
     def stop_locate(self):
         self._locate_stop = True
@@ -642,6 +666,7 @@ class GameDetail(QWidget):
         self.ctx.client.clear_cancel()
 
     def _located(self, gen, found, when, ver, tried, problems):
+        map_after, self._map_after = self._map_after, False
         self._locate_done()
         if gen != self.server_gen:
             return                                            # (another game, or a new search: this answer is old)
@@ -653,6 +678,8 @@ class GameDetail(QWidget):
         if problems:
             text += f" {len(problems)} could not be located: {problems[0]}"
         self.server_note.setText(text)
+        if map_after:
+            self._open_map()
 
     def copy_server_link(self):
         rows = selected_rows(self.server_table)
@@ -666,27 +693,36 @@ class GameDetail(QWidget):
         copy_text(rbx.join_link(self.place_id, job_id=job))
         self.ctx.status("Join link copied.")
 
-    def open_wiki(self):
-        """The game's community wiki from RoSeal's list of game links. Nothing is contacted before the person agrees (the same permission as the data centre list)."""
-        c = self.ctx
+    def _check_wiki(self):
+        """With RoSeal's data service allowed, the game's wiki is looked for as the game opens; the button appears only for a game that has one. Without the permission nothing is contacted."""
         uid = (self.card or {}).get("universeId")
-        if not uid:
+        if not uid or not settings.get("geo.roseal"):
             return
-        if not settings.get("geo.roseal"):
-            if not c.confirm("Game wiki", "To find the game's wiki, the app downloads RoSeal's public list of game links (data.roseal.live). It is one plain download: nothing about you or "
-                             "the game you look at is sent. This service is run by RoSeal, not by Roblox or by this app.\n\nAllow this? (You can change it later in Settings.)"):
-                return
-            settings.set("geo.roseal", True)
+        self._wiki_for = uid
 
         def done(links):
-            if not links:
-                c.status("RoSeal's list has no wiki for this game.")
+            if self._wiki_for != uid or not links:
                 return
-            open_url(links[0]["url"])
-            c.status("Opened " + links[0]["url"])
-        c.async_.run(lambda: roseal_links.links_for(uid), done, lambda e: c.status(f"The wiki could not be found: {e}") if isinstance(e, geo.GeoError) else c.error(e))
+            self.wiki_url = links[0]["url"]
+            self.b_wiki.show()
+        self.ctx.async_.run(lambda: roseal_links.links_for(uid), done, lambda e: None)
+
+    def open_wiki(self):
+        if self.wiki_url:
+            open_url(self.wiki_url)
+            self.ctx.status("Opened " + self.wiki_url)
 
     def show_map(self):
+        """The map shows the servers' places: the ones not looked up yet are looked up first (the same way as 'Location and uptime'), then the map opens."""
+        if not self.servers:
+            self.ctx.status("Press Find servers first.")
+            return
+        if any(s["id"] not in self.started for s in self.servers) and self.ctx.logged_in:
+            self.locate_servers(auto=True, map_after=True)
+            return
+        self._open_map()
+
+    def _open_map(self):
         dlg = ServerMapDialog(self, self.servers, self.places, self._join_server, self.started)
         dlg.exec()
 
@@ -968,6 +1004,41 @@ class DiscoverTab(QWidget):
                 self.cards.setdefault(int(f["universe"]), []).append(w_)
         self._fill_box("friends", "Friends in games", widgets)
         self._load_icons([int(f["universe"]) for f in friends[:ROW_LIMIT] if f.get("universe")])
+        self._load_heads(widgets)
+
+    def _load_heads(self, widgets):
+        """The friends' pictures (kept on disk for a week, like the people lists)."""
+        c = self.ctx.client
+        todo = {}
+        for w_ in widgets:
+            uid = w_.f.get("id")
+            if uid:
+                data = rbx.cached_avatar(uid)
+                if data:
+                    w_.set_head(data)
+                else:
+                    todo.setdefault(int(uid), []).append(w_)
+        if not todo:
+            return
+
+        def work():
+            out = {}
+            for uid, url in c.headshots(list(todo)).items():
+                try:
+                    out[uid] = c.fetch_bytes(url)
+                except rbx.RobloxError:
+                    pass
+            return out
+
+        def done(got):
+            for uid, data in got.items():
+                rbx.save_avatar(uid, data)
+                for w_ in todo.get(uid, []):
+                    try:
+                        w_.set_head(data)
+                    except RuntimeError:
+                        pass                                  # (the row was rebuilt meanwhile)
+        self.ctx.async_.run(work, done, lambda e: None)
 
     def _join_friend(self, f):
         launch_roblox(self.ctx, f["place"], job_id=f.get("job"), web_url=f"https://www.roblox.com/games/{int(f['place'])}")

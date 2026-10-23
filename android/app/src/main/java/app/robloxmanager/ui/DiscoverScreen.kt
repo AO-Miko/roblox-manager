@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -204,13 +205,19 @@ private fun GameCardView(g: GameCard, icons: IconBook, onClick: () -> Unit) {
 }
 
 @Composable
-private fun FriendCardView(f: FriendGame, icons: IconBook, onJoin: () -> Unit) {
+private fun FriendCardView(f: FriendGame, icons: IconBook, head: String?, onJoin: () -> Unit) {
     Column(Modifier.width(140.dp).clip(RoundedCornerShape(12.dp)).background(C.surface).padding(8.dp)) {
         Box(Modifier.size(124.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3)) {
             f.universe?.let { u -> icons.urls[u]?.let { AsyncImage(model = it, contentDescription = f.game, modifier = Modifier.size(124.dp), contentScale = ContentScale.Crop) } }
         }
         Spacer(Modifier.height(6.dp))
-        Text(f.displayName.ifEmpty { f.name }, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(22.dp).clip(CircleShape).background(C.surface3)) {                                  // (the friend's picture, before the name)
+                head?.let { AsyncImage(model = it, contentDescription = f.name, modifier = Modifier.size(22.dp), contentScale = ContentScale.Crop) }
+            }
+            Spacer(Modifier.width(6.dp))
+            Text(f.displayName.ifEmpty { f.name }, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         Text(f.game.ifEmpty { "In a game" }, color = C.muted, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(30.dp))
         Spacer(Modifier.height(4.dp))
         PrimaryButton("Join", onClick = onJoin)
@@ -256,6 +263,7 @@ fun DiscoverScreen(sv: Services) {
     val fmt = remember { NumberFormat.getInstance() }
     val me by sv.current.collectAsState()
     var friends by remember { mutableStateOf<List<FriendGame>>(emptyList()) }
+    val friendHeads = remember { mutableStateMapOf<Long, String>() }
     var favorites by remember { mutableStateOf<List<GameCard>>(emptyList()) }
     var recents by remember { mutableStateOf(RecentGames.load(sv.prefs)) }
     var askInstall by remember { mutableStateOf(false) }
@@ -264,6 +272,7 @@ fun DiscoverScreen(sv: Services) {
         val m = me
         if (m == null) { friends = emptyList(); favorites = emptyList(); return@LaunchedEffect }
         try { friends = sv.api.friendsInGames(); icons.ensure(friends.mapNotNull { it.universe }) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+        try { friendHeads.putAll(sv.api.headshots(friends.take(Games.ROW_LIMIT).map { it.id }, "48x48")) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
         try { favorites = sv.api.favoriteGames(m.id); icons.ensure(favorites.map { it.universeId }) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
     }
     LaunchedEffect(recents) { icons.ensure(recents.map { it.universeId }) }
@@ -323,7 +332,7 @@ fun DiscoverScreen(sv: Services) {
                 if (friends.isNotEmpty()) item(key = "friends") {
                     Text("Friends in games", fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 6.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(friends.take(Games.ROW_LIMIT), key = { it.id }) { f -> FriendCardView(f, icons) { launchRoblox(ctx, f.place, jobId = f.job) { askInstall = true } } }
+                        items(friends.take(Games.ROW_LIMIT), key = { it.id }) { f -> FriendCardView(f, icons, friendHeads[f.id]) { launchRoblox(ctx, f.place, jobId = f.job) { askInstall = true } } }
                     }
                 }
                 if (favorites.isNotEmpty()) item(key = "favorites") {
@@ -396,7 +405,8 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
     val places = remember(card.universeId) { mutableStateMapOf<String, Place>() }
     val started = remember(card.universeId) { mutableStateMapOf<String, Long>() }
     val versions = remember(card.universeId) { mutableStateMapOf<String, Long>() }
-    var askWiki by remember { mutableStateOf(false) }
+    var wikiUrl by remember(card.universeId) { mutableStateOf<String?>(null) }
+    var wikiTick by remember { mutableStateOf(0) }                              // (raised when RoSeal's data service gets allowed: the game is checked again)
     var locating by remember { mutableStateOf(false) }
     val stopLocate = remember { booleanArrayOf(false) }
     val autoAgain = remember { booleanArrayOf(false) }
@@ -413,11 +423,11 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
 
     /** The loaded servers that are not looked up yet (25 at a time): Roblox's join answer gives each one's data centre, address and start time; the place comes from RoSeal's list
      *  or ipwho.is, whichever the person allowed. */
-    fun locate(auto: Boolean = false) {
+    fun locate(auto: Boolean = false, all: Boolean = false) {
         val p = place ?: return
         if (locating) { if (auto) autoAgain[0] = true; return }                      // (the look-up of the old list is ending: this one follows)
         if (signedIn == null) { if (!auto) srvNote = "Sign in first: this needs your account."; return }
-        val todo = servers.filter { it.id !in started }.take(25)
+        val todo = servers.filter { it.id !in started }.let { if (all) it else it.take(25) }          // (the map wants every loaded server)
         if (todo.isEmpty()) { if (!auto) srvNote = if (servers.isEmpty()) "Press Find servers first." else "Every loaded server is looked up already."; return }
         val useRoseal = sv.prefs.bool("geo.roseal", false)
         val useIpwho = sv.prefs.bool("geo.allowed", false)
@@ -466,14 +476,10 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         }
     }
 
-    /** The game's community wiki from RoSeal's list of game links (only after the person allowed RoSeal's data service). */
-    fun openWiki() {
-        scope.launch {
-            try {
-                val links = sv.rosealLinks.linksFor(card.universeId)
-                if (links.isEmpty()) note = "RoSeal's list has no wiki for this game." else openUrl(ctx, links[0].url)
-            } catch (e: CancellationException) { throw e } catch (e: GeoException) { note = "The wiki could not be found: ${e.message}" } catch (e: Exception) { note = errorText(e) }
-        }
+    /** With RoSeal's data service allowed, the game's wiki is looked for as the game opens; the button appears only for a game that has one. Without the permission nothing is contacted. */
+    LaunchedEffect(card.universeId, wikiTick) {
+        if (!sv.prefs.bool("geo.roseal", false)) return@LaunchedEffect
+        try { wikiUrl = sv.rosealLinks.linksFor(card.universeId).firstOrNull()?.url } catch (e: CancellationException) { throw e } catch (_: Exception) { }
     }
 
     LaunchedEffect(card.universeId) {
@@ -497,8 +503,6 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
         } catch (e: RobloxException) { note = errorText(e) }
     }
 
-    if (askWiki) Confirm("Game wiki", "To find the game's wiki, the app downloads RoSeal's public list of game links (data.roseal.live). It is one plain download: nothing about you or the game you look at is sent. " +
-        "This service is run by RoSeal, not by Roblox or by this app. You can change this later in Settings.", "Allow", false, { askWiki = false; sv.prefs.put("geo.roseal", true); openWiki() }, { askWiki = false })
     if (askGeo) androidx.compose.material3.AlertDialog(
         onDismissRequest = { askGeo = false }, title = { Text("Where should server locations come from?") },
         text = {
@@ -511,7 +515,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 TextButton(onClick = { askGeo = false }) { Text("Cancel") }
             }
         },
-        confirmButton = { TextButton(onClick = { askGeo = false; sv.prefs.put("geo.roseal", true); locate() }) { Text("Use RoSeal's list") } },
+        confirmButton = { TextButton(onClick = { askGeo = false; sv.prefs.put("geo.roseal", true); wikiTick++; locate() }) { Text("Use RoSeal's list") } },
         dismissButton = { TextButton(onClick = { askGeo = false; sv.prefs.put("geo.allowed", true); locate() }) { Text("Use ipwho.is") } },
     )
     if (askInstall) InstallRobloxDialog { askInstall = false }
@@ -545,7 +549,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuietButton("Open on roblox.com") { openUrl(ctx, Games.pageUrl(place)) }
-                QuietButton("Game wiki") { if (sv.prefs.bool("geo.roseal", false)) openWiki() else askWiki = true }
+                wikiUrl?.let { u -> QuietButton("Game wiki") { openUrl(ctx, u) } }
                 QuietButton("Copy link") {
                     (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.setPrimaryClip(ClipData.newPlainText("game", Games.pageUrl(place)))
                     note = "Game link copied."
@@ -593,7 +597,13 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                     if (sv.prefs.bool("geo.roseal", false) || sv.prefs.bool("geo.allowed", false)) locate() else askGeo = true
                 }
                 if (locating) QuietButton("Stop") { stopLocate[0] = true }
-                QuietButton(if (showMap) "Hide map" else "Show map") { showMap = !showMap }
+                QuietButton(if (showMap) "Hide map" else "Show map") {
+                    showMap = !showMap
+                    // the map looks the servers up by itself when it opens (asking first which service to use, if none is allowed yet)
+                    if (showMap && !locating && signedIn != null && servers.any { it.id !in started }) {
+                        if (sv.prefs.bool("geo.roseal", false) || sv.prefs.bool("geo.allowed", false)) locate(all = true) else askGeo = true
+                    }
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuietButton(if (srvBusy) "Looking…" else "Find servers", enabled = !srvBusy && place != null) { findServers(true) }
@@ -615,7 +625,7 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                     color = C.muted, fontSize = 12.sp)
             }
             mapFilter?.let { f -> Row(verticalAlignment = Alignment.CenterVertically) { Text("Showing ${f.size} server(s) at one place", color = C.muted, fontSize = 12.sp, modifier = Modifier.weight(1f)); QuietButton("Show all") { mapFilter = null } } }
-            if (servers.isNotEmpty()) Card {
+            if (servers.isNotEmpty() && (!showMap || mapFilter != null)) Card {          // (with the map open, only the servers of the pressed place are listed)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Games.sortServers(servers, order, started).filter { s -> mapFilter?.let { s.id in it } ?: true }.forEach { s ->
                         Row(verticalAlignment = Alignment.CenterVertically) {

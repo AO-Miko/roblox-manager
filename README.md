@@ -198,8 +198,8 @@ The apps update from two other branches that only receive signed release commits
 ## Server locations, uptime and a world map
 
 On a game's page, **Location and uptime** looks up the selected servers (or up to 25 loaded ones at a time): where each one is, and how long it has been running (a **Running for**
-column that can be sorted: longest running, or started most recently). **Show map** draws the located servers on a world map, one dot per city, bigger for more servers; press a
-dot to list its servers and join one. It needs a sign-in. This follows the way the RoSeal browser extension does it: Roblox's join answer for a server (the request the website makes
+column that can be sorted: longest running, or started most recently). **Show map** looks up every loaded server by itself (asking once which service to use) and draws them on a world map, one dot per city, bigger for more servers; only the
+servers of the dot you press are listed (say, the ones in France), and you can join one. It needs a sign-in. This follows the way the RoSeal browser extension does it: Roblox's join answer for a server (the request the website makes
 when you press Play; nothing is joined) contains the server's start time, the id of its data centre and its address.
 
 **Turning a data centre into a city uses a service, and nothing is contacted until you agree.** The first time you press the button the app asks which one may be used, and
@@ -220,8 +220,8 @@ list. These two services are third parties: if one of them changes or stops, loc
   friends, whether you played together, and which friends you share (by name). One request.
 - **Friend requests** show when they were sent, where they came from (a game, your profile, contacts ...) and how many friends you share.
 - **Servers** also show the **version** of the game each one runs, marking the ones older than the newest looked up, and **Copy join link** (PC) / **Link** (phone) gives a web link that opens Roblox on that server.
-- **Game wiki:** a button on a game's page opens its community wiki, from RoSeal's list of game links (`data.roseal.live`). Like the data centre list, it is only contacted after you agree
-  (asked the first time; the same switch in Settings), and every link is checked before it can be opened (https, a plain site name, nothing else).
+- **Game wiki:** a button on a game's page opens its community wiki, from RoSeal's list of game links (`data.roseal.live`). The button appears only for a game that has a wiki. Like the data centre list, it is only contacted after you agree
+  (the switch in Settings, or the question when the map or locations are used the first time; without it the button never shows), and every link is checked before it can be opened (https, a plain site name, nothing else).
 - **Account:** your voice chat state (on, off, suspended until ...) and whether your age is verified.
 - **Money:** a Developer Exchange line: the Robux you can cash out, the minimum, and whether DevEx is suspended or open to you. No dollar value is guessed (the rate is Roblox's to set).
 
