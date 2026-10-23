@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.15.5.4.3",
+    "date": "2026-10-23",
+    "changes": [
+      "App debug log in the Request log: everything that happens in the app with its output, private things hidden",
+      "Forced update: Update now installs the update by itself (no GitHub page unless it fails)"
+    ]
+  },
+  {
     "version": "1.14.5.4.3",
     "date": "2026-10-23",
     "changes": [

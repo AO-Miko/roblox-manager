@@ -1,7 +1,7 @@
 {
-  "versionName": "1.14.5.4.3",
-  "versionCode": 35,
+  "versionName": "1.15.5.4.3",
+  "versionCode": 36,
   "apk": "roblox-manager.apk",
-  "sha256": "f188f06e66fe84fb54eae99420279a05488b93cd0bfdf5d0cc3fa7574bdef5d8",
-  "notes": "Map opens by itself and looks up every loaded server, listing only the place you press|Game wiki button shows only for games that have a wiki|Friends in games show the friend's picture"
+  "sha256": "4dc540522521838ab695431a6550a34aa1e959e8ace3658cc3af11112e810b77",
+  "notes": "App debug log in the Request log: everything that happens in the app with its output, private things hidden|Forced update: Update now installs the update by itself (no GitHub page unless it fails)"
 }
