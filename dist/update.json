@@ -1,7 +1,7 @@
 {
-  "versionName": "1.14.4.4.3",
-  "versionCode": 34,
+  "versionName": "1.14.5.4.3",
+  "versionCode": 35,
   "apk": "roblox-manager.apk",
-  "sha256": "c0efd0fdf83c3faecfe4bd0259b686b633546e0fd1eacc75261607733fd16803",
-  "notes": "Forced updates now work for every channel: an app counts the updates of its own channel, so a Beta app that missed two betas gets the 'Please update' page (it was only counting Stable releases, so nothing could ever be blocked)"
+  "sha256": "f188f06e66fe84fb54eae99420279a05488b93cd0bfdf5d0cc3fa7574bdef5d8",
+  "notes": "Map opens by itself and looks up every loaded server, listing only the place you press|Game wiki button shows only for games that have a wiki|Friends in games show the friend's picture"
 }

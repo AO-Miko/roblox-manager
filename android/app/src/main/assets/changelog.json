@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.14.5.4.3",
+    "date": "2026-10-23",
+    "changes": [
+      "Map opens by itself and looks up every loaded server, listing only the place you press",
+      "Game wiki button shows only for games that have a wiki",
+      "Friends in games show the friend's picture"
+    ]
+  },
+  {
     "version": "1.14.4.4.3",
     "date": "2026-10-22",
     "changes": [
