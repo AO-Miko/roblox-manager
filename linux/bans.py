@@ -27,12 +27,35 @@ def _cache_file():
     return plat.state_dir() / "bans.cache.json"           # the list and its signature together, written in one step
 
 
+def _net(*args):
+    """Tell the app debug log about a download (when this runs inside the app; the launcher and the tests may not have it)."""
+    try:
+        import debuglog
+        _net(*args)
+    except Exception:           # noqa: BLE001
+        pass
+
+
+def _net(*args):
+    """Tell the app debug log about a download (when this runs inside the app; the launcher and the tests may not have it)."""
+    try:
+        import debuglog
+        debuglog.net(*args)
+    except Exception:           # noqa: BLE001
+        pass
+
+
 def _http_get(url, limit=MAX_BYTES, timeout=15):
     if not url.startswith("https://"):
         raise OSError("not https")
     req = urllib.request.Request(url, headers={"User-Agent": "RobloxManager-bans"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        data = r.read(limit + 1)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = r.read(limit + 1)
+            _net("GET", url, getattr(r, "status", 200), len(data))
+    except Exception as e:      # noqa: BLE001 - the caller decides what a network problem means
+        _net("GET", url, getattr(e, "code", None), 0, e.__class__.__name__)
+        raise
     if len(data) > limit:
         raise OSError("too large")
     return data

@@ -5,6 +5,9 @@ import android.content.Context
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 import app.robloxmanager.core.Account
+import app.robloxmanager.core.Debug
+import app.robloxmanager.core.DebugLog
+import app.robloxmanager.core.Scrub
 import app.robloxmanager.core.AlertRules
 import app.robloxmanager.core.AlertSettings
 import app.robloxmanager.core.Seen
@@ -54,11 +57,18 @@ class Services(app: Application) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val dir: File = app.filesDir
     val log = RequestLog(File(dir, "requests.log"))
+    /** What happens in the app, with the output (the App debug view of the Request log; everything private is hidden). */
+    val debug = DebugLog(File(dir, "debug.log"))
     val client = RobloxClient(log = log)
     val names = NameCache(File(dir, "names.json"))
     val api = RobloxApi(client, names)
     val accounts = Accounts(File(dir, "accounts.json"), KeystoreVault())
     val prefs = Prefs(File(dir, "prefs.json"))
+    init {
+        debug.writeFile = prefs.bool("debugToFile", true)
+        Debug.install(debug)                                   // uncaught errors and printed lines too
+        debug.event("app", "started version ${BuildConfig.VERSION_NAME}")
+    }
     val alerts = AlertSettings(prefs)
     /** Where servers are (answers kept 30 days); only used when the person presses Location and uptime and allowed a service. */
     val geo = GeoBook(File(dir, "server_places.json"), Geo.httpFetch())
@@ -95,6 +105,10 @@ class Services(app: Application) {
 
     init {
         client.readBurst = prefs.double("readBurst", 0.5)
+        scope.launch {                         // the accounts in use are hidden in the debug log; signing in and out are events
+            current.collect { a -> Scrub.setIdentity(a); Debug.event("account", if (a != null) "signed in" else "signed out") }
+        }
+        scope.launch { accountList.collect { l -> Scrub.setIdentity(*l.toTypedArray()) } }
         log.writeFile = prefs.bool("logToFile", true)
         enforcePolicy()                       // from the last policy kept on the phone: a version that is too far behind is covered before anything is sent
         scope.launch { restore() }
@@ -131,8 +145,9 @@ class Services(app: Application) {
         if (seenFor != me.id) { seen = emptyMap(); seenFor = me.id }
         val now = AlertRules.snapshot(api.presence(watched.keys.toList()))
         val found = AlertRules.news(seen, now, watched, alerts.online, alerts.ingame)
+        Debug.event("alerts", "looked at ${watched.size} watched friend(s): ${found.size} piece(s) of news", "debug")
         seen = now
-        found.take(5).forEach { notifier(it.second) }
+        found.take(5).forEach { Debug.event("alerts", "notification: ${it.second}"); notifier(it.second) }
         if (found.size > 5) notifier("...and ${found.size - 5} more friends")
     }
 

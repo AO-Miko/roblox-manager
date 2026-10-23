@@ -2,6 +2,7 @@
 
 The same lines are written to requests.log in the state folder (rotated, about 8 MB at most). Nothing secret is ever recorded: no cookie,
 no password or code, no request body, no headers; the value of anything in an address that looks like a secret is hidden.
+The second view, App debug (tab_debug.py), shows everything else that happens in the app, with the output.
 """
 import time
 from collections import deque
@@ -9,10 +10,11 @@ from datetime import datetime
 
 from PySide6.QtCore import QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QColor, QDesktopServices
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QSplitter, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QSplitter, QTabWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 import rbx
 import settings
+from tab_debug import DebugView
 from ui_common import button, export_csv, hint, make_table
 
 KEEP = 5000
@@ -71,7 +73,15 @@ class RequestsTab(QWidget):
         self.queue = []
         self.total = 0
         self.btn_probe_running = False
-        lay = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        self.views = QTabWidget()                    # Requests (what the app asks Roblox) and App debug (everything that happens, with the output)
+        outer.addWidget(self.views)
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        self.debug = DebugView(ctx)
+        self.views.addTab(page, "Requests")
+        self.views.addTab(self.debug, "App debug")
         top = QHBoxLayout()
         self.filter = QLineEdit()
         self.filter.setPlaceholderText("Filter lines...")

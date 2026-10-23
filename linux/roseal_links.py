@@ -10,6 +10,7 @@ import time
 import requests
 
 import geo
+import debuglog
 import rbx
 
 URL = "https://data.roseal.live/v2/experience-links.json"
@@ -58,6 +59,10 @@ def _fetch(url):
     try:
         r.raise_for_status()
         body = r.raw.read(MAX_BYTES + 1, decode_content=True)
+        debuglog.net("GET", url, r.status_code, len(body))
+    except requests.RequestException as e:
+        debuglog.net("GET", url, getattr(e.response, "status_code", None), 0, e.__class__.__name__)
+        raise
     finally:
         r.close()
     if len(body) > MAX_BYTES:

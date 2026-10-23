@@ -239,6 +239,15 @@ def _swap(dest, sha):
 
 
 # ------------------------------------------------------------------ releases (no git needed: used on Windows)
+def _net(*args):
+    """Tell the app debug log about a download (when this runs inside the app; the launcher and the tests may not have it)."""
+    try:
+        import debuglog
+        debuglog.net(*args)
+    except Exception:           # noqa: BLE001
+        pass
+
+
 def _http_get(url, limit=MAX_BYTES, timeout=25):
     """The bytes at an https address (the update server and its download links only; nothing about you is sent)."""
     if not url.startswith("https://"):
@@ -247,7 +256,9 @@ def _http_get(url, limit=MAX_BYTES, timeout=25):
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             data = r.read(limit + 1)
+            _net("GET", url, getattr(r, "status", 200), len(data))
     except Exception as e:                                       # noqa: BLE001 - any network problem is just "could not reach"
+        _net("GET", url, getattr(e, "code", None), 0, e.__class__.__name__)
         raise UpdateError(f"could not reach the update server ({e.__class__.__name__})")
     if len(data) > limit:
         raise UpdateError("the download is unexpectedly large")

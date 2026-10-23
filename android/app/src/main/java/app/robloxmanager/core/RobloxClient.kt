@@ -229,7 +229,7 @@ class RobloxClient(
             if (status == 429) note = "retry-after ${headers["retry-after"] ?: "?"}"
             else if (status == 403 && headers["x-csrf-token"] != null && m != "GET") note = "csrf token refresh"
             val rate = rates.learn(key, headers, status, attempt, minWaitMs)
-            log.record(who(), m, url, params, status, now() - t0, attempt, slow, note, rate)
+            log.record(who(), m, url, params, status, now() - t0, attempt, slow, note, rate, sent = body, answer = text, contentType = headers["content-type"])
             check(ep)                                        // the account changed while this was in flight: its answer is not used
             val tok = headers["x-csrf-token"]
             if (tok != null && m != "GET") csrf = tok

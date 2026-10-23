@@ -166,6 +166,18 @@ fun MoneyScreen(sv: Services) {
 // ======================================================================== Request log
 @Composable
 fun LogScreen(sv: Services) {
+    var view by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("requests") }      // Requests (what is asked of Roblox) or App debug (everything that happens)
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(view == "requests", { view = "requests" }, label = { Text("Requests") })
+            FilterChip(view == "debug", { view = "debug" }, label = { Text("App debug") })
+        }
+        if (view == "debug") DebugScreen(sv) else RequestsView(sv)
+    }
+}
+
+@Composable
+private fun RequestsView(sv: Services) {
     val entries by sv.log.entries.collectAsState()
     var onlyProblems by remember { mutableStateOf(false) }
     var showLimits by remember { mutableStateOf(false) }

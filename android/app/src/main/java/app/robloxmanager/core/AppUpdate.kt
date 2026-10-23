@@ -50,7 +50,7 @@ class AppUpdate(private val baseUrl: String, private val http: OkHttpClient = Ro
 
     private fun get(url: String): okhttp3.Response {
         if (!url.startsWith("https://")) throw UpdateError("The update address must start with https://")
-        val r = try { http.newCall(Request.Builder().url(url).header("User-Agent", RobloxClient.USER_AGENT).header("Cache-Control", "no-cache").build()).execute() } catch (e: IOException) { throw UpdateError("Could not reach the update server (${e.javaClass.simpleName})") }
+        val r = try { Debug.execute(http, Request.Builder().url(url).header("User-Agent", RobloxClient.USER_AGENT).header("Cache-Control", "no-cache").build()) } catch (e: IOException) { throw UpdateError("Could not reach the update server (${e.javaClass.simpleName})") }
         if (!r.isSuccessful) { val c = r.code; r.close(); throw UpdateError(if (c == 404) "The update server has no update.json yet" else "The update server answered $c") }
         return r
     }

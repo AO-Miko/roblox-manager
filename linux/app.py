@@ -37,6 +37,7 @@ from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QLabel, QMai
 
 import accounts
 import bans
+import debuglog
 import nav
 import policy
 import roles
@@ -54,6 +55,7 @@ from tab_explorer import ExplorerTab
 from tab_groups import GroupsTab
 from tab_money import MoneyTab
 from tab_people import PeopleTab
+import tab_debug
 from tab_requests import RequestsTab
 from tab_info import InfoTab
 from tab_vip import VipTab
@@ -134,6 +136,7 @@ class MainWindow(QMainWindow):
         self.header.show_page(self.tabs.tabText(0))
         self.ctx.signed_in.connect(self.update_admin)
         self.ctx.signed_out.connect(self.update_admin)
+        tab_debug.watch(self, QApplication.instance())             # the debug log hears about pages, buttons, dialogs and sign-ins
         self.ctx.accounts_changed.connect(self._fill_accounts)
         self._fill_accounts()
         self.counts = {}
@@ -379,6 +382,7 @@ ICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.png")
 
 
 def main():
+    debuglog.install()                  # from here on, everything that happens (and is printed, and goes wrong) is in the App debug view
     app = QApplication(sys.argv)
     app.setApplicationName("Roblox Manager")
     QGuiApplication.setDesktopFileName("roblox-manager")        # ties the window to its launcher, so the taskbar shows the right icon

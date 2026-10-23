@@ -130,6 +130,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
     val rank = remember(me, rolesVersion) { me?.let { sv.roles.rankOf(it.id) } ?: 0 }
     val isAdmin = rank >= app.robloxmanager.core.Roles.MODERATOR
     fun open(id: String, sub: Int = 0) {
+        app.robloxmanager.core.Debug.event("page", "opened page '${(ALL.firstOrNull { it.id == id } ?: MORE).title}'")
         if (id !in visited) visited.add(id)
         dest = id
         if (id == PEOPLE.id || id == INFO.id || id == HOME.id || id == GROUPS.id) jump = Jump(id, sub, (jump?.nonce ?: 0) + 1)

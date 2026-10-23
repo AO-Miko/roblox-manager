@@ -127,6 +127,7 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
     val upd by Updates.state.collectAsState()
     var burst by remember { mutableStateOf(sv.client.readBurst.toFloat()) }
     var logFile by remember { mutableStateOf(sv.log.writeFile) }
+    var debugFile by remember { mutableStateOf(sv.debug.writeFile) }
     var url by remember { mutableStateOf(Updates.savedUrl(sv)) }
     var beta by remember { mutableStateOf(Updates.isBeta(sv)) }
     var askBeta by remember { mutableStateOf(false) }
@@ -169,11 +170,15 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(logFile, { logFile = it; sv.log.writeFile = it; sv.prefs.put("logToFile", it) }); Spacer(Modifier.width(8.dp)); Text("Keep the request log in a file")
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(debugFile, { debugFile = it; sv.debug.writeFile = it; sv.prefs.put("debugToFile", it) }); Spacer(Modifier.width(8.dp)); Text("Keep the app debug log (Request log > App debug) in a file")
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    QuietButton("Clear debug log") { sv.debug.clear(); File(sv.filesDir, "debug.log").delete(); File(sv.filesDir, "debug.log.1").delete(); msg = "Debug log cleared." }
                     QuietButton("Clear request log") { sv.log.clear(); File(sv.filesDir, "requests.log").delete(); File(sv.filesDir, "requests.log.1").delete(); msg = "Request log cleared." }
                     QuietButton("Forget saved names") { File(sv.filesDir, "names.json").delete(); msg = "Saved names are forgotten the next time the app starts." }
                 }
-                Text("The log never contains your cookie, passwords, codes or request bodies.", color = C.muted, fontSize = 12.sp)
+                Text("The request log never contains your cookie, passwords, codes or request bodies; the debug log hides everything private too.", color = C.muted, fontSize = 12.sp)
             }
         }
         if (part == "settings") Section("FRIEND ALERTS", collapsible = true) {

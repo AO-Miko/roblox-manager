@@ -276,6 +276,7 @@ class SettingsTab(QWidget):
         box = QGroupBox("Request log")
         form = self._form(box)
         form.addRow(self._check("log.requests", "Write every request to requests.log"))
+        form.addRow(self._check("log.debug", "Write the app debug log (the App debug view of the Request log) to debug.log"))
         form.addRow(self._lab("Rows kept in the Request log tab"), self._spin("log.keep_rows", " rows", 100))
         return box
 

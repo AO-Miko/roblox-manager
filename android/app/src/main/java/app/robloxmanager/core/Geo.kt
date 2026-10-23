@@ -91,7 +91,7 @@ object Geo {
 
     private suspend fun fetchJson(http: OkHttpClient, url: String, max: Long): JsonElement? = withContext(Dispatchers.IO) {
         try {
-            http.newCall(Request.Builder().url(url).header("User-Agent", "RobloxManager").build()).execute().use { r ->
+            Debug.execute(http, Request.Builder().url(url).header("User-Agent", "RobloxManager").build()).use { r ->
                 if (!r.isSuccessful) throw GeoException("The service answered ${r.code}")
                 val src = r.body!!.source()
                 src.request(max + 1)

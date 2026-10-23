@@ -128,6 +128,7 @@ class Prefs(private val file: File) {
     fun raw(key: String): JsonElement? = data[key]
 
     fun put(key: String, value: Any) {
+        Debug.event("settings", "$key = ${value.toString().take(120)}", "debug")
         data = JsonObject(data + (key to value.toJson()))
         file.parentFile?.mkdirs()
         file.writeText(AppJson.encodeToString(JsonElement.serializer(), data))

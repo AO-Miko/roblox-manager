@@ -1,7 +1,9 @@
 """Shared pieces for the Roblox Manager window: background requests, dialogs, small helpers."""
 import csv
+import os
 import re
 import time
+import traceback
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -12,6 +14,7 @@ from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QLayout, QStyle, QHBoxLayout, QHeaderView, QLabel, QMenu, QMessageBox, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
+import debuglog
 import rbx
 import settings
 
@@ -37,15 +40,25 @@ class Async:
     def run(self, fn, ok=None, err=None):
         self.pending += 1
         gen = self.generation
+        name = getattr(fn, "__qualname__", "") or "task"
+        if name.endswith("<lambda>"):
+            code = getattr(fn, "__code__", None)
+            name = f"{os.path.basename(code.co_filename)}:{code.co_firstlineno}" if code else name
 
         def work():
+            t0 = time.time()
+            debuglog.event("task", f"started {name}", "debug")
             try:
                 res = fn()
+                debuglog.event("task", f"finished {name} in {int((time.time() - t0) * 1000)} ms", "debug", "output: " + debuglog.preview(res, 1500))
                 self.bridge.done.emit(ok, res, None, gen)
             except rbx.Cancelled as e:
+                debuglog.event("task", f"stopped {name}", "info")
                 self.bridge.done.emit(err, None, e, gen)       # stopped on purpose: callbacks still run so they can tidy up
             except Exception as e:          # noqa: BLE001 - everything is reported to the user, never swallowed
                 rbx.log.info("task failed: %s", rbx.redact(e))
+                debuglog.event("task", f"failed {name} after {int((time.time() - t0) * 1000)} ms: {e.__class__.__name__}: {e}", "error",
+                               "".join(traceback.format_exception(type(e), e, e.__traceback__)))
                 self.bridge.done.emit(err, None, e, gen)
         try:
             self.pool.submit(work)
@@ -104,9 +117,11 @@ class Context(QObject):
         return self.client.user is not None
 
     def status(self, text, ms=6000):
+        debuglog.event("ui", "status line: " + str(text), "info")
         self.window.statusBar().showMessage(text, ms)
 
     def error(self, e):
+        debuglog.event("ui", f"error shown: {e.__class__.__name__}: {e}", "warning")
         if isinstance(e, rbx.Cancelled):
             self.status("Stopped.")
             return
@@ -128,7 +143,9 @@ class Context(QObject):
         box = QMessageBox(QMessageBox.Icon.Warning if danger else QMessageBox.Icon.Question, title, text,
                           QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, self.window)
         box.setDefaultButton(QMessageBox.StandardButton.No)
-        return box.exec() == QMessageBox.StandardButton.Yes
+        yes = box.exec() == QMessageBox.StandardButton.Yes
+        debuglog.event("ui", f"question '{title}' answered {'yes' if yes else 'no'}", "info", text)
+        return yes
 
     def notify(self, title, text):
         """A desktop notification (from the system tray); where the desktop has none, the line at the bottom of the window shows it."""

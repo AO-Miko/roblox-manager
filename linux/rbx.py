@@ -60,7 +60,7 @@ def _query_text(params, url_query=""):
     return "&".join(f"{k}={'***' if _SECRET_PARAM.search(k) else (v if len(v) <= 40 else v[:37] + '...')}" for k, v in pairs)
 
 
-def record_request(account, method, url, params=None, status=None, ms=None, attempt=0, paced=False, note="", rate=""):
+def record_request(account, method, url, params=None, status=None, ms=None, attempt=0, paced=False, note="", rate="", sent=None, got=None):
     """Write one line to the request log and tell the listeners. `status` is None when there was no answer (stopped, network error)."""
     u = urlparse(url)
     entry = {"time": time.time(), "account": account or "-", "method": method, "host": u.hostname or "", "path": u.path,
@@ -78,6 +78,11 @@ def record_request(account, method, url, params=None, status=None, ms=None, atte
             fn(entry)
         except Exception:       # noqa: BLE001
             pass
+    try:
+        import debuglog                     # (the app debug log: the same request with what was sent and what came back, everything private hidden)
+        debuglog.http(entry, sent, got)
+    except Exception:           # noqa: BLE001
+        pass
     return entry
 
 
@@ -517,7 +522,7 @@ class Client:
             elif r.status_code == 403 and r.headers.get("x-csrf-token") and method != "GET":
                 note = "csrf token refresh"
             rate = self.rates.learn(key, r.headers, r.status_code, attempt, self.RL_MIN_WAIT)
-            record_request(self._who(), method, url, params, r.status_code, int((time.time() - t_sent) * 1000), attempt, slow, note, rate)
+            record_request(self._who(), method, url, params, r.status_code, int((time.time() - t_sent) * 1000), attempt, slow, note, rate, sent=json_body, got=r)
             if self._epoch != ep:
                 raise Cancelled()           # the account changed while this was in flight: its answer must not be used
             self.last_headers = dict(r.headers)

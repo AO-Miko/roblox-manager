@@ -10,6 +10,7 @@ FILE = rbx.CONFIG_DIR / "settings.json"
 DEFAULTS = {
     "rate.read_burst": (50, 0, 100),         # % of a route's limit a read may use back to back; the rest is spread over the window
     "log.requests": (True, None, None),      # write every request to requests.log
+    "log.debug": (True, None, None),         # write the app debug log (everything that happens, private things hidden) to debug.log
     "log.keep_rows": (1500, 100, 10000),     # rows kept in the Requests tab's list
     "cache.avatar_days": (7, 1, 90),         # how long saved pictures are reused
     "cache.names_days": (30, 1, 365),        # how long saved names are reused
@@ -57,6 +58,11 @@ def set(key, value):          # noqa: A001 - reads naturally as settings.set(...
     _values[key] = value
     save()
     apply()
+    try:
+        import debuglog
+        debuglog.event("settings", f"{key} = {value}")
+    except ImportError:
+        pass
     for fn in list(_listeners):
         fn(key, value)
     return value
@@ -88,6 +94,11 @@ def apply():
     """Push the values into the parts of the app that use them."""
     rbx.Client.READ_BURST = _values["rate.read_burst"] / 100
     rbx.LOG_REQUESTS = _values["log.requests"]
+    try:
+        import debuglog
+        debuglog.ENABLED = _values["log.debug"]
+    except ImportError:
+        pass
     rbx.AVATAR_MAX_AGE = _values["cache.avatar_days"] * 24 * 3600
     rbx.NameCache.TTL = _values["cache.names_days"] * 24 * 3600
 

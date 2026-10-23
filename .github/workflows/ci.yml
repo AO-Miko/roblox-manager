@@ -69,6 +69,8 @@ jobs:
         run: python tests/test_geo.py
       - name: Mutual friends, voice and age, DevEx, game wikis
         run: python tests/test_features.py
+      - name: App debug log
+        run: python tests/test_debug.py
       - name: Security checks
         run: python tests/test_security.py
       - name: Version numbers

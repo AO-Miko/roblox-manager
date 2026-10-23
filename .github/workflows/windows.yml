@@ -71,6 +71,9 @@ jobs:
       - name: Mutual friends, voice and age, DevEx, game wikis
         if: ${{ !cancelled() }}
         run: python tests/test_features.py
+      - name: App debug log
+        if: ${{ !cancelled() }}
+        run: python tests/test_debug.py
       - name: Security checks
         if: ${{ !cancelled() }}
         run: python tests/test_security.py

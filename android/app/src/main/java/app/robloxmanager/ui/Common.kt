@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.robloxmanager.Bulk
+import app.robloxmanager.core.Debug
 import app.robloxmanager.core.Person
 import coil.compose.AsyncImage
 import kotlin.coroutines.cancellation.CancellationException
@@ -87,7 +88,14 @@ sealed class Load<out T> {
     class Failed(val message: String) : Load<Nothing>()
 }
 
-fun errorText(e: Throwable): String = when (e) {
+fun errorText(e: Throwable): String = shown(e, errorTextOf(e))
+
+private fun shown(e: Throwable, text: String): String {
+    Debug.event("ui", "error shown: ${e.javaClass.simpleName}: ${e.message}", "warning", e.stackTraceToString())
+    return text
+}
+
+private fun errorTextOf(e: Throwable): String = when (e) {
     is app.robloxmanager.core.RobloxException -> when (e.status) {
         401 -> "Signed out or the cookie is no longer valid. Sign in again."
         429 -> "Roblox is rate-limiting: ${e.message}"
@@ -198,24 +206,25 @@ fun PersonRow(p: Person, avatar: String?, selected: Boolean? = null, onToggle: (
 
 @Composable
 fun Confirm(title: String, text: String, ok: String = "Yes", danger: Boolean = false, onYes: () -> Unit, onNo: () -> Unit) {
+    androidx.compose.runtime.LaunchedEffect(title, text) { Debug.event("dialog", "question '$title'", "info", text) }
     AlertDialog(
-        onDismissRequest = onNo, title = { Text(title) }, text = { Text(text, color = C.muted) },
-        confirmButton = { TextButton(onClick = { onYes() }) { Text(ok, color = if (danger) C.danger else C.accent) } },
-        dismissButton = { TextButton(onClick = onNo) { Text("Cancel") } },
+        onDismissRequest = { Debug.event("dialog", "question '$title' dismissed"); onNo() }, title = { Text(title) }, text = { Text(text, color = C.muted) },
+        confirmButton = { TextButton(onClick = { Debug.event("dialog", "question '$title' answered: $ok"); onYes() }) { Text(ok, color = if (danger) C.danger else C.accent) } },
+        dismissButton = { TextButton(onClick = { Debug.event("dialog", "question '$title' answered: Cancel"); onNo() }) { Text("Cancel") } },
     )
 }
 
 @Composable
 fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) =
-    Button(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(10.dp)) { Text(text) }
+    Button(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(10.dp)) { Text(text) }
 
 @Composable
 fun DangerButton(text: String, enabled: Boolean = true, onClick: () -> Unit) =
-    Button(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = C.dangerDim, contentColor = C.danger)) { Text(text) }
+    Button(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = C.dangerDim, contentColor = C.danger)) { Text(text) }
 
 @Composable
 fun QuietButton(text: String, enabled: Boolean = true, onClick: () -> Unit) =
-    OutlinedButton(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(10.dp)) { Text(text) }
+    OutlinedButton(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(10.dp)) { Text(text) }
 
 /** Progress of a batch with a Stop button; shows what failed afterwards. */
 @Composable

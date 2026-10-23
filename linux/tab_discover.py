@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLay
                                QWidget)
 
 import games_store
+import debuglog
 import geo
 import rbx
 import roblox_launcher
@@ -54,7 +55,10 @@ def launch_roblox(ctx, place_id, link_code=None, web_url=None, job_id=None):
     except ValueError:                                           # a join code that does not look like one is never put into a launcher link
         ctx.status("Roblox gave an unusual join code or server id, so nothing was opened.", 12000)
         return False
-    if QDesktopServices.openUrl(QUrl(url)):
+    opened = QDesktopServices.openUrl(QUrl(url))
+    debuglog.event("launch", f"Roblox launcher {'opened' if opened else 'could not be opened'}: place {place_id}" + (" (private server)" if link_code else "") + (f", server {job_id}" if job_id else ""),
+                   "info" if opened else "warning")
+    if opened:
         ctx.status("Opening the Roblox launcher...")
         return True
     ctx.status("The Roblox launcher could not be opened (is Roblox installed?). Opening the game's page instead.", 12000)

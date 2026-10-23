@@ -46,7 +46,7 @@ class RequestLog(private val file: File? = null, private val keep: Int = 5000) {
 
     fun record(
         account: String, method: String, url: String, params: Map<String, String>? = null, status: Int? = null, ms: Long? = null,
-        attempt: Int = 0, paced: Boolean = false, note: String = "", rate: String = "",
+        attempt: Int = 0, paced: Boolean = false, note: String = "", rate: String = "", sent: Any? = null, answer: String? = null, contentType: String? = null,
     ): LogEntry {
         val u = URI(url)
         val e = LogEntry(System.currentTimeMillis(), account.ifEmpty { "-" }, method, u.host ?: "", u.path ?: "", queryText(params, u.rawQuery),
@@ -57,6 +57,7 @@ class RequestLog(private val file: File? = null, private val keep: Int = 5000) {
             total++
             _entries.value = ring.toList()
         }
+        Debug.log?.http(e, sent, answer, contentType)          // (the app debug log: the same request with what was sent and came back, hidden)
         if (writeFile) file?.let { f ->
             try {
                 val line = Redact.text(

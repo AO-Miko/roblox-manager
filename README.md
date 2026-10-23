@@ -154,6 +154,12 @@ with me, no analytics, no telemetry and no ads.
 - A cache of names and profile pictures of people the app has shown, so it doesn't ask Roblox again (clear it any time under Settings → Preferences).
 - A **request log** of what the app asked Roblox (address, answer code and timing). It never contains cookies, passwords, codes or request bodies, and
   secret-looking parts of an address are masked. It can be switched off and cleared in Settings.
+- An **app debug log** (Request log > *App debug*, on PC and phone): everything that happens in the app, with its output. Requests with what was sent and what came back
+  (shortened), background tasks and their results, buttons pressed, pages and questions opened, settings changed, sign-ins and account switches, downloads (update server,
+  RoSeal, ipwho.is, ban/policy lists), friend alerts, launcher opens, warnings, errors with their full trace, and what the program prints. Filter by level, area or word;
+  select an event for its output; copy, save or share it as text. Before anything is kept, **cookies, tokens, passwords, codes, e-mail addresses, phone numbers, IP
+  addresses, your folder names, the names and id of your accounts and the names and descriptions of people in Roblox's answers are replaced by a mark**. It stays on your
+  device (`debug.log` in the app's private folder, switch off and clear in Settings); nothing is ever sent anywhere.
 - On Linux, small records of bulk actions you ran (for example which friends you removed), so you can look back at what happened.
 - Where: Linux keeps this in `~/.config/roblox-manager` and `~/.local/state/roblox-manager`. Windows keeps it in `%APPDATA%\RobloxManager` and
   `%LOCALAPPDATA%\RobloxManager`. Android keeps it in the app's private storage.

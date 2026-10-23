@@ -187,7 +187,7 @@ class BanStore(
 
     private fun get(url: String, limit: Long): ByteArray {
         require(url.startsWith("https://"))
-        http.newCall(Request.Builder().url(url).header("User-Agent", RobloxClient.USER_AGENT).header("Cache-Control", "no-cache").build()).execute().use { r ->
+        Debug.execute(http, Request.Builder().url(url).header("User-Agent", RobloxClient.USER_AGENT).header("Cache-Control", "no-cache").build()).use { r ->
             if (!r.isSuccessful) error("HTTP ${r.code}")
             val b = r.body?.bytes() ?: error("empty")
             if (b.size > limit) error("too large")
