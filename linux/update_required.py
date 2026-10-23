@@ -1,6 +1,7 @@
 """The 'Update required' page (see policy.py): the app is too far behind, so it covers the whole window and nothing else can be used until it is updated.
-It says what is wrong and has a button that updates the app (and one that opens the download page, in case the update does not work)."""
-from PySide6.QtCore import Qt
+It says what is wrong and has one button: Update now downloads, checks and installs the newest version and restarts the app by itself. The download page
+(GitHub) is only offered if the automatic update did not work."""
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 import policy
@@ -9,6 +10,8 @@ from ui_common import button, hint, open_url
 
 
 class UpdateRequiredPage(QWidget):
+    RESTART_DELAY = 1500              # ms the person can read "Updated ... Restarting" before the app restarts
+
     def __init__(self, ctx, restart=None):
         super().__init__()
         self.ctx = ctx
@@ -37,9 +40,10 @@ class UpdateRequiredPage(QWidget):
         lay.addWidget(self.status)
         buttons = QHBoxLayout()
         buttons.addStretch()
-        self.b_page = button("Open the download page", lambda: open_url(policy.releases_url()), "In case the update does not work: download the newest version yourself")
-        self.b_update = button("Update now", self.update_now, "Download and install the newest version", primary=True)
-        self.b_restart = button("Restart now", self.restart_now, primary=True)
+        self.b_page = button("Open the download page", lambda: open_url(policy.releases_url()), "The update did not work: download the newest version yourself")
+        self.b_page.hide()                                # (only after the automatic update failed)
+        self.b_update = button("Update now", self.update_now, "Download, check and install the newest version, then restart", primary=True)
+        self.b_restart = button("Restart now", self.restart_now, "Restart at once (it also happens by itself)", primary=True)
         self.b_restart.hide()
         for b in (self.b_page, self.b_update, self.b_restart):
             buttons.addWidget(b)
@@ -61,15 +65,26 @@ class UpdateRequiredPage(QWidget):
         def done(r):
             if r["status"] == "updated":
                 self.updated = True
-                self.status.setText(r["message"])
+                self.status.setText(r["message"].replace(" Restart the app to use it.", "") + " Restarting...")
                 self.b_update.hide()
+                self.b_page.hide()
                 self.b_restart.show()
+                QTimer.singleShot(self.RESTART_DELAY, self.restart_now)         # (no second press: the new version starts by itself)
             else:
                 self.b_update.setEnabled(True)
+                self.b_page.show()
                 self.status.setText(r["message"] if r["status"] != "up-to-date" else "No newer version was found on your update channel. Use the download page.")
-        self.ctx.async_.run(updater.apply, done, lambda e: (self.b_update.setEnabled(True), self.status.setText(f"The update did not work: {e}")))
+
+        def failed(e):
+            self.b_update.setEnabled(True)
+            self.b_page.show()
+            self.status.setText(f"The update did not work: {e}")
+        self.ctx.async_.run(updater.apply, done, failed)
 
     def restart_now(self):
+        if not self.updated:
+            return
+        self.updated = False
         if self.restart:
             self.restart()
         else:

@@ -99,7 +99,7 @@ like "'Client' object has no attribute ..."). `tests/test_api_surface.py` checks
 ## Forced updates (an app that is two updates behind)
 
 An app that has missed **two** updates cannot be used any more: a page covers the whole window (PC) or screen (phone), says which version it is and how far behind, and has an
-**Update now** button (and a link to the download page in case the update does not work). Nobody is signed out and nothing is deleted: after the update everything is as it was.
+**Update now** button: it downloads, checks and installs the newest version by itself (PC: then restarts the app; phone: Android's installer opens, and if the phone first has to allow installs from the app it carries on by itself when you come back). The link to the download page (GitHub) only appears if the automatic update did not work. Nobody is signed out and nothing is deleted: after the update everything is as it was.
 It is checked at every start and every ten minutes.
 
 - `dist/policy.json` (signed with the release key as `policy.json.sig`) lists the versions that were released: `"stable"` = every version released to everybody, betas not included, and, in

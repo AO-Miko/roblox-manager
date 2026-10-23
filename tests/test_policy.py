@@ -177,25 +177,27 @@ QTest.keyClick(w, Qt.Key.Key_K, Qt.KeyboardModifier.ControlModifier); spin(0.1)
 QTest.keyClick(w, Qt.Key.Key_2, Qt.KeyboardModifier.ControlModifier); spin(0.1)
 w.open_search(); spin(0.1)
 check("...and nothing else can be used: no search, no shortcuts", not w.palette_box.isVisible() and w.tabs.currentIndex() == 0 and not any(s.isEnabled() for s in w._shortcuts))
-check("...the page has an Update now button and a download page button", w.lock_page.b_update.isVisible() and w.lock_page.b_update.text() == "Update now" and w.lock_page.b_page.isVisible())
+check("...the page has an Update now button, and no GitHub link unless the update fails", w.lock_page.b_update.isVisible() and w.lock_page.b_update.text() == "Update now" and not w.lock_page.b_page.isVisible())
 opened = []
 update_required.open_url = lambda url: opened.append(url)
-w.lock_page.b_page.click()
-check("the download page button opens the releases page", opened == [policy.RELEASES_URL] and "github.com/AO-Miko/roblox-manager/releases" in opened[0], opened)
 
 updater.apply = lambda cfg=None: {"status": "error", "message": "could not reach the update server"}
 w.lock_page.b_update.click()
-check("an update that fails says why and the button works again", wait(lambda: "could not reach" in w.lock_page.status.text() and w.lock_page.b_update.isEnabled()), w.lock_page.status.text())
+check("an update that fails says why, the button works again and the download page is offered", wait(lambda: "could not reach" in w.lock_page.status.text() and w.lock_page.b_update.isEnabled() and w.lock_page.b_page.isVisible()), w.lock_page.status.text())
+w.lock_page.b_page.click()
+check("the download page button opens the releases page", opened == [policy.RELEASES_URL] and "github.com/AO-Miko/roblox-manager/releases" in opened[0], opened)
 updater.apply = lambda cfg=None: {"status": "refused", "message": "the newest version is not signed with a key you trust, so it was NOT installed"}
 w.lock_page.b_update.click()
 check("a refused update says so", wait(lambda: "NOT installed" in w.lock_page.status.text() and w.lock_page.b_update.isEnabled()))
 updater.apply = lambda cfg=None: {"status": "updated", "version": "1.9.0.0.0", "message": "Updated to version 1.9.0.0.0. Restart the app to use it."}
 restarted = []
 w.lock_page.restart = lambda: restarted.append(1)
+w.lock_page.RESTART_DELAY = 50
 w.lock_page.b_update.click()
-check("a successful update offers Restart now", wait(lambda: w.lock_page.b_restart.isVisible() and not w.lock_page.b_update.isVisible()) and "Updated to version 1.9.0.0.0" in w.lock_page.status.text())
+check("a successful update installs and restarts the app by itself (no second press, no GitHub)", wait(lambda: restarted == [1]) and "Updated to version 1.9.0.0.0" in w.lock_page.status.text() and "Restarting" in w.lock_page.status.text()
+      and not w.lock_page.b_update.isVisible() and not w.lock_page.b_page.isVisible() and opened == [policy.RELEASES_URL], (restarted, w.lock_page.status.text(), opened))
 w.lock_page.b_restart.click()
-check("...which restarts the app", restarted == [1])
+check("...and pressing Restart now afterwards does not restart twice", restarted == [1])
 
 # the new version is not behind: the lock is gone (also after a new policy)
 (tmp / "app" / "VERSION").write_text("1.9.0.0.0\n")
