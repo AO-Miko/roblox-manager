@@ -288,7 +288,7 @@ for p in (tmp / "state").glob("debug.log*"):
     text_all += p.read_text(encoding="utf-8", errors="replace")
 leaks = [s for s in SECRETS if s in text_all]
 check("after all this no secret appears in the events, the export or debug.log", not leaks, leaks)
-check("debug.log is private to this user", (debuglog.FILE.stat().st_mode & 0o077) == 0, oct(debuglog.FILE.stat().st_mode))
+check("debug.log is private to this user (where files have Unix permissions)", sys.platform == "win32" or (debuglog.FILE.stat().st_mode & 0o077) == 0, oct(debuglog.FILE.stat().st_mode))
 
 print(f"{sum(res)}/{len(res)} checks passed")
 sys.exit(0 if all(res) else 1)
