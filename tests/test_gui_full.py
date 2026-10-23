@@ -396,6 +396,7 @@ w.groups.change_rank()
 check("someone with the permission but no role below theirs is told so", not offered and denied, denied)
 
 # the permission itself is checked again: calling the action without it is refused and sends nothing
+wait(lambda: w.ctx.async_.pending == 0)                 # (the rank change of the step above may still be on its way: it must not land in the next step's list)
 as_rank(255, rank=False, invite=False, remove=False, shout=False, conf=False)
 denied.clear(); client.calls.clear(); pick_member("dave")
 for name, fn in (("change ranks", w.groups.change_rank), ("remove members", w.groups.kick), ("ban members", w.groups.ban), ("accept or decline join requests", lambda: w.groups.answer(True)),
