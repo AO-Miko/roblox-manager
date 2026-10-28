@@ -72,3 +72,21 @@ tools/ban.sh list
 
 Like the rest of the app this is client-side: it keeps honest users honest and cannot stop someone who edits the program. The signature stops
 anybody else from changing the lists.
+
+## Notifications
+
+The maintainer can send a message to everybody who uses the app (Linux, Windows and Android). It appears on the **Notifications** page; a red number in the
+side bar (the bell on the phone) says how many are unread, and a new one also pops up. The list is `dist/notifications.json`, signed with the release key
+(`dist/notifications.json.sig`, namespace `roblox-manager-notifications`). The apps fetch it at every start and every ten minutes, believe it only with a valid
+signature, never accept a lower `serial` than the one they have, show everything as plain text, and keep a link only if it starts with `https://`. Nothing about the
+person is sent. Which ones were read is kept only on their device.
+
+```
+tools/notify.sh send "Title" "Text of the message" [--level info|important|warning] [--link https://...] [--channel all|beta|stable] [--expires YYYY-MM-DD] [--id NAME] --push
+tools/notify.sh remove ID --push
+tools/notify.sh list
+```
+
+Run it on the `release` branch. No new app version is needed (GitHub's cache can delay a change by a few minutes). Title: at most 80 characters; text: at most 1000;
+the newest 50 are kept. `--channel beta` sends it only to people on the Beta channel. The same id sent again replaces the old message (people who read it see it
+as read; use a new id to make it unread again).

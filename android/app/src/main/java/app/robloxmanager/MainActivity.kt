@@ -51,6 +51,8 @@ import app.robloxmanager.ui.INFO
 import app.robloxmanager.ui.Jump
 import app.robloxmanager.ui.LOG
 import app.robloxmanager.ui.MONEY
+import app.robloxmanager.ui.NOTICES
+import app.robloxmanager.ui.NoticesScreen
 import app.robloxmanager.ui.MORE
 import app.robloxmanager.ui.MoreScreen
 import app.robloxmanager.ui.PEOPLE
@@ -127,6 +129,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
     val me by sv.current.collectAsState()
     val accounts by sv.accountList.collectAsState()
     val rolesVersion by sv.rolesVersion.collectAsState()
+    val unread by sv.unreadNotices.collectAsState()
     val rank = remember(me, rolesVersion) { me?.let { sv.roles.rankOf(it.id) } ?: 0 }
     val isAdmin = rank >= app.robloxmanager.core.Roles.MODERATOR
     fun open(id: String, sub: Int = 0) {
@@ -144,7 +147,7 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
         Column(Modifier.fillMaxSize()) {
             TopBar(
                 title = (ALL.firstOrNull { it.id == dest } ?: MORE).title, subtitle = (ALL.firstOrNull { it.id == dest } ?: MORE).hint, onBack = if (inMore) ({ open(MORE.id) }) else null,
-                accounts = accounts, me = me, onAdd = addAccount, onSearch = { searching = true },
+                accounts = accounts, me = me, onAdd = addAccount, onSearch = { searching = true }, unread = unread, onBell = { open(NOTICES.id) },
                 onSwitch = { a -> sv.scope.launch { try { sv.switchTo(a.id) } catch (_: Exception) { } } },
             )
             if (upd.ready != null) Row(Modifier.fillMaxWidth().background(C.accentDim).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -157,15 +160,16 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
                 if (PEOPLE.id in visited) Box(shown(PEOPLE.id)) { PeopleScreen(sv, bulk, counts, jump) }
                 if (GROUPS.id in visited) Box(shown(GROUPS.id)) { GroupsScreen(sv, bulk, counts, jump) }
                 if (VIP.id in visited) Box(shown(VIP.id)) { VipScreen(sv, bulk, counts) }
+                if (NOTICES.id in visited) Box(shown(NOTICES.id)) { NoticesScreen(sv) }
                 if (MONEY.id in visited) Box(shown(MONEY.id)) { MoneyScreen(sv) }
                 if (LOG.id in visited) Box(shown(LOG.id)) { LogScreen(sv) }
                 if (STAFF.id in visited) Box(shown(STAFF.id)) { StaffScreen(sv) }
                 if (ADMIN.id in visited && isAdmin) Box(shown(ADMIN.id)) { AdminScreen(sv) }
                 if (INFO.id in visited) Box(shown(INFO.id)) { InfoScreen(sv, jump) }
-                if (dest == MORE.id) MoreScreen(isAdmin) { open(it.id) }
+                if (dest == MORE.id) MoreScreen(isAdmin, unread) { open(it.id) }
             }
             BulkBar(bulk)
-            BottomBar(current = dest, counts = counts) { open(it.id) }
+            BottomBar(current = dest, counts = counts, unread = unread) { open(it.id) }
         }
     }
     if (searching) SearchDialog(admin = isAdmin, onClose = { searching = false }) { j -> searching = false; open(j.dest, j.sub) }

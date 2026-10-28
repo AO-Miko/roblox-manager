@@ -8,6 +8,8 @@ import app.robloxmanager.core.Account
 import app.robloxmanager.core.Debug
 import app.robloxmanager.core.DebugLog
 import app.robloxmanager.core.LookChoice
+import app.robloxmanager.core.NoticeStore
+import app.robloxmanager.core.Notice
 import app.robloxmanager.core.Scrub
 import app.robloxmanager.core.AlertRules
 import app.robloxmanager.core.AlertSettings
@@ -90,6 +92,27 @@ class Services(app: Application) {
     private var seen: Map<Long, Seen> = emptyMap()
     private var seenFor: Long? = null
     val bans = BanStore(File(dir, "bans.cache.json"))
+    /** News from the developer (signed list, see NoticeStore) and how many of them the person has not read. */
+    val notices = NoticeStore(File(dir, "notices.cache.json"), prefs)
+    val unreadNotices = MutableStateFlow(0)
+    private fun channel() = if (prefs.str("channel", "stable") == "beta") "beta" else "stable"
+    fun visibleNotices(): List<Notice> = notices.visible(channel())
+    fun isNoticeRead(id: String) = notices.isRead(id)
+    fun markNoticeRead(id: String) { notices.markRead(id); unreadNotices.value = notices.unreadCount(channel()) }
+    fun markAllNoticesRead() { notices.markAllRead(channel()); unreadNotices.value = notices.unreadCount(channel()) }
+    /** Looks for a newer list (also when the person opens the page); a notice never seen before is shown as a phone notification. */
+    suspend fun refreshNotices() {
+        try {
+            val changed = withContext(Dispatchers.IO) { notices.refresh() }
+            val fresh = notices.takeNew(channel())
+            unreadNotices.value = notices.unreadCount(channel())
+            if (changed == true) Debug.event("notices", "list changed: ${notices.visible(channel()).size} notification(s), ${unreadNotices.value} unread")
+            fresh.take(3).forEach { notifier(it.title.ifEmpty { "New notification" }) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+        }
+    }
     val roles = RoleStore(File(dir, "roles.cache.json"))
     val policy = PolicyStore(File(dir, "policy.cache.json"))
     /** The Beta channel counts its own updates (every release, betas included), from the beta branch; its serial is independent of the stable one. */
@@ -112,6 +135,7 @@ class Services(app: Application) {
 
     init {
         client.readBurst = prefs.double("readBurst", 0.5)
+        try { unreadNotices.value = notices.unreadCount(channel()) } catch (_: Throwable) { }          // from the list kept on the phone, until a new one is fetched
         scope.launch {                         // the accounts in use are hidden in the debug log; signing in and out are events
             current.collect { a -> Scrub.setIdentity(a); Debug.event("account", if (a != null) "signed in" else "signed out") }
         }
@@ -131,6 +155,7 @@ class Services(app: Application) {
                     enforce()
                     withContext(Dispatchers.IO) { bans.refresh() }
                     enforce()
+                    refreshNotices()
                     if (withContext(Dispatchers.IO) { roles.refresh() } == true) rolesVersion.value++
                     withContext(Dispatchers.IO) { activePolicy().refresh() }
                     enforcePolicy()

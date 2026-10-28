@@ -39,6 +39,7 @@ python tests/test_windows_native.py
 python tests/test_info_tab.py
 python tests/test_nav.py                  # side bar, search, shortcuts
 python tests/test_theme.py                # dark and light themes, accent colours, text size, readable colours
+python tests/test_notices.py              # notifications from the developer: signed list, read state, the red number (needs git, bash, ssh-keygen)
 python tests/test_admin.py                # roles, staff list, admin page (needs git, bash, ssh-keygen)
 python tests/test_versions.py             # the five-number version R.B.S.F.D
 python tests/test_channels.py             # stable / beta update channels

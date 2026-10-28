@@ -16,7 +16,7 @@ DARK = {
     "danger_dim": "#3d2227", "danger_hover": "#52292f", "danger_border": "#5a2d33",
     "zebra": "#1e222b", "hover": "#252a35", "sidebar": "#0e1015",
     "notice_bg": "#33280f", "notice_border": "#6b5120", "on_dim": "#ffffff",
-    "orange": "#ef8a5b", "violet": "#b59bff",
+    "orange": "#ef8a5b", "violet": "#b59bff", "badge": "#cf2a37",
 }
 LIGHT = {
     "bg": "#f3f5f9", "surface": "#ffffff", "surface2": "#eef1f6", "surface3": "#e1e6ee",
@@ -26,7 +26,7 @@ LIGHT = {
     "danger_dim": "#fbe4e4", "danger_hover": "#f6cfcf", "danger_border": "#e8b4b4",
     "zebra": "#f7f9fc", "hover": "#eaeff6", "sidebar": "#e9edf4",
     "notice_bg": "#fff3d6", "notice_border": "#e3c27a", "on_dim": "#171b24",
-    "orange": "#a8480f", "violet": "#6b3fd1",
+    "orange": "#a8480f", "violet": "#6b3fd1", "badge": "#cf2a37",
 }
 # name -> (fill in the dark theme, fill in the light theme). White text on a fill is always at least 4.5 : 1.
 ACCENTS = {
@@ -219,6 +219,12 @@ QLabel[role="display"] { font-size: ${f9}px; font-weight: 800; }
 QLabel[role="tile-value"] { font-size: ${f6}px; font-weight: 700; }
 QLabel[role="tile-caption"] { color: $muted; font-size: ${fm2}px; }
 QLabel[role="warn"] { color: $warn; }
+QLabel[role="card-title"] { font-weight: 700; font-size: ${f1}px; }
+QLabel[role="unread-dot"] { color: $badge; }
+QLabel[role="level"] { font-weight: 700; padding: 2px 9px; border-radius: 9px; }
+QLabel[level="important"] { color: $on_dim; background: $accent_dim; border: 1px solid $accent; }
+QLabel[level="warning"] { color: $warn; background: $notice_bg; border: 1px solid $notice_border; }
+QFrame[card="true"][unread="true"] { border-left: 4px solid $badge; }
 QLabel[role="notice"] { background: $notice_bg; border: 1px solid $notice_border; border-radius: 10px; padding: 10px; }
 QLabel[role="step"] { background: $accent_dim; color: $on_dim; border-radius: 13px; font-weight: 700; min-width: 26px; max-width: 26px; min-height: 26px; max-height: 26px; qproperty-alignment: AlignCenter; }
 

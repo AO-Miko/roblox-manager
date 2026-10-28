@@ -53,6 +53,8 @@ jobs:
         run: python tests/test_nav.py
       - name: Looks (themes, accent colours, text size)
         run: python tests/test_theme.py
+      - name: Notifications
+        run: python tests/test_notices.py
       - name: Roles, staff list and admin page
         run: python tests/test_admin.py
       - name: Update channels

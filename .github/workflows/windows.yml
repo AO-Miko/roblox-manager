@@ -50,6 +50,9 @@ jobs:
       - name: Looks (themes, accent colours, text size)
         if: ${{ !cancelled() }}
         run: python tests/test_theme.py
+      - name: Notifications
+        if: ${{ !cancelled() }}
+        run: python tests/test_notices.py
       - name: Update channels
         if: ${{ !cancelled() }}
         run: python tests/test_channels.py

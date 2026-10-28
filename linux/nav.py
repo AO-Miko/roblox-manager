@@ -19,6 +19,7 @@ PAGES = {
     "API Explorer": ("Tools", "Send any Roblox web API request and read the answer."),
     "Staff List": ("Staff", "Who is on the staff, from the owner down, with their Roblox profiles."),
     "Admin": ("Staff", "Ban and unban Roblox user ids. Only accounts with the admin role or higher see this page."),
+    "Notifications": ("", "News from the developer. A red number says how many you have not read."),
     "Settings": ("", "Preferences, updates and what changed in each version."),
 }
 KEYWORDS = {                      # extra words the search also understands, so "robux" finds Money and "private server" finds VIP servers
@@ -29,6 +30,7 @@ KEYWORDS = {                      # extra words the search also understands, so 
     "Money": "robux balance pending transactions history csv export revenue",
     "Request log": "log requests http rate limit errors",
     "API Explorer": "api endpoint http get post developer",
+    "Notifications": "notifications news messages announcements bell unread read developer",
     "Settings": "settings info updates update log version changes about preferences theme dark light accent colour text size looks confirm cache backup export restore license",
     "Admin": "ban unban banned reason roles moderator",
     "Staff List": "staff team owner co-owner senior admin trusted friends roles hierarchy members profile",
@@ -72,6 +74,10 @@ def icon_path(name):
     elif name == "Admin":
         p.moveTo(12, 3.5); p.lineTo(19.5, 6.5); p.lineTo(19.5, 12); p.cubicTo(19.5, 16.5, 16, 19.5, 12, 20.8); p.cubicTo(8, 19.5, 4.5, 16.5, 4.5, 12)
         p.lineTo(4.5, 6.5); p.closeSubpath(); p.moveTo(9, 12); p.lineTo(11.2, 14.2); p.lineTo(15.2, 9.8)
+    elif name == "Notifications":
+        p.moveTo(5.5, 17); p.lineTo(18.5, 17); p.cubicTo(17.2, 15.8, 16.5, 14.5, 16.5, 11.5); p.cubicTo(16.5, 8.5, 14.5, 6.5, 12, 6.5)
+        p.cubicTo(9.5, 6.5, 7.5, 8.5, 7.5, 11.5); p.cubicTo(7.5, 14.5, 6.8, 15.8, 5.5, 17); p.moveTo(12, 4.5); p.lineTo(12, 6.5)
+        p.moveTo(10, 19.5); p.cubicTo(10.5, 20.8, 13.5, 20.8, 14, 19.5)
     elif name == "Settings":
         p.moveTo(4, 7); p.lineTo(20, 7); p.moveTo(4, 17); p.lineTo(20, 17); p.addEllipse(QPointF(9, 7), 2.2, 2.2); p.addEllipse(QPointF(15, 17), 2.2, 2.2)
     elif name == "chevron_down":
@@ -169,8 +175,15 @@ class NavItem(QAbstractButton):
         colour = T["text"] if on else (T["text"] if self._hover else T["muted"])
         x = r.x() + (r.width() - 20) / 2 if self.compact else r.x() + 14
         draw_icon(p, self.title, QRectF(x, r.center().y() - 10, 20, 20), T["accent_hover"] if on else colour)
+        red = self.title == "Notifications"                 # unread notifications: a red badge with the number, like a phone's
         if self.compact:
-            if self.badge:
+            if self.badge and red:
+                p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["badge"]))
+                p.drawEllipse(QPointF(r.right() - 10, r.y() + 10), 8, 8)
+                bf = self.font(); bf.setPixelSize(10); bf.setWeight(bf.Weight.Bold)
+                p.setFont(bf); p.setPen(QColor(T["on_accent"]))
+                p.drawText(QRectF(r.right() - 18, r.y() + 2, 16, 16), Qt.AlignmentFlag.AlignCenter, self.badge if len(self.badge) < 3 else "9+")
+            elif self.badge:
                 p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["accent"]))
                 p.drawEllipse(QPointF(r.right() - 9, r.y() + 9), 4, 4)
             return
@@ -183,9 +196,9 @@ class NavItem(QAbstractButton):
             bfm = QFontMetrics(bf)
             badge_w = max(22, bfm.horizontalAdvance(self.badge) + 14)
             br = QRectF(r.right() - badge_w - 8, r.center().y() - 9, badge_w, 18)
-            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["accent"] if on else T["surface3"]))
+            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["badge"] if red else T["accent"] if on else T["surface3"]))
             p.drawRoundedRect(br, 9, 9)
-            p.setFont(bf); p.setPen(QColor("white" if on else T["text"]))
+            p.setFont(bf); p.setPen(QColor(T["on_accent"] if (red or on) else T["text"]))
             p.drawText(br, Qt.AlignmentFlag.AlignCenter, self.badge)
             p.setFont(f)
             badge_w += 8
@@ -362,6 +375,8 @@ class Sidebar(QFrame):
                 group = ""
             if group != last:
                 label = None
+                if not group and last:
+                    lay.addSpacing(10)
                 if group:
                     label = GroupHeader(group.upper())
                     label.clicked.connect(lambda _=False, lab=label: self.toggle_group(lab.text()))

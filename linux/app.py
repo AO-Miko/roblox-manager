@@ -39,6 +39,7 @@ import accounts
 import bans
 import debuglog
 import nav
+import notices
 import policy
 import roles
 import plat
@@ -54,6 +55,7 @@ from update_required import UpdateRequiredPage
 from tab_explorer import ExplorerTab
 from tab_groups import GroupsTab
 from tab_money import MoneyTab
+from tab_notices import NoticesTab
 from tab_people import PeopleTab
 import tab_debug
 from tab_requests import RequestsTab
@@ -90,12 +92,13 @@ class MainWindow(QMainWindow):
         self.explorer = ExplorerTab(self.ctx)
         self.staff = StaffTab(self.ctx)
         self.admin = AdminTab(self.ctx)
+        self.notices = NoticesTab(self.ctx)
         self.info_tab = InfoTab(self.ctx, on_cleared=self._cleared)
         self.holders = {}
         self.settings_tab = self.info_tab.settings_tab
         for w, name in ((self.home, "Home"), (self.people, "People"), (self.groups, "Groups"), (self.vip, "VIP servers"),
                         (self.money, "Money"), (self.requests, "Request log"), (self.explorer, "API Explorer"),
-                        (self.staff, "Staff List"), (self.admin, "Admin"), (self.info_tab, "Settings")):
+                        (self.staff, "Staff List"), (self.admin, "Admin"), (self.notices, "Notifications"), (self.info_tab, "Settings")):
             holder = nav.PageHolder(w)
             self.holders[w] = holder
             self.tabs.addTab(holder, name)
@@ -114,7 +117,8 @@ class MainWindow(QMainWindow):
         self.sidebar.layout_changed.connect(self._save_state)
         self.tabs.currentChanged.connect(lambda i: self.header.show_page(self.tabs.tabText(i)))
         self.tabs.currentChanged.connect(lambda i: self.header.set_reloadable(self._reloadable(self.tabs.widget(i).page)))
-        self.tabs.currentChanged.connect(lambda i: self.setWindowTitle(f"{nav.base_title(self.tabs.tabText(i))[0]} - Roblox Manager"))
+        self._unread = 0
+        self.tabs.currentChanged.connect(lambda i: self._retitle())
         right = QWidget()
         rl = QVBoxLayout(right)
         rl.setContentsMargins(0, 0, 0, 0)
@@ -143,6 +147,7 @@ class MainWindow(QMainWindow):
         self._fill_accounts()
         self.counts = {}
         self.ctx.counts.connect(self._on_count)
+        self.notices.reload()                          # the red number in the side bar, from the saved list (also without a network)
         self.ctx.signed_out.connect(lambda: [self.ctx.counts.emit(k, None) for k in ("friends", "requests", "followers", "following", "blocked", "groups", "vip")])
         self._restore_state(auto_login)
         self.update_admin()
@@ -161,6 +166,10 @@ class MainWindow(QMainWindow):
             self._ban_timer.timeout.connect(self._check_bans)
             self._ban_timer.start(bans.REFRESH_SECONDS * 1000)
             QTimer.singleShot(1500, self._check_bans)
+            self._notice_timer = QTimer(self)             # notifications from the developer: now, and every ten minutes
+            self._notice_timer.timeout.connect(self._check_notices)
+            self._notice_timer.start(notices.REFRESH_SECONDS * 1000)
+            QTimer.singleShot(2500, self._check_notices)
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
@@ -298,9 +307,22 @@ class MainWindow(QMainWindow):
         if category == "logs":
             self.requests.clear()            # the list on screen goes too: it is the same history
 
+    def _retitle(self):
+        """The window title: the page, and the number of unread notifications in front when there are any."""
+        i = self.tabs.currentIndex()
+        self.setWindowTitle((f"({self._unread}) " if self._unread else "") + f"{nav.base_title(self.tabs.tabText(i))[0]} - Roblox Manager")
+
+    def _check_notices(self):
+        self.ctx.async_.run(notices.refresh, lambda changed: changed and self.notices.reload(announce=True), lambda e: None)
+
     def _on_count(self, what, n):
         """Show how many there are in the tab titles: Groups (7), VIP servers (250), People (3 requests) ..."""
         self.counts[what] = n
+        if what == "notices":
+            self._unread = n or 0
+            self.tabs.setTabText(self.tabs.indexOf(self.holders[self.notices]), f"Notifications ({n})" if n else "Notifications")
+            self.sidebar.sync()
+            self._retitle()
         for widget, base, what_ in ((self.groups, "Groups", "groups"), (self.vip, "VIP servers", "vip")):
             if what == what_:
                 self.tabs.setTabText(self.tabs.indexOf(self.holders[widget]), f"{base} ({format(n, ',')})" if n else base)

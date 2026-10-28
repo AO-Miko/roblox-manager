@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Paid
@@ -77,12 +78,13 @@ val MONEY = Dest("money", "Money", Icons.Outlined.Paid, "Robux balance, pending,
 val LOG = Dest("log", "Request log", Icons.AutoMirrored.Outlined.ListAlt, "Every request the app sends to Roblox and the answer.", "log requests http rate limit errors")
 val STAFF = Dest("staff", "Staff List", Icons.Outlined.Badge, "Who is on the staff, from the owner down, with their Roblox profiles.", "staff team owner co-owner senior admin trusted friends roles hierarchy members profile")
 val ADMIN = Dest("admin", "Admin", Icons.Outlined.AdminPanelSettings, "Who is banned and by whom (admin role or higher).", "ban unban banned reason roles moderator")
+val NOTICES = Dest("notices", "Notifications", Icons.Outlined.Notifications, "News from the developer.", "news notifications messages announcements bell")
 val INFO = Dest("info", "Settings", Icons.Outlined.Settings, "Preferences, updates and what changed in each version.", "settings updates update log version changes about preferences")
 val MORE = Dest("more", "More", Icons.Outlined.MoreHoriz, "Money, request log, settings and updates.", "")
 
 val BOTTOM = listOf(HOME, PEOPLE, GROUPS, VIP, MORE)
-val IN_MORE = listOf(MONEY, LOG, STAFF, ADMIN, INFO)           // (the Admin page is only offered to the admin role and higher)
-val ALL = listOf(HOME, PEOPLE, GROUPS, VIP, MONEY, LOG, STAFF, ADMIN, INFO)
+val IN_MORE = listOf(NOTICES, MONEY, LOG, STAFF, ADMIN, INFO)           // (the Admin page is only offered to the admin role and higher)
+val ALL = listOf(HOME, PEOPLE, GROUPS, VIP, NOTICES, MONEY, LOG, STAFF, ADMIN, INFO)
 
 /** A request to open a page, and optionally one of its sub pages (People: 0..5, Settings: 0 preferences / 1 updates). [nonce] makes the same request work twice. */
 class Jump(val dest: String, val sub: Int = 0, val nonce: Int = 0)
@@ -111,7 +113,7 @@ fun matchHits(hits: List<Hit>, query: String): List<Hit> {
 }
 
 @Composable
-fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: List<Account>, me: Account?, onSwitch: (Account) -> Unit, onAdd: () -> Unit, onSearch: () -> Unit) {
+fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: List<Account>, me: Account?, onSwitch: (Account) -> Unit, onAdd: () -> Unit, onSearch: () -> Unit, unread: Int = 0, onBell: () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().background(C.bg).statusBarsPadding().padding(start = if (onBack != null) 4.dp else 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
@@ -119,6 +121,9 @@ fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: Lis
             if (subtitle.isNotEmpty()) Text(subtitle, color = C.muted, fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
         IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "Search") }
+        IconButton(onClick = onBell) {
+            BadgedBox(badge = { UnreadBadge(unread) }) { Icon(Icons.Outlined.Notifications, if (unread > 0) "Notifications, $unread unread" else "Notifications") }
+        }
         var open by remember { mutableStateOf(false) }
         Box {
             IconButton(onClick = { open = true }) {
@@ -140,15 +145,16 @@ fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: Lis
 }
 
 @Composable
-fun BottomBar(current: String, counts: Map<String, Int>, onPick: (Dest) -> Unit) {
+fun BottomBar(current: String, counts: Map<String, Int>, unread: Int = 0, onPick: (Dest) -> Unit) {
     NavigationBar(containerColor = C.surface, tonalElevation = 0.dp) {
         BOTTOM.forEach { d ->
             val selected = current == d.id || (d == MORE && IN_MORE.any { it.id == current })
             val n = when (d) { PEOPLE -> counts["Friends"]; GROUPS -> counts["Groups"]; VIP -> counts["VIP"]; else -> null }
+            val red = d == MORE && unread > 0
             NavigationBarItem(
                 selected = selected, onClick = { onPick(d) }, alwaysShowLabel = true,
                 icon = {
-                    BadgedBox(badge = { if (n != null && n > 0) Badge(containerColor = C.fill, contentColor = C.onAccent) { Text(if (n > 999) "999+" else n.toString(), fontSize = 10.sp) } }) { Icon(d.icon, d.title) }
+                    BadgedBox(badge = { if (red) UnreadBadge(unread) else if (n != null && n > 0) Badge(containerColor = C.fill, contentColor = C.onAccent) { Text(if (n > 999) "999+" else n.toString(), fontSize = 10.sp) } }) { Icon(d.icon, d.title) }
                 },
                 label = { Text(d.title, fontSize = 11.sp, maxLines = 1) },
                 colors = NavigationBarItemDefaults.colors(indicatorColor = C.accentDim, selectedIconColor = C.onDim, selectedTextColor = C.onDim, unselectedIconColor = C.muted, unselectedTextColor = C.muted),
@@ -159,8 +165,8 @@ fun BottomBar(current: String, counts: Map<String, Int>, onPick: (Dest) -> Unit)
 
 /** More: the rest of the pages in groups (Tools, Staff, App); a group folds with its arrow. */
 @Composable
-fun MoreScreen(admin: Boolean, onOpen: (Dest) -> Unit) {
-    val groups = listOf("TOOLS" to listOf(MONEY, LOG), "STAFF" to listOf(STAFF, ADMIN), "APP" to listOf(INFO))
+fun MoreScreen(admin: Boolean, unread: Int = 0, onOpen: (Dest) -> Unit) {
+    val groups = listOf("TOOLS" to listOf(NOTICES, MONEY, LOG), "STAFF" to listOf(STAFF, ADMIN), "APP" to listOf(INFO))
     Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 8.dp)) {
         groups.forEach { (name, dests) ->
             val shown = dests.filter { admin || it != ADMIN }
@@ -175,6 +181,7 @@ fun MoreScreen(admin: Boolean, onOpen: (Dest) -> Unit) {
                                     Text(d.title, fontWeight = FontWeight.SemiBold)
                                     Text(d.hint, color = C.muted, fontSize = 12.sp)
                                 }
+                                if (d == NOTICES) UnreadBadge(unread)
                                 Icon(androidx.compose.material.icons.Icons.Outlined.ChevronRight, null, tint = C.muted)
                             }
                         }
