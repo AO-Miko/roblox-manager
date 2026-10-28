@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.6.4.4",
+    "date": "2026-10-28",
+    "changes": [
+      "Notifications: a check icon in the page header shows the messages you have read again (read ones leave the list, each marked with a check mark), on the PC and on the phone"
+    ]
+  },
+  {
     "version": "1.16.5.4.4",
     "date": "2026-10-28",
     "changes": [

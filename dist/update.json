@@ -1,7 +1,7 @@
 {
-  "versionName": "1.16.5.4.4",
-  "versionCode": 38,
+  "versionName": "1.16.6.4.4",
+  "versionCode": 39,
   "apk": "roblox-manager.apk",
-  "sha256": "272cf32446c25eb332988e8c3eee4c43e35f12fd143d205026e1c7e4c6cfb07e",
-  "notes": "Notifications: the developer can send a message to everybody. A new Notifications page, a red number in the side bar (a bell with a red badge on the phone) and a pop-up for each new message|Messages come from a signed file in the repository, so only the maintainer can send one"
+  "sha256": "c48152cf61c8b3e28439e0dc2917ed0ae00069e06d20fc48cb6eb4171a1c4339",
+  "notes": "Notifications: a check icon in the page header shows the messages you have read again (read ones leave the list, each marked with a check mark), on the PC and on the phone"
 }
