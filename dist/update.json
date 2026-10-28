@@ -1,7 +1,7 @@
 {
-  "versionName": "1.15.5.4.3",
-  "versionCode": 36,
+  "versionName": "1.15.5.4.4",
+  "versionCode": 37,
   "apk": "roblox-manager.apk",
-  "sha256": "4dc540522521838ab695431a6550a34aa1e959e8ace3658cc3af11112e810b77",
-  "notes": "App debug log in the Request log: everything that happens in the app with its output, private things hidden|Forced update: Update now installs the update by itself (no GitHub page unless it fails)"
+  "sha256": "ef969fa9d8a0f66e4db58580345c6ea7608d791546e9d3b961ef4bf3859cdbc9",
+  "notes": "Design rework on PC and phone: a Light theme, five accent colours and four text sizes (Settings > Looks; Ctrl+Shift+L switches dark and light on a PC)|Home shows a welcome page until you sign in|Small tabs are pills, with sharper cards, tables and buttons|Every colour is checked to be readable in both themes"
 }

@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.15.5.4.4",
+    "date": "2026-10-28",
+    "changes": [
+      "Design rework on PC and phone: a Light theme, five accent colours and four text sizes (Settings > Looks; Ctrl+Shift+L switches dark and light on a PC)",
+      "Home shows a welcome page until you sign in",
+      "Small tabs are pills, with sharper cards, tables and buttons",
+      "Every colour is checked to be readable in both themes"
+    ]
+  },
+  {
     "version": "1.15.5.4.3",
     "date": "2026-10-23",
     "changes": [
