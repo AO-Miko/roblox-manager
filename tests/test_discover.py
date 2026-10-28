@@ -5,6 +5,7 @@ import re
 import sys
 import tempfile
 import time
+from urllib.parse import urlparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -125,7 +126,7 @@ class FakeRoblox(rbx.Client):
             return {"isFavorited": bool(FAVORITES.get("on"))}
         if "/favorite/games" in url:
             return {"data": [{"id": 1, "name": "Alpha Game", "rootPlace": {"id": 11}, "creator": {"name": "Maker"}}, {"id": 8, "name": "Favorite Eight", "rootPlace": {"id": 88}}]}
-        if re.search(r"friends.roblox.com/v1/users/\d+/friends$", url):
+        if re.search(r"^https?://friends\.roblox\.com/v1/users/\d+/friends$", url):
             return {"data": [{"id": 201, "name": "ann", "displayName": "Ann"}, {"id": 202, "name": "bob", "displayName": "Bob"}, {"id": 203, "name": "cy", "displayName": "Cy"}]}
         if "/groups/roles" in url:
             return {"data": []}
@@ -152,7 +153,7 @@ class FakeRoblox(rbx.Client):
             n = int(job[-1])
             return {"jobId": job, "status": 2, "joinTicket": "T", "joinScript": {"UdmuxEndpoints": [{"Address": f"128.116.{44 if n % 2 else 97}.{n}", "Port": 1}], "MachineAddress": "10.0.0.1",
                                                                                 "DataCenterId": 25960 if n % 2 else 25853, "ServerClaimedTime": int(time.time() * 1000) - n * 3600 * 1000, "PlaceVersion": 1800 + n % 3}}
-        if "presence.roblox.com" in url:
+        if urlparse(url).hostname == "presence.roblox.com":
             return {"userPresences": [{"userId": 201, "userPresenceType": 2, "lastLocation": "Alpha Game", "rootPlaceId": 11, "placeId": 11, "gameId": "job-aaaa-1111", "universeId": 1},
                                       {"userId": 202, "userPresenceType": 1, "lastLocation": "Website"}, {"userId": 203, "userPresenceType": 0}]}
         if "profiles" in url or url == self.PROFILES_URL:
