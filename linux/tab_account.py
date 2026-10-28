@@ -20,6 +20,7 @@ from signin import SignInDialog
 from ui_common import (
     PRESENCE, PRESENCE_COLOUR, button, cell, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
 )
+from theme import T
 
 
 def pending_rows(items):
@@ -162,6 +163,9 @@ class AccountTab(QWidget):
             tile.setMinimumWidth(96)
             hl.addWidget(tile)
             self.tiles[key] = val
+        self.welcome = self._welcome_card()
+        lay.addWidget(self.welcome)
+        self.head = head
         lay.addWidget(head)
         self.set_avatar(None)
         # ---- details
@@ -187,6 +191,7 @@ class AccountTab(QWidget):
                 self.form.addRow(("Pending (sources)" if k == "Pending Robux" else k) + ":", w)
         self.pending_report = None
         dl.addLayout(self.form)
+        self.details = details
         lay.addWidget(details)
         row = QHBoxLayout()
         self.btn_set = button("Sign in...", self.set_cookie, "Sign in with your password (and 2-step code), in a browser window, or with a pasted cookie", primary=True)
@@ -228,6 +233,60 @@ class AccountTab(QWidget):
         self.refresh_buttons()
         self.refresh_accounts()
 
+    def _welcome_card(self):
+        """What a person sees before signing in: what the app does, and how to start."""
+        card = QFrame()
+        card.setProperty("hero", True)
+        v = QVBoxLayout(card)
+        v.setContentsMargins(26, 22, 26, 22)
+        v.setSpacing(10)
+        title = QLabel("Welcome to Roblox Manager")
+        title.setProperty("role", "display")
+        title.setWordWrap(True)
+        sub = QLabel("Friends, groups, VIP servers and Robux for all your accounts, from one place. It follows Roblox's own rate limits and keeps your sign-ins encrypted on this PC.")
+        sub.setProperty("role", "hint")
+        sub.setWordWrap(True)
+        v.addWidget(title)
+        v.addWidget(sub)
+        steps = QHBoxLayout()
+        steps.setSpacing(12)
+        for n, (head, text) in enumerate((("Sign in", "With your password and 2-step code, in a browser window, or with a pasted cookie."),
+                                          ("Look around", "People, Groups, VIP servers, Money and Discover are on the left."),
+                                          ("Stay in control", "Bulk actions ask first, and every request is in the Request log.")), 1):
+            tile = QFrame()
+            tile.setProperty("tile", True)
+            tv = QVBoxLayout(tile)
+            tv.setContentsMargins(14, 12, 14, 12)
+            tv.setSpacing(6)
+            chip = QLabel(str(n))
+            chip.setProperty("role", "step")
+            h = QLabel(head)
+            h.setProperty("role", "tile-value")
+            t = QLabel(text)
+            t.setProperty("role", "hint")
+            t.setWordWrap(True)
+            tv.addWidget(chip)
+            tv.addWidget(h)
+            tv.addWidget(t)
+            tv.addStretch()
+            steps.addWidget(tile, 1)
+        v.addLayout(steps)
+        row = QHBoxLayout()
+        self.btn_welcome = button("Sign in...", self.set_cookie, "Sign in with your password (and 2-step code), in a browser window, or with a pasted cookie", primary=True)
+        row.addWidget(self.btn_welcome)
+        row.addWidget(hint("No account at hand? The API Explorer and the public group look-up work without one."), 1)
+        v.addLayout(row)
+        return card
+
+    def _sync_welcome(self):
+        """The welcome card is for a signed-out app; the account card and its details are for a signed-in one."""
+        signed = self.ctx.client.has_cookie
+        self.welcome.setVisible(not signed)
+        self.head.setVisible(signed)
+        self.details.setVisible(signed)
+        for w in (self.btn_set, self.btn_test, self.btn_pending, self.btn_profile, self.btn_out, self.safety):
+            w.setVisible(signed)             # (before signing in, the welcome card has the Sign in button)
+
     def update_tiles(self):
         """The header shows the same numbers as the details below, in big type."""
         f = self.fields
@@ -259,8 +318,8 @@ class AccountTab(QWidget):
             p.setClipPath(path)
             p.drawPixmap(0, 0, pm.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
         else:
-            p.fillPath(path, QBrush(QColor("#2b303c")))
-            p.setPen(QColor("#6f788a"))
+            p.fillPath(path, QBrush(QColor(T["surface3"])))
+            p.setPen(QColor(T["muted"]))
             f = p.font()
             f.setPointSize(26)
             p.setFont(f)
@@ -291,6 +350,7 @@ class AccountTab(QWidget):
 
     def refresh_buttons(self):
         c = self.ctx
+        self._sync_welcome()
         self.btn_test.setEnabled(c.client.has_cookie)
         self.btn_out.setEnabled(c.client.has_cookie)
         sel = self._selected_account()
@@ -302,15 +362,15 @@ class AccountTab(QWidget):
         kind, plain = accounts.storage_status()
         if not c.client.has_cookie and not accounts.list_accounts():
             self.safety.setText("Not signed in. Press Sign in... (password with 2-step code, browser, or cookie). Without signing in you can still use the API Explorer and look up public groups.")
-            self.safety.setStyleSheet("color: #9a9da6;")
+            self.safety.setStyleSheet(f"color: {T['muted']};")
         elif kind == "plain":
             self.safety.setText(f"Warning: {plain} sign-in(s) are stored in plain private files, NOT encrypted, because the safe store ("
                                 f"{plat.WALLET}) could not be used. "
                                 "Unlock or start the wallet and restart the app: they will be moved into it automatically.")
-            self.safety.setStyleSheet("color: #e0a030;")
+            self.safety.setStyleSheet(f"color: {T['warn']};")
         else:
             self.safety.setText(f"Your sign-ins are stored encrypted ({plat.WALLET}) and sent only to roblox.com. Your password is never stored.")
-            self.safety.setStyleSheet("color: #9a9da6;")
+            self.safety.setStyleSheet(f"color: {T['muted']};")
 
     # ---- several accounts
     def _selected_account(self):
@@ -322,7 +382,7 @@ class AccountTab(QWidget):
         rows = accounts.list_accounts()
         fill_table(self.atable, [[a["displayName"] or a["name"], "@" + a["name"], "in use" if a["id"] == active else "",
                                   self.balances.get(a["id"], "")] for a in rows],
-                   {(i, 2): "#3ba55d" for i, a in enumerate(rows) if a["id"] == active}, keys=[a["id"] for a in rows])
+                   {(i, 2): T["success"] for i, a in enumerate(rows) if a["id"] == active}, keys=[a["id"] for a in rows])
         self.refresh_buttons()
 
     def _reset_for_switch(self):
@@ -595,7 +655,7 @@ class AccountTab(QWidget):
                 other = amount - s["total"]
                 if other > 0:
                     sources += f", other {other:,}"
-                txt += f"  <span style='color:#9a9da6'>({sources})</span>"
+                txt += f"  <span style='color:{T['muted']}'>({sources})</span>"
             label.setText(txt)
         label.updateGeometry()
         if rep.get("uid") and rep["total_done"] and rep["breakdown_done"] and rep["groups_done"]:
@@ -604,7 +664,7 @@ class AccountTab(QWidget):
         gl = self.fields["Groups' pending"]
         if g:
             g.sort(key=lambda x: -x["pending"])
-            gl.setText(f"<b>{sum(x['pending'] for x in g):,}</b>  <span style='color:#9a9da6'>({', '.join(f'{esc(x['name'])} {x['pending']:,}' for x in g[:5])})</span>")
+            gl.setText(f"<b>{sum(x['pending'] for x in g):,}</b>  <span style='color:{T['muted']}'>({', '.join(f'{esc(x['name'])} {x['pending']:,}' for x in g[:5])})</span>")
         elif rep["groups_done"]:
             gl.setText("0" if rep.get("groups") else "none in groups you own")
         else:
@@ -940,7 +1000,7 @@ class FriendsTab(QWidget):
         keep = self._selected()["id"] if self._selected() else None
         fill_table(self.table, [[r["name"] + ("  ✔" if r["verified"] else ""), "@" + r["username"] if r["username"] else "", PRESENCE.get(r["type"], "?"),
                                  r["game"], when(r["last"])] for r in shown],
-                   {(i, 2): PRESENCE_COLOUR.get(r["type"], "#fff") for i, r in enumerate(shown)},
+                   {(i, 2): PRESENCE_COLOUR.get(r["type"], T["text"]) for i, r in enumerate(shown)},
                    keys=[r["id"] for r in shown], icons={i: self.icons[r["id"]] for i, r in enumerate(shown) if r["id"] in self.icons})
         if keep is not None:
             for i in range(self.table.rowCount()):
@@ -996,7 +1056,7 @@ class FriendsTab(QWidget):
         n = len(selected_rows(self.table))
         if n > 1:
             self.avatar.setPixmap(QPixmap())
-            self.profile.setText(f"<b style='font-size:16px'>{n} friends selected</b><br><span style='color:#9a9da6'>Use \"Remove selected friends...\" "
+            self.profile.setText(f"<b style='font-size:16px'>{n} friends selected</b><br><span style='color:{T['muted']}'>Use \"Remove selected friends...\" "
                                  "to unfriend them, or select a single friend to see their profile.</span>")
             return
         icon = self.icons.get(r["id"])
@@ -1014,17 +1074,17 @@ class FriendsTab(QWidget):
                          lambda e: None)
 
     def _render_profile(self, r, d):
-        lines = [f"<b style='font-size:16px'>{esc(r['name'])}</b>" + (f"  <span style='color:#9a9da6'>@{esc(r['username'])}</span>" if r["username"] else "")
+        lines = [f"<b style='font-size:16px'>{esc(r['name'])}</b>" + (f"  <span style='color:{T['muted']}'>@{esc(r['username'])}</span>" if r["username"] else "")
                  + ("  ✔ verified" if r["verified"] else ""), f"User id {r['id']}  |  {PRESENCE.get(r['type'], '?')}"
                  + (f"  -  {esc(r['game'])}" if r["game"] else (f"  -  {esc(r['location'])}" if r["location"] and r["type"] else ""))]
         if d:
             cnt = d.get("counts") or {}
             lines.append(f"Joined {when(d.get('created'))[:10]}  |  {cnt.get('friends', '?')} friends  |  {cnt.get('followers', '?')} followers  |  {cnt.get('following', '?')} following"
-                         + ("  |  <span style='color:#e5534b'>banned</span>" if d.get("isBanned") else ""))
+                         + ("  |  <span style='color:{T['danger']}'>banned</span>" if d.get("isBanned") else ""))
             if d.get("description"):
-                lines.append("<span style='color:#9a9da6'>" + esc(d["description"][:240]) + "</span>")
+                lines.append("<span style='color:{T['muted']}'>" + esc(d["description"][:240]) + "</span>")
         else:
-            lines.append("<span style='color:#9a9da6'>loading profile...</span>")
+            lines.append("<span style='color:{T['muted']}'>loading profile...</span>")
         self.profile.setText("<br>".join(lines))
 
     def open_profile(self):
@@ -1200,7 +1260,7 @@ class FriendsTab(QWidget):
         t = make_table(["Friend's?", "Game", "Server name", "Owner", "Players"], [90, 260, 220, 160, 80])
         fill_table(t, [["YES" if r["friend"] else "", names.get(r["place_id"], r["place_id"]), r["name"], r["owner"],
                         f"{r['playing']}/{r['max']}" if r["max"] else ""] for r in rows],
-                   {(i, 0): "#3ba55d" for i, r in enumerate(rows) if r["friend"]})
+                   {(i, 0): T["success"] for i, r in enumerate(rows) if r["friend"]})
         lay.addWidget(t, 1)
         if problems:
             lay.addWidget(hint("Some lookups failed: " + "; ".join(f"{names.get(p, p)}: {m[0]}" for p, m in problems.items())))

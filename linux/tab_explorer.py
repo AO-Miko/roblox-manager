@@ -14,11 +14,12 @@ from PySide6.QtWidgets import (
 
 import rbx
 from ui_common import Table, button, copy_text, hint
+from theme import Live, T
 
 CATALOG = Path(__file__).resolve().parent / "catalog"
 UPDATABLE = ["groups", "friends", "presence", "users", "inventory", "accountsettings", "privatemessages", "catalog", "badges",
              "trades", "thumbnails", "premiumfeatures", "develop"]
-METHOD_COLOUR = {"GET": "#5ab0ff", "POST": "#3ba55d", "PATCH": "#e0a030", "PUT": "#e0a030", "DELETE": "#e5534b"}
+METHOD_COLOUR = Live({"GET": "info", "POST": "success", "PATCH": "warn", "PUT": "warn", "DELETE": "danger"})
 
 
 # ------------------------------------------------------------------ reading the specs
@@ -174,7 +175,7 @@ class ExplorerTab(QWidget):
                 continue
             self.visible.append(e)
             it = QListWidgetItem(f"{e['method']:6s} {e['service']}{e['path']}" + (f"   - {e['summary'][:60]}" if e["summary"] else ""))
-            it.setForeground(QColor(METHOD_COLOUR.get(e["method"], "#ddd")))
+            it.setForeground(QColor(METHOD_COLOUR.get(e["method"], T["text"])))
             self.list.addItem(it)
         self.list.blockSignals(False)
         self.count.setText(f"{len(self.visible)} of {len(self.entries)} endpoints")
@@ -263,7 +264,7 @@ class ExplorerTab(QWidget):
         limit = headers.get("x-ratelimit-remaining") or headers.get("X-RateLimit-Remaining")
         self.result_head.setText(f"HTTP {status}  -  {secs:.2f} s" + (f"  -  rate limit left: {limit}" if limit else "")
                                  + ("  -  with your account" if auth else "  -  anonymous") + (f"  -  {err}" if err and not good else ""))
-        self.result_head.setStyleSheet("font-weight: bold; color: " + ("#3ba55d" if good else "#e5534b"))
+        self.result_head.setStyleSheet("font-weight: bold; color: " + (T["success"] if good else T["danger"]))
         self.result.setPlainText(json.dumps(data, indent=2, ensure_ascii=False) if not isinstance(data, str) else data)
 
     def copy_curl(self):

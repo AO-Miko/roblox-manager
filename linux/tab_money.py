@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QVBoxLa
 
 from tab_account import pending_rows
 from ui_common import button, export_csv, fill_table, hint, make_table
+from theme import T
 
 PERIODS = [("Day", "Today"), ("Week", "This week"), ("Month", "This month"), ("Year", "This year")]
 KINDS = [("Sale", "Sales"), ("Purchase", "Purchases"), ("GroupPayout", "Group payouts"), ("EngagementPayout", "Premium payouts"),
@@ -138,7 +139,7 @@ class MoneyTab(QWidget):
 
         def got(d):
             rows = total_rows(d)
-            fill_table(self.totals, [[k, v] for k, v in rows], {(i, 1): ("#3ba55d" if v > 0 else "#e5534b") for i, (k, v) in enumerate(rows)})
+            fill_table(self.totals, [[k, v] for k, v in rows], {(i, 1): (T["success"] if v > 0 else T["danger"]) for i, (k, v) in enumerate(rows)})
             if not rows:
                 self.info.setText("No money moved in this period.")
         c.async_.run(lambda: c.client.transaction_totals(frame), got, lambda e: self.info.setText(f"Could not load the totals: {e}"))

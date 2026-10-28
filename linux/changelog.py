@@ -1,6 +1,7 @@
 """The update log: what changed in each version. CHANGELOG.json ships next to the app, so it always describes the installed version."""
 import json
 from pathlib import Path
+from theme import T
 
 FILE = Path(__file__).resolve().parent / "CHANGELOG.json"
 
@@ -26,9 +27,9 @@ def html(entries, current):
         return "<p>No update log is available.</p>"
     parts = []
     for e in entries:
-        mark = " &nbsp;<span style='color:#35c27a'>&#9679; installed</span>" if e["version"] == current else ""
+        mark = f" &nbsp;<span style='color:{T['success']}'>&#9679; installed</span>" if e["version"] == current else ""
         parts.append(f"<h3 style='margin-bottom:2px'>Version {escape(e['version'])}"
-                     f" <span style='color:#8d96a7;font-weight:normal'>&nbsp;{escape(e['date'])}</span>{mark}</h3><ul style='margin-top:2px'>")
+                     f" <span style='color:{T['muted']};font-weight:normal'>&nbsp;{escape(e['date'])}</span>{mark}</h3><ul style='margin-top:2px'>")
         parts += [f"<li>{escape(c)}</li>" for c in e["changes"]]
         parts.append("</ul>")
     return "".join(parts)

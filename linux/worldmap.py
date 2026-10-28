@@ -98,14 +98,14 @@ class WorldMap(QWidget):
         for lat in range(-60, 90, 30):
             _, y = project(lat, 0, self.width(), self.height())
             p.drawLine(QPointF(0, y), QPointF(self.width(), y))
-        p.setPen(QPen(QColor("#3a4152"), 1))
+        p.setPen(QPen(QColor(T["border2"]), 1))
         p.setBrush(QColor(T["surface3"]))
         p.drawPath(self._land_path())
         for i, d in enumerate(self.dots):
             x, y = project(d["lat"], d["lon"], self.width(), self.height())
             r = self._radius(d)
             on = i == self.chosen
-            p.setPen(QPen(QColor("#ffffff") if on else QColor(T["bg"]), 2 if on else 1.2))
+            p.setPen(QPen(QColor(T["on_accent"]) if on else QColor(T["bg"]), 2 if on else 1.2))
             p.setBrush(QColor(T["accent_hover"] if on else T["accent"]))
             p.drawEllipse(QPointF(x, y), r, r)
         p.end()

@@ -15,6 +15,7 @@ from PySide6.QtCore import QItemSelectionModel, Qt, QTimer, Signal
 import rbx
 import settings
 from ui_common import FlowLayout, button, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
+from theme import T
 
 
 def vip_id(item):
@@ -560,12 +561,12 @@ class VipTab(QWidget):
         for i, s in enumerate(shown):
             active = s.get("active")
             status = s["_state"] or ("ON" if active else ("OFF" if active is not None else "?"))
-            colours[(i, 2)] = "#3ba55d" if (active and not s["_state"]) else "#e5534b"
+            colours[(i, 2)] = T["success"] if (active and not s["_state"]) else T["danger"]
             rows.append([self.names.get(int(s["placeId"])) if s.get("placeId") else (s.get("gameName") or "?"), s.get("name", ""),
                          status, when(expiry(s)), s["_vid"] if s["_vid"] is not None else "", self.links.get(s["_vid"], ""),
                          ("x%d" % len(dups[game_key(s)]) if game_key(s) in dups else ""), cost_kind(s)])
             if game_key(s) in dups:
-                colours[(i, 6)] = "#e0a030"
+                colours[(i, 6)] = T["warn"]
         fill_table(self.mtable, rows, colours, keys=[s["_key"] for s in shown])
         by_key = {s["_key"]: s for s in shown}
         for r in range(self.mtable.rowCount()):
@@ -1331,7 +1332,7 @@ class VipTab(QWidget):
         self.view = sorted([dict(r, mine=r["owner_id"] == me) for r in rows], key=lambda r: (not r["mine"], not r["friend"], r["name"].lower()))
         fill_table(self.table, [["YES" if r["mine"] else "", "YES" if r["friend"] else "", r["name"], r["owner"],
                                  f"{r['playing']}/{r['max']}" if r["max"] else "", r["vip_id"]] for r in self.view],
-                   {**{(i, 0): "#3ba55d" for i, r in enumerate(self.view) if r["mine"]}, **{(i, 1): "#5ab0ff" for i, r in enumerate(self.view) if r["friend"]}},
+                   {**{(i, 0): T["success"] for i, r in enumerate(self.view) if r["mine"]}, **{(i, 1): T["info"] for i, r in enumerate(self.view) if r["friend"]}},
                    keys=[r["vip_id"] for r in self.view])
         friends = sum(1 for r in self.view if r["friend"])
         msg = f"{len(self.view)} VIP server(s) visible here: {sum(1 for r in self.view if r['mine'])} yours, {friends} owned by friends."

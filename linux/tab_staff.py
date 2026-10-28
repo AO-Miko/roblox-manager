@@ -9,8 +9,9 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidget, QListWid
 import rbx
 import roles
 from ui_common import button, copy_text, hint, open_url, when
+from theme import Live, T
 
-ROLE_COLOURS = {"owner": "#f0a73a", "co-owner": "#ef8a5b", "senior-admin": "#b07cff", "admin": "#2f8cff", "trusted-friend": "#35c27a"}
+ROLE_COLOURS = Live({"owner": "warn", "co-owner": "orange", "senior-admin": "violet", "admin": "accent_fg", "trusted-friend": "success"})
 
 
 def round_icon(data, size=64):
@@ -26,7 +27,7 @@ def round_icon(data, size=64):
         p.setClipPath(path)
         p.drawPixmap(0, 0, pm.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
     else:
-        p.fillPath(path, QBrush(QColor("#2b303c")))
+        p.fillPath(path, QBrush(QColor(T["surface3"])))
     p.end()
     return out
 
@@ -70,7 +71,7 @@ def facts_html(uid, info, counts):
         rows.append(("Verified", "yes"))
     if info.get("isBanned"):
         rows.append(("Roblox account", "banned by Roblox"))
-    return "<table cellspacing='6'>" + "".join(f"<tr><td style='color:#8d96a7'>{k}</td><td>&nbsp;&nbsp;{v}</td></tr>" for k, v in rows) + "</table>"
+    return "<table cellspacing='6'>" + "".join(f"<tr><td style='color:{T['muted']}'>{k}</td><td>&nbsp;&nbsp;{v}</td></tr>" for k, v in rows) + "</table>"
 
 
 class StaffTab(QWidget):
@@ -164,7 +165,7 @@ class StaffTab(QWidget):
                 f.setBold(True)
                 f.setPointSize(max(8, f.pointSize() - 2))
                 head.setFont(f)
-                head.setForeground(QColor(ROLE_COLOURS.get(role, "#8d96a7")))
+                head.setForeground(QColor(ROLE_COLOURS.get(role, T["muted"])))
                 self.list.addItem(head)
                 last = rank
             it = QListWidgetItem(self._label(uid))
@@ -265,7 +266,7 @@ class StaffTab(QWidget):
         role = roles.load()[1].get(uid, "")
         self.display.setText(i.get("displayName") or i.get("name") or f"User {uid}")
         self.user.setText(f"@{i['name']}" if i.get("name") else "(profile not loaded)")
-        self.role.setText(f"<b style='color:{ROLE_COLOURS.get(role, '#8d96a7')}'>{roles.LABELS.get(role, '')}</b>")
+        self.role.setText(f"<b style='color:{ROLE_COLOURS.get(role, T['muted'])}'>{roles.LABELS.get(role, '')}</b>")
         self.facts.setText(facts_html(uid, i, self.counts.get(uid)))
         self.about.setPlainText(i.get("description") or "")
         self.pic.setPixmap(round_icon(self.avatars.get(uid), 96))

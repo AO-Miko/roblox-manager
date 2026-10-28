@@ -16,6 +16,7 @@ import rbx
 import settings
 from tab_debug import DebugView
 from ui_common import button, export_csv, hint, make_table
+from theme import T
 
 KEEP = 5000
 WINDOW = 30            # seconds the 'recent' counters look back (Roblox's limit for changes is measured in about this window)
@@ -34,12 +35,12 @@ HEADERS = ["Time", "Account", "Method", "Request", "Status", "ms", "Notes", "Rat
 def status_colour(e):
     s = e["status"]
     if s is None:
-        return "#7d808a" if "cancelled" in e["note"] or "cool-down" in e["note"] else "#e5534b"
+        return T["muted"] if "cancelled" in e["note"] or "cool-down" in e["note"] else T["danger"]
     if s == 429 or s >= 500:
-        return "#e5534b"
+        return T["danger"]
     if s >= 400:
-        return "#e0a030"
-    return "#3ba55d"
+        return T["warn"]
+    return T["success"]
 
 
 def is_problem(e):
@@ -214,9 +215,9 @@ class RequestsTab(QWidget):
                     t.setItem(i, c, it)
                 it.setData(Qt.ItemDataRole.DisplayRole, v)
                 if row[1] == "unknown until first use":
-                    it.setForeground(QColor("#7d808a"))
+                    it.setForeground(QColor(T["muted"]))
                 elif c == 3 and isinstance(v, int) and isinstance(row[1], int) and row[1] and v <= max(1, row[1] // 10):
-                    it.setForeground(QColor("#e0a030"))            # nearly used up
+                    it.setForeground(QColor(T["warn"]))            # nearly used up
 
     def probe(self):
         c = self.ctx
@@ -242,6 +243,6 @@ class RequestsTab(QWidget):
         self.update_limits()
         n, changes, limited, problems = summary(self.entries)
         text = f"Last {WINDOW} s: <b>{n}</b> requests, <b>{changes}</b> changes, "
-        text += f"<b style='color:#e5534b'>{limited} rate-limited (429)</b>" if limited else "no rate limits"
+        text += f"<b style='color:{T['danger']}'>{limited} rate-limited (429)</b>" if limited else "no rate limits"
         text += f", {problems} problem(s).   Since the app started: {self.total:,} requests."
         self.stats.setText(text)

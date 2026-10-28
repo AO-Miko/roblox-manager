@@ -2,7 +2,7 @@
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QFileDialog, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
+    QButtonGroup, QCheckBox, QComboBox, QFileDialog, QFormLayout, QFrame, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QSpinBox, QTableWidgetItem,
     QVBoxLayout, QWidget,
 )
 
@@ -13,6 +13,7 @@ import cleanup
 import plat
 import rbx
 import settings
+import theme
 from ui_common import esc, FlowLayout, WrapCheck, button, hint, make_table
 
 
@@ -30,6 +31,7 @@ class SettingsTab(QWidget):
         body = QWidget()
         scroll.setWidget(body)
         lay = QVBoxLayout(body)
+        lay.addWidget(self._look_box())
         lay.addWidget(self._data_box())
         lay.addWidget(self._backup_box())
         lay.addWidget(self._rate_box())
@@ -44,6 +46,63 @@ class SettingsTab(QWidget):
         self.timer.timeout.connect(self._tick)
         self.timer.start(4000)
         settings.on_change(lambda k, v: self.load_values())
+
+    # ------------------------------------------------------------ looks: theme, accent colour, text size
+    SIZE_NAMES = {90: "Small (90 %)", 100: "Normal (100 %)", 110: "Large (110 %)", 125: "Extra large (125 %)"}
+    THEME_NAMES = {"dark": "Dark", "light": "Light", "system": "Match my desktop"}
+
+    def _look_box(self):
+        box = QGroupBox("Looks")
+        form = self._form(box)
+        row = QHBoxLayout()
+        self.theme_group = QButtonGroup(self)
+        self.theme_buttons = {}
+        for mode, name in self.THEME_NAMES.items():
+            b = QPushButton(name)
+            b.setCheckable(True)
+            b.setAccessibleName("Theme: " + name)
+            b.clicked.connect(lambda _=False, m=mode: settings.set("ui.theme", m))
+            self.theme_group.addButton(b)
+            self.theme_buttons[mode] = b
+            row.addWidget(b)
+        row.addStretch()
+        form.addRow(self._lab("Theme"), row)
+        row = QHBoxLayout()
+        self.accent_group = QButtonGroup(self)
+        self.accent_buttons = {}
+        for name in theme.ACCENTS:
+            b = QPushButton()
+            b.setProperty("swatch", True)
+            b.setCheckable(True)
+            b.setToolTip(name.capitalize())
+            b.setAccessibleName("Accent colour: " + name)
+            b.clicked.connect(lambda _=False, n=name: settings.set("ui.accent", n))
+            self.accent_group.addButton(b)
+            self.accent_buttons[name] = b
+            row.addWidget(b)
+        row.addStretch()
+        form.addRow(self._lab("Accent colour"), row)
+        self.size_combo = QComboBox()
+        for pct, name in self.SIZE_NAMES.items():
+            self.size_combo.addItem(name, pct)
+        self.size_combo.setMaximumWidth(380)
+        self.size_combo.activated.connect(lambda i: settings.set("ui.text_size", self.size_combo.itemData(i)))
+        form.addRow(self._lab("Text size"), self.size_combo)
+        form.addRow(hint("The change shows at once. Lists that are already on screen take the new colours when they are loaded again."))
+        self._look_sync()
+        return box
+
+    def _look_sync(self):
+        """Show the saved choices on the buttons (also after a reset or a restored backup)."""
+        if not hasattr(self, "theme_buttons"):
+            return
+        for mode, b in self.theme_buttons.items():
+            b.setChecked(mode == settings.get("ui.theme"))
+        dark = theme.STATE["dark"]
+        for name, b in self.accent_buttons.items():
+            b.setChecked(name == settings.get("ui.accent"))
+            b.setStyleSheet(f"QPushButton {{ background: {theme.ACCENTS[name][0 if dark else 1]}; }}")
+        self.size_combo.setCurrentIndex(max(0, self.size_combo.findData(settings.get("ui.text_size"))))
 
     # ------------------------------------------------------------ what the app saves, and clearing it
     def _data_box(self):
@@ -255,6 +314,7 @@ class SettingsTab(QWidget):
         return self._widgets
 
     def load_values(self):
+        self._look_sync()
         for key, w in self.widgets.items():
             w.blockSignals(True)
             if isinstance(w, QCheckBox):

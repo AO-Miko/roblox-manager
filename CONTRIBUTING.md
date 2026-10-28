@@ -38,6 +38,7 @@ python tests/test_updater_release.py
 python tests/test_windows_native.py
 python tests/test_info_tab.py
 python tests/test_nav.py                  # side bar, search, shortcuts
+python tests/test_theme.py                # dark and light themes, accent colours, text size, readable colours
 python tests/test_admin.py                # roles, staff list, admin page (needs git, bash, ssh-keygen)
 python tests/test_versions.py             # the five-number version R.B.S.F.D
 python tests/test_channels.py             # stable / beta update channels
@@ -50,7 +51,7 @@ python tests/test_geo.py                  # server locations and the world map
 python tests/test_features.py             # mutual friends, voice and age, DevEx, game wikis
 python tests/test_security.py             # text from Roblox shown as text, join codes, locked-down Android, pinned Windows libraries
 python tests/test_settings_updates.py
-python tests/test_text_fit.py             # no cut-off text on any tab
+python tests/test_text_fit.py             # no cut-off text on any tab (also: test_text_fit.py light,pink,125)
 python tests/test_gui_full.py             # the whole app against a fake Roblox
 python linux/launcher.py --selftest
 ```

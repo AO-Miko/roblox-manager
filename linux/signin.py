@@ -8,8 +8,7 @@ import auth
 import browser_login
 import plat
 from ui_common import hint
-
-WARN_STYLE = "background: #3a2a1e; border: 1px solid #8a5a2a; border-radius: 8px; padding: 10px;"
+from theme import T
 
 
 class SignInDialog(QDialog):
@@ -104,7 +103,7 @@ class SignInDialog(QDialog):
         QTimer.singleShot(0, lambda: (self.layout().activate(), self.resize(self.width(), self.sizeHint().height())))
 
     def _say(self, text, bad=True):
-        self.msg.setStyleSheet("color: #e5534b;" if bad else "color: #3ba55d;")
+        self.msg.setStyleSheet(f"color: {T['danger']};" if bad else f"color: {T['success']};")
         self.msg.setText(text)
 
     def _busy(self, on):

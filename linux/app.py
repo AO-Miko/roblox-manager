@@ -69,7 +69,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Roblox Manager")
         self.resize(1180, 760)
         self.setMinimumSize(560, 420)
-        theme.apply(QApplication.instance(), rbx.STATE_DIR / "ui-assets")
+        self._dress()
+        settings.on_change(lambda k, v: k in (None, "ui.theme", "ui.accent", "ui.text_size") and self._dress())       # a change in Settings > Looks shows at once
+        theme.follow_system(QApplication.instance(), rbx.STATE_DIR / "ui-assets")
         self.ctx = Context(client or rbx.Client(), self)
         self.tabs = QTabWidget()
         self.tabs.tabBar().hide()               # the side bar is the way around now (the tab widget still holds the pages, their titles and the counts)
@@ -202,6 +204,8 @@ class MainWindow(QMainWindow):
                 for j in range(page.count()):
                     sub = page.tabText(j)
                     out.append((sub, "Settings", "update version changes" if sub == "Updates" else "preferences options", lambda page=page, j=j: (self._go(page), page.setCurrentIndex(j))))
+        for mode, label in (("dark", "Dark theme"), ("light", "Light theme"), ("system", "Theme: match my desktop")):
+            out.append((label, "Looks", "theme colours appearance mode night day look", lambda mode=mode: settings.set("ui.theme", mode)))
         for uid, role, _rank in roles.staff():
             i = self.staff.info.get(uid, {})
             label = f"{i.get('displayName') or i['name']} (@{i['name']})" if i.get("name") else f"User {uid}"
@@ -226,6 +230,14 @@ class MainWindow(QMainWindow):
                 self.staff.list.setCurrentRow(i)
 
     RELOADERS = ("load", "load_groups", "load_mine")
+
+    def toggle_theme(self):
+        """Ctrl+Shift+L: dark to light and back."""
+        settings.set("ui.theme", "light" if theme.STATE["dark"] else "dark")
+
+    def _dress(self):
+        """Colours, accent and text size from the settings."""
+        theme.apply(QApplication.instance(), rbx.STATE_DIR / "ui-assets", settings.get("ui.theme"), settings.get("ui.accent"), settings.get("ui.text_size"))
 
     def _reloadable(self, page):
         inner = page.tabs.currentWidget() if page in (self.people, self.home) else page

@@ -81,7 +81,7 @@ def restore(data):
     s = data.get("settings")
     if isinstance(s, dict):
         for key in settings.DEFAULTS:
-            if key not in PRIVATE and key in s and (isinstance(s[key], (bool, int)) or isinstance(s[key], float)):
+            if key not in PRIVATE and key in s and (isinstance(s[key], (bool, int, float, str))):
                 settings.set(key, s[key])
                 done["settings"] += 1
     if "alerts" in data:

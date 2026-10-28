@@ -47,6 +47,9 @@ jobs:
       - name: Navigation and search
         if: ${{ !cancelled() }}
         run: python tests/test_nav.py
+      - name: Looks (themes, accent colours, text size)
+        if: ${{ !cancelled() }}
+        run: python tests/test_theme.py
       - name: Update channels
         if: ${{ !cancelled() }}
         run: python tests/test_channels.py
@@ -86,6 +89,9 @@ jobs:
       - name: No cut-off text on any tab (Windows fonts)
         if: ${{ !cancelled() }}
         run: python tests/test_text_fit.py
+      - name: No cut-off text in the light theme at the largest text size
+        if: ${{ !cancelled() }}
+        run: python tests/test_text_fit.py light,pink,125
       - name: The whole app against a fake Roblox
         if: ${{ !cancelled() }}
         run: python tests/test_gui_full.py

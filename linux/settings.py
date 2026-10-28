@@ -20,6 +20,9 @@ DEFAULTS = {
     "geo.auto": (False, None, None),         # look up the location and uptime of servers by themselves when they are listed (one request to Roblox per server)
     "geo.allowed": (False, None, None),      # the person allows asking ipwho.is where a server's public address is (the address is sent there)
     "ui.rate_notes": (True, None, None),     # the orange 'waiting for Roblox's limit' notes
+    "ui.theme": ("dark", ("dark", "light", "system"), None),                       # colours: dark, light, or whatever the desktop uses
+    "ui.accent": ("blue", ("blue", "green", "purple", "orange", "pink"), None),    # the accent colour
+    "ui.text_size": (100, 90, 125),          # text size in percent (90, 100, 110 or 125; anything in between is rounded to the nearest)
 }
 
 _values = {k: v[0] for k, v in DEFAULTS.items()}
@@ -40,10 +43,14 @@ def _coerce(key, value):
     default, lo, hi = DEFAULTS[key]
     if isinstance(default, bool):
         return bool(value)
+    if isinstance(default, str):                 # a choice from a list
+        return value if value in lo else default
     try:
         value = int(value)
     except (TypeError, ValueError):
         return default
+    if key == "ui.text_size":                    # only the sizes the design has
+        return min((90, 100, 110, 125), key=lambda s: abs(s - value))
     return max(lo, min(hi, value))
 
 

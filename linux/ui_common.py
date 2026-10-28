@@ -17,9 +17,10 @@ from PySide6.QtWidgets import (
 import debuglog
 import rbx
 import settings
+from theme import Live, T
 
 PRESENCE = {0: "Offline", 1: "Online", 2: "In game", 3: "In Studio"}
-PRESENCE_COLOUR = {0: "#7d808a", 1: "#5ab0ff", 2: "#3ba55d", 3: "#e0a030"}
+PRESENCE_COLOUR = Live({0: "muted", 1: "info", 2: "success", 3: "warn"})
 
 
 class _Bridge(QObject):
@@ -247,7 +248,7 @@ class Table(QTableWidget):
         super().paintEvent(ev)
         if self.empty_text and self.rowCount() == 0:
             p = QPainter(self.viewport())
-            p.setPen(QColor("#6f788a"))
+            p.setPen(QColor(T["muted"]))
             f = p.font()
             f.setPointSizeF(f.pointSizeF() + 1)
             p.setFont(f)

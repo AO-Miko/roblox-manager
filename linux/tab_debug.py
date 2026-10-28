@@ -14,8 +14,9 @@ from PySide6.QtWidgets import (QAbstractButton, QCheckBox, QComboBox, QDialog, Q
 import debuglog
 import rbx
 from ui_common import button, hint, make_table
+from theme import Live, T
 
-LEVEL_COLOUR = {"debug": "#7d808a", "info": "#9a9da6", "warning": "#e0a030", "error": "#e5534b"}
+LEVEL_COLOUR = Live({"debug": "faint", "info": "muted", "warning": "warn", "error": "danger"})
 LEVEL_CHOICES = [("Everything", "debug"), ("Info and more serious", "info"), ("Warnings and errors", "warning"), ("Errors only", "error")]
 ROWS = 3000
 

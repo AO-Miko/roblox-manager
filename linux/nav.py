@@ -29,7 +29,7 @@ KEYWORDS = {                      # extra words the search also understands, so 
     "Money": "robux balance pending transactions history csv export revenue",
     "Request log": "log requests http rate limit errors",
     "API Explorer": "api endpoint http get post developer",
-    "Settings": "settings info updates update log version changes about preferences theme confirm cache backup export restore license",
+    "Settings": "settings info updates update log version changes about preferences theme dark light accent colour text size looks confirm cache backup export restore license",
     "Admin": "ban unban banned reason roles moderator",
     "Staff List": "staff team owner co-owner senior admin trusted friends roles hierarchy members profile",
 }
@@ -583,9 +583,10 @@ class Palette(QDialog):
 
 
 def install_shortcuts(win):
-    """Ctrl+K opens the search, Ctrl+1 ... Ctrl+8 open the pages, F5 reloads the page in view."""
+    """Ctrl+K opens the search, Ctrl+1 ... Ctrl+8 open the pages, F5 reloads the page in view, Ctrl+Shift+L switches between the dark and the light theme."""
     out = [QShortcut(QKeySequence("Ctrl+K"), win, activated=win.open_search)]
     for n in range(9):
         out.append(QShortcut(QKeySequence(f"Ctrl+{n + 1}"), win, activated=lambda n=n: win.open_nth_page(n)))
     out.append(QShortcut(QKeySequence("F5"), win, activated=win.reload_page))
+    out.append(QShortcut(QKeySequence("Ctrl+Shift+L"), win, activated=win.toggle_theme))
     return out
