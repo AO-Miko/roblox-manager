@@ -1,0 +1,12 @@
+{
+  "serial": 1,
+  "notifications": [
+    {
+      "id": "miko-message-1",
+      "date": "2026-10-28",
+      "title": "Message from Miko",
+      "body": "hey Here's Miko, I Just Wanted To Remember Everyone That This Project Is Just Made For Fun. If You Want To Contribute You Are More Than Welcome. If I Ever Notice That You Tried To Mess Up With The Project Or Tried To Install A Virus You Will Be Banned From All My Projects.",
+      "level": "info"
+    }
+  ]
+}
