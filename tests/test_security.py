@@ -182,7 +182,7 @@ for p in sorted((ROOT / "linux").glob("*.py")) + sorted((ROOT / "tools").glob("*
             if re.search(pat, code) and not (name == "exec of a string" and (".exec(" in code or "def exec" in code or "app.exec" in code or p.name == "test_launcher_update.py")):
                 problems.append(f"{p.name}:{i}: {name}")
 check("no shell=True, os.system, eval, verify=False, pickle, yaml.load, mktemp in the code or the tests", not problems, problems[:8])
-secrets_in_logs = [f"{p.name}: {m.group(0)}" for p in (ROOT / "linux").glob("*.py")
+secrets_in_logs = [p.name for p in (ROOT / "linux").glob("*.py")
                    for m in re.finditer(r"log\.(?:info|debug|warning|error)\([^)]*[,(]\s*(?:self\._cookie|self\.cookie|cookie|password|pw|passwd)\s*[,)]", p.read_text(encoding="utf-8"))]
 check("no log line is given a cookie or a password variable (the two that mention the cookie only log its length and where it is kept)", not secrets_in_logs, secrets_in_logs)
 

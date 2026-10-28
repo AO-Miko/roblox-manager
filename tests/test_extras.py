@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 import time
+from urllib.parse import urlparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -124,7 +125,7 @@ class FakeRoblox(rbx.Client):
 
     def post(self, url, body=None, **kw):
         State.log.append(("POST", url, json.dumps(body, sort_keys=True)))
-        if "presence.roblox.com" in url:
+        if urlparse(url).hostname == "presence.roblox.com":
             wanted = set(body["userIds"])
             return {"userPresences": [p for p in State.presence if p["userId"] in wanted]}
         if "/join-requests" in url:
