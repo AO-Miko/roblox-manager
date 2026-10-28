@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
         sv.notifier = { text -> Notifier.show(applicationContext, text) }
         // At every start: look for a newer build on the update server and have it ready (never blocks the app).
         if (sv.prefs.bool("autoUpdate", true) && Updates.url(sv).isNotBlank()) Updates.check(sv, applicationContext, quiet = true)
-        setContent { AppTheme { Root(sv) } }
+        setContent { val look by sv.look.collectAsState(); AppTheme(look) { Root(sv) } }
     }
 }
 

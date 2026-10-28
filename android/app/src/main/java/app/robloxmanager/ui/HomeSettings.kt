@@ -158,6 +158,7 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
             }
         }
         if (part == "updates") UpdateLog()
+        if (part == "settings") LooksSection(sv)
         if (part == "settings") Section("RATE LIMITS", collapsible = true) {
             Column {
                 Text("How much of a route's limit a read may use at once: ${(burst * 100).toInt()}%", fontSize = 13.sp)

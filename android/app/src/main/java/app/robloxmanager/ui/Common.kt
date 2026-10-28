@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,36 +49,89 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.robloxmanager.Bulk
 import app.robloxmanager.core.Debug
+import app.robloxmanager.core.Look
+import app.robloxmanager.core.LookChoice
 import app.robloxmanager.core.Person
 import coil.compose.AsyncImage
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/** The colours in use. They follow Settings > Looks (theme and accent colour) and change at once: every colour is read from state. */
 object C {
-    val bg = Color(0xFF13151A)
-    val surface = Color(0xFF1A1D24)
-    val surface2 = Color(0xFF222630)
-    val surface3 = Color(0xFF2B303C)
-    val border = Color(0xFF2A2F3A)
-    val text = Color(0xFFE7EAF0)
-    val muted = Color(0xFF8D96A7)
-    val accent = Color(0xFF2F8CFF)
-    val accentDim = Color(0xFF1D3A63)
-    val success = Color(0xFF35C27A)
-    val warn = Color(0xFFF0A73A)
-    val danger = Color(0xFFEF5B5B)
-    val dangerDim = Color(0xFF3D2227)
+    private class Pal(val key: String, private val m: Map<String, Int>) {
+        private fun c(k: String) = Color(m.getValue(k))
+        val bg = c("bg"); val surface = c("surface"); val surface2 = c("surface2"); val surface3 = c("surface3"); val border = c("border"); val border2 = c("border2")
+        val text = c("text"); val muted = c("muted"); val faint = c("faint"); val accent = c("accent"); val accentDim = c("accentDim"); val fill = c("fill"); val onAccent = c("onAccent")
+        val onDim = c("onDim"); val success = c("success"); val warn = c("warn"); val danger = c("danger"); val dangerDim = c("dangerDim"); val info = c("info")
+        val orange = c("orange"); val violet = c("violet")
+    }
+    private var pal by mutableStateOf(Pal("dark/blue", Look.palette(true, "blue")))
+    var dark by mutableStateOf(true)
+        private set
+
+    /** Use the colours of a theme and an accent colour (does nothing when they are already in use). */
+    fun use(isDark: Boolean, accent: String) {
+        val key = (if (isDark) "dark/" else "light/") + accent
+        if (pal.key != key) pal = Pal(key, Look.palette(isDark, accent))
+        if (dark != isDark) dark = isDark
+    }
+
+    val bg get() = pal.bg
+    val surface get() = pal.surface
+    val surface2 get() = pal.surface2
+    val surface3 get() = pal.surface3
+    val border get() = pal.border
+    val border2 get() = pal.border2
+    val text get() = pal.text
+    val muted get() = pal.muted
+    val faint get() = pal.faint
+    /** The accent as a colour for icons, links and text. */
+    val accent get() = pal.accent
+    /** The accent as a fill (buttons, badges): [onAccent] text on it is readable. */
+    val fill get() = pal.fill
+    val onAccent get() = pal.onAccent
+    /** Text on [accentDim], the selected item. */
+    val onDim get() = pal.onDim
+    val accentDim get() = pal.accentDim
+    val success get() = pal.success
+    val warn get() = pal.warn
+    val danger get() = pal.danger
+    val dangerDim get() = pal.dangerDim
+    val info get() = pal.info
+    val orange get() = pal.orange
+    val violet get() = pal.violet
 }
 
-private val scheme: ColorScheme = darkColorScheme(
-    primary = C.accent, onPrimary = Color.White, background = C.bg, onBackground = C.text, surface = C.surface, onSurface = C.text,
-    surfaceVariant = C.surface2, onSurfaceVariant = C.muted, error = C.danger, outline = C.border, secondaryContainer = C.accentDim,
-    onSecondaryContainer = C.text, surfaceContainer = C.surface, surfaceContainerHigh = C.surface2, surfaceContainerHighest = C.surface3,
-)
+private fun scheme(): ColorScheme {
+    val common = { c: ColorScheme -> c.copy(
+        primary = C.fill, onPrimary = C.onAccent, primaryContainer = C.accentDim, onPrimaryContainer = C.onDim,
+        background = C.bg, onBackground = C.text, surface = C.surface, onSurface = C.text, surfaceVariant = C.surface2, onSurfaceVariant = C.muted,
+        error = C.danger, errorContainer = C.dangerDim, onErrorContainer = C.danger, outline = C.border2, outlineVariant = C.border,
+        secondaryContainer = C.accentDim, onSecondaryContainer = C.onDim, surfaceContainerLowest = C.bg, surfaceContainerLow = C.surface, surfaceContainer = C.surface,
+        surfaceContainerHigh = C.surface2, surfaceContainerHighest = C.surface3,
+    ) }
+    return if (C.dark) common(darkColorScheme()) else common(lightColorScheme())
+}
 
-@Composable fun AppTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = scheme) {
-    androidx.compose.material3.Surface(color = C.bg, contentColor = C.text, content = content)
+/** Dresses the app: the colours and accent of [look], the text size, and dark or light icons in the status and navigation bars. */
+@Composable fun AppTheme(look: LookChoice = LookChoice(), content: @Composable () -> Unit) {
+    val dark = Look.isDark(look.mode, androidx.compose.foundation.isSystemInDarkTheme())
+    C.use(dark, look.accent)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.SideEffect {
+        (view.context as? android.app.Activity)?.window?.let { w ->
+            val bars = androidx.core.view.WindowCompat.getInsetsController(w, view)
+            bars.isAppearanceLightStatusBars = !dark
+            bars.isAppearanceLightNavigationBars = !dark
+        }
+    }
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * look.size / 100f)) {
+        MaterialTheme(colorScheme = scheme()) {
+            androidx.compose.material3.Surface(color = C.bg, contentColor = C.text, content = content)
+        }
+    }
 }
 
 /** What a screen's data is doing. */

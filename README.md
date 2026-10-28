@@ -20,7 +20,7 @@ Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/r
 | **API Explorer** (PC) | send any Roblox web API request and read the answer |
 | **Staff List** | who is on the staff, from the owner down, with their Roblox profiles (see [docs/ADMIN.md](docs/ADMIN.md)) |
 | **Admin** (PC; overview on the phone) | ban and unban Roblox user ids; only for accounts with the admin role or higher |
-| **Settings** | preferences, **backup and restore**, updates (with the Beta channel choice) and the update log: what changed in each version |
+| **Settings** | **Looks** (dark, light or the same as your desktop or phone; five accent colours; four text sizes; on a PC Ctrl+Shift+L switches dark and light), preferences, **backup and restore**, updates (with the Beta channel choice) and the update log: what changed in each version |
 
 ## About this project
 

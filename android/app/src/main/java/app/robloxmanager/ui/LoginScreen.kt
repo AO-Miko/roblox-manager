@@ -50,8 +50,9 @@ fun LoginScreen(sv: Services, canCancel: Boolean, onCancel: () -> Unit) {
     var tab by remember { mutableStateOf(0) }
     val titles = listOf("Password", "Browser", "Cookie")
     Column(Modifier.fillMaxSize()) {
-        Text("Sign in to Roblox", fontSize = 22.sp, modifier = Modifier.padding(16.dp, 24.dp, 16.dp, 4.dp))
-        Text("Your cookie is stored encrypted on this phone only and sent to roblox.com only.", color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+        Text(if (canCancel) "Add an account" else "Welcome to Roblox Manager", fontSize = 24.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.padding(16.dp, 24.dp, 16.dp, 4.dp))
+        if (!canCancel) Text("Friends, groups, VIP servers and Robux for all your accounts, from one place. It follows Roblox's own rate limits.", color = C.muted, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
+        Text("Sign in to start. Your cookie is stored encrypted on this phone only and sent to roblox.com only.", color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
         Spacer(Modifier.height(12.dp))
         TabRow(selectedTabIndex = tab, containerColor = C.bg) {
             titles.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) }) }

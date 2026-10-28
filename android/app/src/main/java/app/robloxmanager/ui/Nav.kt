@@ -148,10 +148,10 @@ fun BottomBar(current: String, counts: Map<String, Int>, onPick: (Dest) -> Unit)
             NavigationBarItem(
                 selected = selected, onClick = { onPick(d) }, alwaysShowLabel = true,
                 icon = {
-                    BadgedBox(badge = { if (n != null && n > 0) Badge(containerColor = C.accent) { Text(if (n > 999) "999+" else n.toString(), fontSize = 10.sp) } }) { Icon(d.icon, d.title) }
+                    BadgedBox(badge = { if (n != null && n > 0) Badge(containerColor = C.fill, contentColor = C.onAccent) { Text(if (n > 999) "999+" else n.toString(), fontSize = 10.sp) } }) { Icon(d.icon, d.title) }
                 },
                 label = { Text(d.title, fontSize = 11.sp, maxLines = 1) },
-                colors = NavigationBarItemDefaults.colors(indicatorColor = C.accentDim, selectedIconColor = C.text, selectedTextColor = C.text, unselectedIconColor = C.muted, unselectedTextColor = C.muted),
+                colors = NavigationBarItemDefaults.colors(indicatorColor = C.accentDim, selectedIconColor = C.onDim, selectedTextColor = C.onDim, unselectedIconColor = C.muted, unselectedTextColor = C.muted),
             )
         }
     }

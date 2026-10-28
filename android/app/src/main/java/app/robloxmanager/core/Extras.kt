@@ -150,7 +150,8 @@ object Backup {
     const val FORMAT = 1
     const val MAX_BYTES = 5_000_000
     /** The settings that go into a backup and come back from one: name -> kind. Nothing else is ever read from or written to a backup. */
-    val KEYS = mapOf("readBurst" to "double", "logToFile" to "bool", "alerts.enabled" to "bool", "alerts.online" to "bool", "alerts.ingame" to "bool")
+    val KEYS = mapOf("readBurst" to "double", "logToFile" to "bool", "alerts.enabled" to "bool", "alerts.online" to "bool", "alerts.ingame" to "bool",
+        "ui.theme" to "theme", "ui.accent" to "accent", "ui.textSize" to "size")
 
     fun build(prefs: Prefs, version: String, created: String, account: Person? = null, friends: List<Person>? = null, followers: List<Person>? = null,
               following: List<Person>? = null, groups: List<RobloxApi.Group>? = null): JsonObject {
@@ -187,6 +188,9 @@ object Backup {
                 when (kind) {
                     "bool" -> v.content.toBooleanStrictOrNull()?.let { prefs.put(k, it); s++ }
                     "double" -> v.content.toDoubleOrNull()?.takeIf { it in 0.0..1.0 }?.let { prefs.put(k, it); s++ }
+                    "theme" -> v.content.takeIf { it in Look.MODES }?.let { prefs.put(k, it); s++ }
+                    "accent" -> v.content.takeIf { it in Look.ACCENTS }?.let { prefs.put(k, it); s++ }
+                    "size" -> v.content.toDoubleOrNull()?.toInt()?.takeIf { it in Look.SIZES }?.let { prefs.put(k, it.toDouble()); s++ }
                 }
             }
         }

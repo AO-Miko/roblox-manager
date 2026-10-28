@@ -56,11 +56,11 @@ fun ServerMap(groups: List<Pair<Place, List<String>>>, chosen: List<String>?, on
             }
         }
         drawPath(path, C.surface3)
-        drawPath(path, Color(0xFF3A4152), style = Stroke(1f))
+        drawPath(path, C.border2, style = Stroke(1f))
         groups.forEach { (p, ids) ->
             val (x, y) = WorldMap.project(p.lat, p.lon, w, h)
             val on = chosen != null && chosen == ids
-            drawCircle(if (on) Color.White else C.bg, radius(ids) + (if (on) 2f else 1.2f) * density, Offset(x, y))
+            drawCircle(if (on) C.onAccent else C.bg, radius(ids) + (if (on) 2f else 1.2f) * density, Offset(x, y))
             drawCircle(C.accent, radius(ids), Offset(x, y))
         }
     }

@@ -41,9 +41,10 @@ import java.text.NumberFormat
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 
-private val ROLE_COLOURS = mapOf(
-    "owner" to Color(0xFFF0A73A), "co-owner" to Color(0xFFEF8A5B), "senior-admin" to Color(0xFFB07CFF), "admin" to Color(0xFF2F8CFF), "trusted-friend" to Color(0xFF35C27A),
-)
+/** The colour of a role's heading; it follows the theme. */
+private fun roleColour(key: String): Color = when (key) {
+    "owner" -> C.warn; "co-owner" -> C.orange; "senior-admin" -> C.violet; "admin" -> C.accent; "trusted-friend" -> C.success; else -> C.muted
+}
 
 // ======================================================================== Staff List (everybody)
 @Composable
@@ -80,7 +81,7 @@ fun StaffScreen(sv: Services) {
         val rows = staff.flatMap { (id, role) -> if (role.rank != last) { last = role.rank; listOf<Any>(role, id to role) } else listOf<Any>(id to role) }
         items(rows) { row ->
             if (row is Roles.Role) {
-                Text(row.label.uppercase(), Modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp), color = ROLE_COLOURS[row.key] ?: C.muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(row.label.uppercase(), Modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp), color = roleColour(row.key), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             } else {
                 @Suppress("UNCHECKED_CAST") val pair = row as Pair<Long, Roles.Role>
                 val (id, role) = pair
@@ -94,7 +95,7 @@ fun StaffScreen(sv: Services) {
                             Text(shownName, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(p?.str("name")?.let { "@$it" } ?: "id $id", color = C.muted, fontSize = 12.sp)
                         }
-                        Text(role.label, color = ROLE_COLOURS[role.key] ?: C.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(role.label, color = roleColour(role.key), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                     if (selected == id) {
                         Spacer(Modifier.height(8.dp))
@@ -169,7 +170,7 @@ fun AdminScreen(sv: Services) {
         }
         item { Text("STAFF (${sv.roles.staff().size})", color = C.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
         items(sv.roles.staff(), key = { it.first }) { (id, role) ->
-            Row(Modifier.fillMaxWidth()) { Text(id.toString(), Modifier.weight(1f)); Text(role.label, color = ROLE_COLOURS[role.key] ?: C.muted, fontSize = 13.sp) }
+            Row(Modifier.fillMaxWidth()) { Text(id.toString(), Modifier.weight(1f)); Text(role.label, color = roleColour(role.key), fontSize = 13.sp) }
         }
     }
 }

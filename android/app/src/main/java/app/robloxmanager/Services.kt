@@ -7,6 +7,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import app.robloxmanager.core.Account
 import app.robloxmanager.core.Debug
 import app.robloxmanager.core.DebugLog
+import app.robloxmanager.core.LookChoice
 import app.robloxmanager.core.Scrub
 import app.robloxmanager.core.AlertRules
 import app.robloxmanager.core.AlertSettings
@@ -70,6 +71,12 @@ class Services(app: Application) {
         debug.event("app", "started version ${BuildConfig.VERSION_NAME}")
     }
     val alerts = AlertSettings(prefs)
+    /** The theme, accent colour and text size (Settings > Looks); the app is dressed again when this changes. */
+    val look = MutableStateFlow(LookChoice.load(prefs))
+    fun setLook(choice: LookChoice) {
+        prefs.put("ui.theme", choice.mode); prefs.put("ui.accent", choice.accent); prefs.put("ui.textSize", choice.size.toDouble())
+        look.value = choice
+    }
     /** Where servers are (answers kept 30 days); only used when the person presses Location and uptime and allowed a service. */
     val geo = GeoBook(File(dir, "server_places.json"), Geo.httpFetch())
     /** RoSeal's public list of Roblox data centres (data.roseal.live), only downloaded when the person allowed it. */

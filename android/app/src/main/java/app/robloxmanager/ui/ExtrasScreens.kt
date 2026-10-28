@@ -287,6 +287,7 @@ fun BackupSection(sv: Services, onMessage: (String) -> Unit) {
         Confirm("Restore backup", "Replace your settings, friend alerts and recently viewed games with those in this backup? Nothing on Roblox is changed and your sign-ins stay as they are.", "Restore", false, {
             pending = null
             val (s, w, g) = Backup.restore(sv.prefs, d)
+            sv.look.value = app.robloxmanager.core.LookChoice.load(sv.prefs)           // (a restored theme shows at once)
             sv.client.readBurst = sv.prefs.double("readBurst", 0.5)
             sv.log.writeFile = sv.prefs.bool("logToFile", true)
             sv.alertsOn.value = sv.alerts.enabled
