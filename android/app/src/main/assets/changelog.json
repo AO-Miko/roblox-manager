@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.16.5.4.4",
+    "date": "2026-10-28",
+    "changes": [
+      "Notifications: the developer can send a message to everybody. A new Notifications page, a red number in the side bar (a bell with a red badge on the phone) and a pop-up for each new message",
+      "Messages come from a signed file in the repository, so only the maintainer can send one"
+    ]
+  },
+  {
     "version": "1.15.5.4.4",
     "date": "2026-10-28",
     "changes": [

@@ -1,7 +1,7 @@
 {
-  "versionName": "1.15.5.4.4",
-  "versionCode": 37,
+  "versionName": "1.16.5.4.4",
+  "versionCode": 38,
   "apk": "roblox-manager.apk",
-  "sha256": "ef969fa9d8a0f66e4db58580345c6ea7608d791546e9d3b961ef4bf3859cdbc9",
-  "notes": "Design rework on PC and phone: a Light theme, five accent colours and four text sizes (Settings > Looks; Ctrl+Shift+L switches dark and light on a PC)|Home shows a welcome page until you sign in|Small tabs are pills, with sharper cards, tables and buttons|Every colour is checked to be readable in both themes"
+  "sha256": "272cf32446c25eb332988e8c3eee4c43e35f12fd143d205026e1c7e4c6cfb07e",
+  "notes": "Notifications: the developer can send a message to everybody. A new Notifications page, a red number in the side bar (a bell with a red badge on the phone) and a pop-up for each new message|Messages come from a signed file in the repository, so only the maintainer can send one"
 }
