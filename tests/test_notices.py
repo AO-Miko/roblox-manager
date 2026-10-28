@@ -158,54 +158,58 @@ check("a new notification is announced once", [e["id"] for e in notices.fresh("s
 check("...and is unread", [e["id"] for e in notices.unread("stable", today)] == ["d"])
 
 # ---------------------------------------------------------------- tools/notify.sh in a throw-away repository
-repo = tmp / "repo"
-(repo / "tools").mkdir(parents=True)
-(repo / "dist").mkdir()
-shutil.copy(ROOT / "tools" / "notify.sh", repo / "tools" / "notify.sh")
-(tmp / "allowed").write_text(f"release@test namespaces=\"git,{notices.NAMESPACE}\" {TRUSTED.split(' ', 1)[1]}")
-sh("git", "init", "-q", "-b", "release", cwd=repo)
-for k, v in (("user.name", "t"), ("user.email", "t@t"), ("gpg.format", "ssh"), ("user.signingkey", str(tmp / KEY)), ("commit.gpgsign", "true"),
-             ("gpg.ssh.allowedSignersFile", str(tmp / "allowed"))):
-    sh("git", "config", k, v, cwd=repo)
-(repo / "README").write_text("x")
-sh("git", "add", "-A", cwd=repo)
-check("the test repository is ready", sh("git", "commit", "-q", "-m", "start", cwd=repo).returncode == 0)
-os.environ["ROBLOX_MANAGER_SIGNING_KEY"] = str(tmp / KEY)
+# (the shell script is a Linux tool, like ban.sh: on Windows 'bash' may be the WSL stub, so this part runs on Linux only)
+if os.name == "nt":
+    print("SKIP tools/notify.sh (Linux only)")
+else:
+    repo = tmp / "repo"
+    (repo / "tools").mkdir(parents=True)
+    (repo / "dist").mkdir()
+    shutil.copy(ROOT / "tools" / "notify.sh", repo / "tools" / "notify.sh")
+    (tmp / "allowed").write_text(f"release@test namespaces=\"git,{notices.NAMESPACE}\" {TRUSTED.split(' ', 1)[1]}")
+    sh("git", "init", "-q", "-b", "release", cwd=repo)
+    for k, v in (("user.name", "t"), ("user.email", "t@t"), ("gpg.format", "ssh"), ("user.signingkey", str(tmp / KEY)), ("commit.gpgsign", "true"),
+                 ("gpg.ssh.allowedSignersFile", str(tmp / "allowed"))):
+        sh("git", "config", k, v, cwd=repo)
+    (repo / "README").write_text("x")
+    sh("git", "add", "-A", cwd=repo)
+    check("the test repository is ready", sh("git", "commit", "-q", "-m", "start", cwd=repo).returncode == 0)
+    os.environ["ROBLOX_MANAGER_SIGNING_KEY"] = str(tmp / KEY)
 
 
-def notify(*args):
-    return sh("bash", "tools/notify.sh", *args, cwd=repo)
+    def notify(*args):
+        return sh("bash", "tools/notify.sh", *args, cwd=repo)
 
 
-def published():
-    data = (repo / "dist" / "notifications.json").read_bytes()
-    return notices.parse(data, (repo / "dist" / "notifications.json.sig").read_text())
+    def published():
+        data = (repo / "dist" / "notifications.json").read_bytes()
+        return notices.parse(data, (repo / "dist" / "notifications.json.sig").read_text())
 
 
-r = notify("send", "Big news", "Please update.", "--level", "important", "--link", "https://example.com/news")
-check("send makes a signed list that the app accepts", r.returncode == 0 and published() is not None and published()[0] == 1, r.stderr + r.stdout)
-e = published()[1][0]
-check("...with the title, text, level and link", (e["title"], e["body"], e["level"], e["link"]) == ("Big news", "Please update.", "important", "https://example.com/news"), e)
-check("...an id made from the date and the title", e["id"] == datetime.date.today().isoformat() + "-big-news", e["id"])
-check("...as a signed commit", sh("git", "verify-commit", "HEAD", cwd=repo).returncode == 0 and "Notifications" in sh("git", "log", "-1", "--format=%s", cwd=repo).stdout)
-notify("send", "Second", "Only for the beta.", "--channel", "beta", "--expires", "2030-01-01", "--id", "beta-note")
-got = published()
-check("a second one goes first, the serial goes up, channel and expiry are kept", got[0] == 2 and [x["id"] for x in got[1]][0] == "beta-note" and got[1][0]["channel"] == "beta" and got[1][0]["expires"] == "2030-01-01", got)
-notify("send", "Second again", "Replaced.", "--id", "beta-note")
-check("the same id replaces the old notification", [x["id"] for x in published()[1]].count("beta-note") == 1 and published()[1][0]["body"] == "Replaced.")
-before = published()[0]
-for why, args in (("a title that is too long", ("send", "T" * 81, "x")), ("a link that is not https", ("send", "t", "x", "--link", "http://x.example")),
-                  ("an unknown level", ("send", "t", "x", "--level", "loud")), ("an unknown channel", ("send", "t", "x", "--channel", "mars")),
-                  ("a bad id", ("send", "t", "x", "--id", "no spaces")), ("a text that is too long", ("send", "t", "x" * 1001)), ("a bad expiry day", ("send", "t", "x", "--expires", "soon"))):
-    r = notify(*args)
-    check(f"{why} is refused and nothing is published", r.returncode != 0 and published()[0] == before, r.stderr[:100])
-r = notify("remove", "beta-note")
-check("remove takes it away (a new signed list)", r.returncode == 0 and "beta-note" not in [x["id"] for x in published()[1]] and published()[0] == before + 1, r.stderr)
-check("removing one that does not exist is refused", notify("remove", "nope").returncode != 0)
-check("list shows what is published", "Big news" in notify("list").stdout)
-sh("git", "checkout", "-q", "-b", "other", cwd=repo)
-check("it only runs on the release branch", notify("send", "t", "x").returncode != 0)
-sh("git", "checkout", "-q", "release", cwd=repo)
+    r = notify("send", "Big news", "Please update.", "--level", "important", "--link", "https://example.com/news")
+    check("send makes a signed list that the app accepts", r.returncode == 0 and published() is not None and published()[0] == 1, r.stderr + r.stdout)
+    e = published()[1][0]
+    check("...with the title, text, level and link", (e["title"], e["body"], e["level"], e["link"]) == ("Big news", "Please update.", "important", "https://example.com/news"), e)
+    check("...an id made from the date and the title", e["id"] == datetime.date.today().isoformat() + "-big-news", e["id"])
+    check("...as a signed commit", sh("git", "verify-commit", "HEAD", cwd=repo).returncode == 0 and "Notifications" in sh("git", "log", "-1", "--format=%s", cwd=repo).stdout)
+    notify("send", "Second", "Only for the beta.", "--channel", "beta", "--expires", "2030-01-01", "--id", "beta-note")
+    got = published()
+    check("a second one goes first, the serial goes up, channel and expiry are kept", got[0] == 2 and [x["id"] for x in got[1]][0] == "beta-note" and got[1][0]["channel"] == "beta" and got[1][0]["expires"] == "2030-01-01", got)
+    notify("send", "Second again", "Replaced.", "--id", "beta-note")
+    check("the same id replaces the old notification", [x["id"] for x in published()[1]].count("beta-note") == 1 and published()[1][0]["body"] == "Replaced.")
+    before = published()[0]
+    for why, args in (("a title that is too long", ("send", "T" * 81, "x")), ("a link that is not https", ("send", "t", "x", "--link", "http://x.example")),
+                      ("an unknown level", ("send", "t", "x", "--level", "loud")), ("an unknown channel", ("send", "t", "x", "--channel", "mars")),
+                      ("a bad id", ("send", "t", "x", "--id", "no spaces")), ("a text that is too long", ("send", "t", "x" * 1001)), ("a bad expiry day", ("send", "t", "x", "--expires", "soon"))):
+        r = notify(*args)
+        check(f"{why} is refused and nothing is published", r.returncode != 0 and published()[0] == before, r.stderr[:100])
+    r = notify("remove", "beta-note")
+    check("remove takes it away (a new signed list)", r.returncode == 0 and "beta-note" not in [x["id"] for x in published()[1]] and published()[0] == before + 1, r.stderr)
+    check("removing one that does not exist is refused", notify("remove", "nope").returncode != 0)
+    check("list shows what is published", "Big news" in notify("list").stdout)
+    sh("git", "checkout", "-q", "-b", "other", cwd=repo)
+    check("it only runs on the release branch", notify("send", "t", "x").returncode != 0)
+    sh("git", "checkout", "-q", "release", cwd=repo)
 
 # ---------------------------------------------------------------- the page and the red number
 notices._cache_file().unlink(missing_ok=True)
