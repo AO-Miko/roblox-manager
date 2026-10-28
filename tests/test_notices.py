@@ -166,7 +166,8 @@ else:
     (repo / "tools").mkdir(parents=True)
     (repo / "dist").mkdir()
     shutil.copy(ROOT / "tools" / "notify.sh", repo / "tools" / "notify.sh")
-    (tmp / "allowed").write_text(f"release@test namespaces=\"git,{notices.NAMESPACE}\" {TRUSTED.split(' ', 1)[1]}")
+    sh("bash", "-c", 'printf "release@test namespaces=\\"git,%s\\" %s\\n" "$1" "$(cut -d" " -f1,2 "$2")" > "$3"',
+       "x", notices.NAMESPACE, str(tmp / (KEY + ".pub")), str(tmp / "allowed"))              # (the trusted-signers file for git, written by the shell from the public key file)
     sh("git", "init", "-q", "-b", "release", cwd=repo)
     for k, v in (("user.name", "t"), ("user.email", "t@t"), ("gpg.format", "ssh"), ("user.signingkey", str(tmp / KEY)), ("commit.gpgsign", "true"),
                  ("gpg.ssh.allowedSignersFile", str(tmp / "allowed"))):
