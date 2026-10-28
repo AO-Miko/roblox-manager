@@ -17,7 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Badge
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,19 +58,28 @@ fun NoticesScreen(sv: Services) {
     val list = remember(unread, version) { sv.visibleNotices() }
     val ctx = LocalContext.current
     var open by remember { mutableStateOf<String?>(null) }
+    var showRead by remember { mutableStateOf(false) }               // the check icon: also show the messages that were read
+    var justRead by remember { mutableStateOf(setOf<String>()) }     // read a moment ago: stays in the list until the page is left, so the card you opened does not vanish
+    val readCount = list.count { sv.isNoticeRead(it.id) }
+    val shown = if (showRead) list else list.filter { !sv.isNoticeRead(it.id) || it.id in justRead }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(if (unread > 0) "$unread unread" else "All read", Modifier.weight(1f), color = C.muted, fontSize = 13.sp)
+            IconButton(onClick = { showRead = !showRead; Debug.event("notices", if (showRead) "showing read notifications" else "hiding read notifications") }, enabled = readCount > 0 || showRead,
+                modifier = Modifier.background(if (showRead) C.accentDim else androidx.compose.ui.graphics.Color.Transparent, CircleShape)) {
+                Icon(Icons.Outlined.Check, if (showRead) "Hide the messages I have read ($readCount)" else "Show the messages I have read ($readCount)", tint = if (showRead) C.onDim else C.muted)
+            }
             QuietButton("Mark all as read", enabled = unread > 0) { sv.markAllNoticesRead(); version++ }
         }
         if (list.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No notifications.", color = C.muted) }
+        else if (shown.isEmpty()) Box(Modifier.fillMaxSize().padding(24.dp), Alignment.Center) { Text("You are all caught up. Tap the check mark above to see the messages you have read.", color = C.muted) }
         else LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(list, key = { it.id }) { n ->
+            items(shown, key = { it.id }) { n ->
                 val read = remember(n.id, unread, version) { sv.isNoticeRead(n.id) }
                 NoticeCard(n, read, open == n.id) {
                     Debug.event("notices", "opened notification '${n.id}'")
                     open = if (open == n.id) null else n.id
-                    if (!read) { sv.markNoticeRead(n.id); version++ }
+                    if (!read) { sv.markNoticeRead(n.id); justRead = justRead + n.id; version++ }
                 }
             }
         }
@@ -78,8 +91,9 @@ private fun NoticeCard(n: Notice, read: Boolean, expanded: Boolean, onClick: () 
     val ctx = LocalContext.current
     Card(onClick = onClick) {
         Row {
-            Box(Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape).background(if (read) C.surface else C.danger))
-            Spacer(Modifier.width(10.dp))
+            if (read) Icon(Icons.Outlined.Check, "read", Modifier.padding(top = 3.dp).size(14.dp), tint = C.success)
+            else Box(Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape).background(C.danger))
+            Spacer(Modifier.width(if (read) 8.dp else 10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(n.title.ifEmpty { "(no title)" }, Modifier.weight(1f), fontWeight = if (read) FontWeight.Medium else FontWeight.Bold, maxLines = if (expanded) Int.MAX_VALUE else 2)

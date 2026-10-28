@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 import notices
+from nav import IconButton
 from ui_common import button, hint, open_url
 
 
@@ -19,6 +20,7 @@ class NoticesTab(QWidget):
         super().__init__()
         self.ctx = ctx
         self.loaded = False
+        self.show_read = False                 # the check icon: also show the messages that were read
         lay = QVBoxLayout(self)
         lay.setContentsMargins(14, 12, 14, 10)
         lay.setSpacing(10)
@@ -26,6 +28,10 @@ class NoticesTab(QWidget):
         self.summary = QLabel("")
         self.summary.setProperty("role", "title")
         top.addWidget(self.summary, 1)
+        self.b_read = IconButton("check", "Show the messages I have read", 34)
+        self.b_read.setCheckable(True)
+        self.b_read.toggled.connect(self._toggle_read)
+        top.addWidget(self.b_read)
         self.b_all = button("Mark all as read", self.read_all, "Every notification counts as read")
         self.b_check = button("Check now", self.check_now, "Look for new notifications (the app does this by itself every ten minutes)")
         top.addWidget(self.b_all)
@@ -57,9 +63,12 @@ class NoticesTab(QWidget):
             if w is not None:
                 w.deleteLater()
         self.cards = {}
+        shown = items if self.show_read else [e for e in items if e["id"] not in read]
         if not items:
             self.col.addWidget(hint("No notifications."))
-        for e in items:
+        elif not shown:
+            self.col.addWidget(hint("You are all caught up. Press the check mark above to see the messages you have read."))
+        for e in shown:
             card = self._card(e, e["id"] not in read)
             self.cards[e["id"]] = card
             self.col.addWidget(card)
@@ -82,6 +91,11 @@ class NoticesTab(QWidget):
             dot.setProperty("role", "unread-dot")
             dot.setAccessibleName("unread")
             head.addWidget(dot)
+        else:
+            tick = QLabel("✓")
+            tick.setProperty("role", "read-check")
+            tick.setAccessibleName("read")
+            head.addWidget(tick)
         title = QLabel(e["title"])
         title.setTextFormat(Qt.TextFormat.PlainText)
         title.setWordWrap(True)
@@ -114,9 +128,18 @@ class NoticesTab(QWidget):
     def _count(self, items=None):
         items = notices.current(channel()) if items is None else items
         n = len(notices.unread(channel()))
-        self.summary.setText(f"{n} unread of {len(items)}" if items else "Notifications")
+        r = len(items) - n
+        self.summary.setText(f"{n} unread" if items else "Notifications")
         self.b_all.setEnabled(n > 0)
+        self.b_read.setEnabled(r > 0 or self.show_read)
+        tip = ("Hide" if self.show_read else "Show") + f" the messages I have read ({r})"
+        self.b_read.setToolTip(tip)
+        self.b_read.setAccessibleName(tip)
         self.ctx.set_count("notices", n)
+
+    def _toggle_read(self, on):
+        self.show_read = bool(on)
+        self.reload()
 
     def read_one(self, nid):
         notices.mark_read(nid)

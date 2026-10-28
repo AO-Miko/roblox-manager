@@ -237,6 +237,7 @@ theme.choose("dark")
 w.tabs.setCurrentIndex(idx)
 spin(0.2)
 check("the page lists both, newest first, unread marked", list(page.cards) == ["u1", "u2"] and page.cards["u1"].property("unread") is True)
+check("the check icon is there, but has nothing to show yet (no message was read)", not page.b_read.isEnabled() and not page.b_read.isChecked())
 labels = [l.text() for l in page.findChildren(QLabel)]
 check("HTML in a title or text is shown as plain text, not interpreted", "First <b>bold</b>" in labels and "<i>text</i> https://x.example" in labels and
       all(l.textFormat() == Qt.TextFormat.PlainText for l in page.cards["u1"].findChildren(QLabel) if "<" in l.text()))
@@ -247,14 +248,23 @@ import tab_notices
 tab_notices.open_url = opened.append
 btns["Open link"].click()
 check("...that opens the https link", opened == ["https://example.com/a"], opened)
-check("the summary says how many are unread", page.summary.text() == "2 unread of 2", page.summary.text())
+check("the summary says how many are unread", page.summary.text() == "2 unread", page.summary.text())
 page.read_one("u1")
 spin(0.1)
-check("reading one lowers the number everywhere", w.tabs.tabText(idx) == "Notifications (1)" and item.badge == "1" and w.windowTitle().startswith("(1) ") and
-      page.cards["u1"].property("unread") is False, (w.tabs.tabText(idx), w.windowTitle()))
+check("reading one lowers the number everywhere", w.tabs.tabText(idx) == "Notifications (1)" and item.badge == "1" and w.windowTitle().startswith("(1) "), (w.tabs.tabText(idx), w.windowTitle()))
+check("a message that was read leaves the list, and the check icon can bring it back", list(page.cards) == ["u2"] and page.b_read.isEnabled() and "(1)" in page.b_read.toolTip())
+page.b_read.click()
+spin(0.1)
+check("with the check icon on, the read message is listed again, marked with a check mark", list(page.cards) == ["u1", "u2"] and page.cards["u1"].property("unread") is False and
+      any(l.property("role") == "read-check" for l in page.cards["u1"].findChildren(QLabel)) and not any(l.property("role") == "read-check" for l in page.cards["u2"].findChildren(QLabel)))
+check("...and its tooltip offers to hide them again", page.b_read.isChecked() and page.b_read.toolTip().startswith("Hide"))
+page.b_read.click()
+spin(0.1)
+check("pressing it again hides them", list(page.cards) == ["u2"])
 page.b_all.click()
 spin(0.1)
 check("'Mark all as read' removes the number", w.tabs.tabText(idx) == "Notifications" and item.badge == "" and not w.windowTitle().startswith("(") and not page.b_all.isEnabled())
+check("when everything is read the page says so and points at the check icon", page.cards == {} and any("all caught up" in l.text() for l in page.findChildren(QLabel)))
 # a new list arrives while the app is open
 fresh = lst(2, n("u3", "Brand new"), n("u1", "First"), n("u2", "Second"))
 notices._state_file().write_text(json.dumps({"read": ["u1", "u2"], "seen": ["u1", "u2"]}))       # (what the app has seen and read so far)

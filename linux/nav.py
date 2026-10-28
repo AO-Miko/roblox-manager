@@ -80,6 +80,8 @@ def icon_path(name):
         p.moveTo(10, 19.5); p.cubicTo(10.5, 20.8, 13.5, 20.8, 14, 19.5)
     elif name == "Settings":
         p.moveTo(4, 7); p.lineTo(20, 7); p.moveTo(4, 17); p.lineTo(20, 17); p.addEllipse(QPointF(9, 7), 2.2, 2.2); p.addEllipse(QPointF(15, 17), 2.2, 2.2)
+    elif name == "check":                  # a check mark (the notifications you have read)
+        p.moveTo(5, 12.5); p.lineTo(10, 17.5); p.lineTo(19, 7)
     elif name == "chevron_down":
         p.moveTo(6, 9.5); p.lineTo(12, 15.5); p.lineTo(18, 9.5)
     elif name == "chevron_right":
@@ -235,11 +237,12 @@ class IconButton(QAbstractButton):
     def paintEvent(self, ev):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if self._hover or self.isDown():
-            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["surface2"]))
+        on = self.isCheckable() and self.isChecked()          # a switch that is on (the check icon of the notifications)
+        if self._hover or self.isDown() or on:
+            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["accent_dim"] if on else T["surface2"]))
             p.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
         s = min(self.width(), self.height()) - 12
-        draw_icon(p, self.icon_name, QRectF((self.width() - s) / 2, (self.height() - s) / 2, s, s), T["text"] if self._hover else T["muted"], 1.8)
+        draw_icon(p, self.icon_name, QRectF((self.width() - s) / 2, (self.height() - s) / 2, s, s), T["accent_fg"] if on else T["text"] if self._hover else T["muted"], 1.8)
 
 
 class GroupHeader(QAbstractButton):

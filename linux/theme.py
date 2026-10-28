@@ -221,6 +221,7 @@ QLabel[role="tile-caption"] { color: $muted; font-size: ${fm2}px; }
 QLabel[role="warn"] { color: $warn; }
 QLabel[role="card-title"] { font-weight: 700; font-size: ${f1}px; }
 QLabel[role="unread-dot"] { color: $badge; }
+QLabel[role="read-check"] { color: $success; font-weight: 700; }
 QLabel[role="level"] { font-weight: 700; padding: 2px 9px; border-radius: 9px; }
 QLabel[level="important"] { color: $on_dim; background: $accent_dim; border: 1px solid $accent; }
 QLabel[level="warning"] { color: $warn; background: $notice_bg; border: 1px solid $notice_border; }
