@@ -24,7 +24,7 @@ class DebugLogTest {
     private lateinit var server: MockWebServer
 
     @Before fun up() {
-        tmp = createTempDir("debuglog")
+        tmp = java.nio.file.Files.createTempDirectory("debuglog").toFile()
         server = MockWebServer()
         Scrub.forgetIdentity()
         Scrub.setIdentity(Account(424242, "JohnnyPrivate", "Johnny Display"))
