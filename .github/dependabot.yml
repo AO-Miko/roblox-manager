@@ -3,7 +3,7 @@ updates:
   # the pinned GitHub Actions
   - package-ecosystem: github-actions
     directory: /
-    target-branch: main
+    target-branch: beta
     schedule:
       interval: weekly
     commit-message:
@@ -11,7 +11,7 @@ updates:
   # the libraries inside the Windows package (and used by the tests)
   - package-ecosystem: pip
     directory: /tools/windows
-    target-branch: main
+    target-branch: beta
     schedule:
       interval: weekly
     commit-message:
@@ -19,7 +19,7 @@ updates:
   # the Android app's libraries
   - package-ecosystem: gradle
     directory: /android
-    target-branch: main
+    target-branch: beta
     schedule:
       interval: weekly
     commit-message:
