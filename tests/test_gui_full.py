@@ -901,7 +901,7 @@ StubSignIn.cookie = COOKIE; w.account.set_cookie(); wait(lambda: ctx.me and ctx.
 w.account.sign_out()
 check("signing out the account in use switches to the next saved account", wait(lambda: ctx.me and ctx.me["name"] == "second" and [a["name"] for a in accts.list_accounts()] == ["second"]) and rbx.load_cookie() == COOKIE2)
 StubSignIn.cookie = COOKIE; w.account.set_cookie(); wait(lambda: ctx.me and ctx.me["name"] == "tester")
-w.account.atable.selectRow(next(r for r in range(2) if w.account.atable.item(r, 1).text() == "@second")); w.account.remove_selected(); wait(lambda: len(accts.list_accounts()) == 1)
+w.account.atable.selectRow(next(r for r in range(2) if w.account.atable.item(r, 1).text() == "@second")); w.account.remove_selected(); wait(lambda: len(accts.list_accounts()) == 1 and ctx.me and ctx.me["name"] == "tester")
 check("only the first account is left, and signed in", [a["name"] for a in accts.list_accounts()] == ["tester"] and ctx.me["name"] == "tester")
 ta2.SignInDialog = __import__("signin").SignInDialog
 # ---- thousands of followers: names are looked up a chunk at a time, once
