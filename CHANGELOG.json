@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.9.4.4",
+    "date": "2026-11-02",
+    "changes": [
+      "Each account now accepts the Terms of use and the Privacy policy at its first sign-in (and when they change); updates install through Android's PackageInstaller; security and code-scan fixes; Terms and Privacy pages in Settings"
+    ]
+  },
+  {
     "version": "1.16.8.4.4",
     "date": "2026-11-02",
     "changes": [

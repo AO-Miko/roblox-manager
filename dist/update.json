@@ -1,7 +1,7 @@
 {
-  "versionName": "1.16.8.4.4",
-  "versionCode": 41,
+  "versionName": "1.16.9.4.4",
+  "versionCode": 42,
   "apk": "roblox-manager.apk",
-  "sha256": "e12d1308f1ad963c9d83af5cb6d9d0d29836d1788e0dd70d1962763b33a0a184",
-  "notes": "Under the hood: stricter automatic checks (code scan of every language, lint, tests that really fail the build); a shorter filter hint in the group member list so it is never cut off"
+  "sha256": "8b4615b06fee76d931bf8cea802d83bb02a7815bdb244fe0d813f5b69d133626",
+  "notes": "Each account now accepts the Terms of use and the Privacy policy at its first sign-in (and when they change); updates install through Android's PackageInstaller; security and code-scan fixes; Terms and Privacy pages in Settings"
 }
