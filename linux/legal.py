@@ -33,7 +33,7 @@ def accept(user_id):
     try:
         FILE.write_text(json.dumps({"accounts": data}, indent=1))
     except OSError:
-        pass
+        pass                  # (a folder that cannot be written: the account is simply asked again next time)
 
 
 def forget(user_id=None):
@@ -42,4 +42,4 @@ def forget(user_id=None):
     try:
         FILE.write_text(json.dumps({"accounts": data}, indent=1))
     except OSError:
-        pass
+        pass                  # (a folder that cannot be written: the account is simply asked again next time)

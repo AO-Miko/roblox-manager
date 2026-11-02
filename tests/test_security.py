@@ -171,7 +171,7 @@ terms = (ROOT / "TERMS.md").read_text(encoding="utf-8")
 code = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for pat in ("linux/*.py", "android/app/src/main/java/**/*.kt") for p in ROOT.glob(pat))
 hosts = {h.lower() for h in _re.findall(r"https?://([A-Za-z0-9.-]+\.[A-Za-z]{2,})", code)}
 LINKS_ONLY = {"www.gnu.org", "play.google.com", "flathub.org", "docs.github.com"}          # (only shown as text or opened when the user clicks; not data the app sends)
-missing = sorted(h for h in hosts - LINKS_ONLY if not h.endswith("roblox.com") and h not in privacy)
+missing = sorted(h for h in hosts - LINKS_ONLY if not (h == "roblox.com" or h.endswith(".roblox.com")) and h not in privacy)
 check("the privacy policy names every outside address the apps use (besides roblox.com)", not missing, str(missing))
 check("the privacy policy covers roblox.com, the opt-in services and the public signed lists", all(x in privacy for x in ("roblox.com", "ipwho.is", "data.roseal.live", "bans.json", "roles.json", "policy.json", "notifications.json")))
 check("the terms and the privacy policy are linked from the README and from both apps",

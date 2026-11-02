@@ -1,5 +1,5 @@
 """The question an account is asked at its first sign-in (and when the texts change): accept the Terms of use and the Privacy policy, or be signed out."""
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QCheckBox, QDialog, QHBoxLayout, QLabel, QVBoxLayout
 
