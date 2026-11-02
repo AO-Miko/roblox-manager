@@ -5,6 +5,8 @@ _Last updated: 2 November 2026. These terms apply to the Roblox Manager apps for
 By installing or using Roblox Manager you agree to these terms. If you do not agree, please do not use it, and uninstall it. How your data is handled is in the
 [Privacy policy](PRIVACY.md).
 
+**You must accept both to use the apps.** Each Roblox account is asked once, the first time it signs in on a device, and again whenever these texts or the Privacy policy change. The answer is kept on that device only. If you decline, that account is signed out (its saved sign-in is kept) and you are asked again the next time.
+
 ## 1. What this is
 
 Roblox Manager is a free, open-source hobby project made by one person, Miko ([@AO-Miko](https://github.com/AO-Miko)), "for fun", as the project's own words go.

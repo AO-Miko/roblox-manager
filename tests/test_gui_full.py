@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt
 import rbx, ui_common
 from theme import T
 from app import MainWindow
+import legal_dialog; legal_dialog.ask = lambda user, parent=None: True          # (these tests sign in through the window: the terms question is tested in test_legal.py)
 import shutil, vault as _vault
 for _k in ("active", "acct-1000", "acct-2000", "acct-1", "acct-2"): _vault.delete(_k)        # leftovers from an aborted earlier run
 for _f in ("accounts.json", "accounts", "cookie"):

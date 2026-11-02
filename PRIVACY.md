@@ -23,6 +23,7 @@ Nothing in this list is ever uploaded:
   Keyring), with Windows data protection (DPAPI) on Windows, and with an AES-256-GCM key inside the Android Keystore on Android. It is sent only to `roblox.com`
   addresses. Android app backup is turned off.
 - **Your saved accounts** (user id and name) and **the app's settings** (including the look you chose and which notifications you have read).
+- **That you accepted the Terms of use and this policy**: the date of the version you accepted, with the date and time, for each account. It is asked once per account and again when the texts change; declining signs that account out.
 - **A cache** of names and profile pictures the app has shown, so it does not ask Roblox again.
 - **A request log** (address, answer code and timing of what the app asked Roblox) and an **app debug log**. Cookies, tokens, passwords, codes, e-mail addresses, phone
   numbers, IP addresses, folder names, your account names and ids, and the names and descriptions of people in Roblox's answers are replaced by a mark before anything is kept.

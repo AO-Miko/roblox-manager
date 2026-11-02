@@ -63,6 +63,7 @@ import app.robloxmanager.ui.VIP
 import app.robloxmanager.ui.C
 import app.robloxmanager.ui.GroupsScreen
 import app.robloxmanager.ui.HomeScreen
+import app.robloxmanager.ui.LegalDialog
 import app.robloxmanager.ui.LoginScreen
 import app.robloxmanager.ui.LogScreen
 import app.robloxmanager.ui.MoneyScreen
@@ -95,6 +96,8 @@ private fun Root(sv: Services) {
     var adding by remember { mutableStateOf(false) }
     val notice by sv.banNotice.collectAsState()
     val lock by sv.updateRequired.collectAsState()
+    val legalFor by sv.legalAsk.collectAsState()
+    legalFor?.let { a -> LegalDialog(a.name, onAnswer = { sv.answerLegal(it) }) }
     notice?.let { n ->
         AlertDialog(
             onDismissRequest = { sv.banNotice.value = null }, title = { Text("Account not allowed") },

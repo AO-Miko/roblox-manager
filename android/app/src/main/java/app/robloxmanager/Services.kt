@@ -35,6 +35,8 @@ import app.robloxmanager.core.RobloxException
 import app.robloxmanager.core.cleanCookie
 import app.robloxmanager.core.long
 import app.robloxmanager.core.str
+import app.robloxmanager.core.Legal
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,6 +45,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class RobloxManagerApp : Application() {
@@ -211,6 +215,19 @@ class Services(app: Application) {
     }
 
     /** Checks the cookie with Roblox, remembers who it belongs to, and makes it the active account. */
+    /** The account that is being asked to accept the terms and the privacy policy (the screen shows the question while this is set). */
+    val legalAsk = MutableStateFlow<Account?>(null)
+    private var legalAnswer: CompletableDeferred<Boolean>? = null
+    private val legalLock = Mutex()
+    private suspend fun askLegal(acc: Account): Boolean = legalLock.withLock {
+        val answer = CompletableDeferred<Boolean>()
+        legalAnswer = answer
+        legalAsk.value = acc
+        try { answer.await() } finally { legalAsk.value = null; legalAnswer = null }
+    }
+    /** The person's answer to the question (true: accepted). */
+    fun answerLegal(accepted: Boolean) { legalAnswer?.complete(accepted) }
+
     suspend fun signIn(rawCookie: String, save: Boolean = true): Account {
         val cookie = cleanCookie(rawCookie)
         if (cookie.length < 40) throw RobloxException(401, "That does not look like a .ROBLOSECURITY cookie", local = true)
@@ -222,6 +239,14 @@ class Services(app: Application) {
             current.value = acc
             enforce()
             throw RobloxException(403, "This account may not use Roblox Manager", local = true)
+        }
+        if (!Legal.accepted(prefs, acc.id)) {                // the terms and the privacy policy: once per account, and again when they change
+            if (!askLegal(acc)) {
+                client.signOut()
+                current.value = null                         // (nobody is signed in now)
+                throw RobloxException(403, "The Terms of use and the Privacy policy were not accepted, so this account was signed out", local = true)
+            }
+            Legal.accept(prefs, acc.id)
         }
         if (save) accounts.save(acc, cookie)
         current.value = acc

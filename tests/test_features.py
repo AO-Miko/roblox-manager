@@ -28,6 +28,7 @@ import tab_account
 import tab_money
 import tab_people
 from app import MainWindow
+import legal_dialog; legal_dialog.ask = lambda user, parent=None: True          # (these tests sign in through the window: the terms question is tested in test_legal.py)
 
 res = []
 

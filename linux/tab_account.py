@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 import accounts
 import bans
+import legal_dialog
 import plat
 import rbx
 import relation
@@ -511,6 +512,13 @@ class AccountTab(QWidget):
         else:
             self.ctx.error(e)
 
+    def _declined_legal(self, user):
+        """The account did not accept the terms: it is signed out (a saved sign-in is kept, and it is asked again next time)."""
+        self._previous = None
+        self._reset_for_switch()                         # (this also logs the client out)
+        self.refresh_buttons()
+        self.ctx.status(f"@{user.get('name', '')} was signed out: the Terms of use and the Privacy policy were not accepted.")
+
     def enforce_bans(self, extra=None):
         """Sign out and forget every banned account (see bans.py): the one in use as well, even in the middle of a session.
         `extra` is a user that has just signed in and is not saved yet."""
@@ -545,6 +553,9 @@ class AccountTab(QWidget):
     def _signed_in(self, user):
         if bans.banned(user["id"]) is not None:          # banned: not even shown as signed in
             self.enforce_bans(extra=user)
+            return
+        if not legal_dialog.ask(user, self):             # the terms and the privacy policy, once per account (and again when they change)
+            self._declined_legal(user)
             return
         self.ctx.async_.run(bans.refresh, lambda changed: changed and self.enforce_bans())      # a fresh list at every sign-in
         self._previous = None
