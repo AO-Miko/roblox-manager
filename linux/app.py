@@ -394,7 +394,7 @@ class MainWindow(QMainWindow):
 
     # ---- remembers the window size, the open tabs and the VIP list's hide switches between runs
     STATE_FILE = rbx.CONFIG_DIR / "ui.json"
-    COLUMNS_VERSION = 3
+    COLUMNS_VERSION = 4
 
     def _restore_state(self, enabled):
         self._state_on = enabled

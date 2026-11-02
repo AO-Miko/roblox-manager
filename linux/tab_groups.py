@@ -134,7 +134,7 @@ class GroupsTab(QWidget):
         top.addWidget(self.member_filter, 1)
         self.b_find = button("Find a user...", self.find_member, "Look up one username in this group")
         lay.addLayout(top)
-        self.mtable = make_table(["Display name", "Username", "Role", "Rank", "User id"], [180, 160, 150, 60, 100])
+        self.mtable = make_table(["Display name", "Username", "Role", "Rank", "User id"], [180, 160, 150, 60, 120])
         lay.addWidget(self.mtable, 1)
         self.b_more_m = button("Load more", lambda: self.load_members(reset=False))
         self.b_rank = button("Change rank...", self.change_rank)
@@ -150,7 +150,7 @@ class GroupsTab(QWidget):
     def _build_requests(self):
         w = QWidget()
         lay = QVBoxLayout(w)
-        self.rtable = make_table(["Display name", "Username", "Requested", "User id"], [180, 160, 150, 100])
+        self.rtable = make_table(["Display name", "Username", "Requested", "User id"], [180, 160, 150, 120])
         self.rtable.setSelectionMode(self.rtable.SelectionMode.ExtendedSelection)
         lay.addWidget(self.rtable, 1)
         row = QHBoxLayout()
@@ -208,7 +208,7 @@ class GroupsTab(QWidget):
     def _build_bans(self):
         w = QWidget()
         lay = QVBoxLayout(w)
-        self.btable = make_table(["Display name", "Username", "Banned", "User id"], [180, 160, 150, 100])
+        self.btable = make_table(["Display name", "Username", "Banned", "User id"], [180, 160, 150, 120])
         lay.addWidget(self.btable, 1)
         row = QHBoxLayout()
         self.b_unban = button("Unban selected", self.unban)

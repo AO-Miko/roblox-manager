@@ -1039,13 +1039,13 @@ w.vip.mine = []; w.vip.checked.clear(); w.vip.reasons.clear(); w.vip.links.clear
 def vip_visual():
     hd = w.vip.mtable.horizontalHeader()
     return [w.vip.mtable.horizontalHeaderItem(l).text() for l in sorted(range(w.vip.mtable.columnCount()), key=hd.visualIndex)]
-check("the VIP list shows its columns as Game, Status, Expires, Cost, Server, VIP id, VIP link, Copies", vip_visual() == ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "VIP link", "Copies"], vip_visual())
+check("the VIP list shows its columns as Game, Status, Expires, Cost, Server, VIP id, Copies, VIP link", vip_visual() == ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "Copies", "VIP link"], vip_visual())
 w.vip.mine = [dict(SV("alpha", 8101, 1, True, price=100), _state=""), dict(SV("beta", 8102, 2, False, discount=100), _state="")]; w.vip.names = {7001: "G1", 7002: "G2"}; w.vip.show_mine()
 check("the cells still line up with their headers (Status next to Game, Cost after Expires)", w.vip.mtable.item(0, 2).text() in ("ON", "OFF") and w.vip.mtable.item(0, 7).text() in ("Paid 100 R$", "Free (Roblox Plus)"))
 _fd, tmpv = tempfile.mkstemp(suffix=".csv"); os.close(_fd); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmpv, ""))
 uc.export_csv(w.vip.mtable, w, name="v")
 rowsv = list(_csv.reader(io.StringIO(pathlib.Path(tmpv).read_text(encoding="utf-8-sig"))))
-check("a CSV export follows the order on screen", rowsv[0] == ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "VIP link", "Copies"] and rowsv[1][0] in ("G1", "G2") and rowsv[1][1] in ("ON", "OFF") and rowsv[1][3] in ("Paid 100 R$", "Free (Roblox Plus)"), rowsv[:2])
+check("a CSV export follows the order on screen", rowsv[0] == ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "Copies", "VIP link"] and rowsv[1][0] in ("G1", "G2") and rowsv[1][1] in ("ON", "OFF") and rowsv[1][3] in ("Paid 100 R$", "Free (Roblox Plus)"), rowsv[:2])
 w.vip.mtable.sortByColumn(7, Qt.SortOrder.AscendingOrder)
 check("sorting by a column still works after the reorder (Cost)", [w.vip.mtable.item(r, 7).text() for r in range(2)] == sorted(w.vip.mtable.item(r, 7).text() for r in range(2)))
 w.vip.mtable.horizontalHeader().moveSection(w.vip.mtable.horizontalHeader().visualIndex(6), 0)

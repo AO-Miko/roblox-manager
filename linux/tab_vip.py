@@ -432,9 +432,9 @@ class VipTab(QWidget):
         self.mnote.setText("Sign in on the Home tab to see your VIP servers.")
         self.update_buttons()
 
-    # what the person sees, left to right: Game, Status, Expires, Cost, Server, VIP id, VIP link, Copies (the table's own numbering stays as it
+    # what the person sees, left to right: Game, Status, Expires, Cost, Server, VIP id, Copies, VIP link (the table's own numbering stays as it
     # was, so sorting, tooltips and the link column keep working; only the order on screen changes)
-    COLUMN_ORDER = ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "VIP link", "Copies"]
+    COLUMN_ORDER = ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "Copies", "VIP link"]
 
     def apply_column_order(self):
         head = self.mtable.horizontalHeader()
@@ -442,9 +442,7 @@ class VipTab(QWidget):
         head.setSectionsMovable(True)                       # drag a column header to arrange them your own way (remembered)
         for visual, name in enumerate(self.COLUMN_ORDER):
             head.moveSection(head.visualIndex(names.index(name)), visual)
-        head.setStretchLastSection(False)
-        head.setDefaultSectionSize(130)                     # (what the link column gets when the others fill the width: its title needs more than the usual 100)
-        head.setSectionResizeMode(names.index("VIP link"), head.ResizeMode.Stretch)       # the link column takes the spare width
+        head.setStretchLastSection(True)                    # the last column takes the spare width (every column keeps the width it was given, so no title is ever squeezed)
 
     def update_buttons(self):
         sel = self._sel() is not None
