@@ -200,6 +200,10 @@ fun SettingsScreen(sv: Services, part: String = "settings") {
             }
         }
         if (part == "settings") BackupSection(sv) { msg = it }
+        if (part == "settings") Section("LEGAL", collapsible = true) {
+            QuietButton("Terms of use") { openUrl(ctx, "https://github.com/AO-Miko/roblox-manager/blob/main/TERMS.md") }
+            QuietButton("Privacy policy") { openUrl(ctx, "https://github.com/AO-Miko/roblox-manager/blob/main/PRIVACY.md") }
+        }
         if (part == "settings") Section("ACCOUNT", collapsible = true) { DangerButton("Sign out") { confirmSignOut = true } }
         if (msg.isNotEmpty()) Text(msg, color = C.muted, fontSize = 12.sp)
     }

@@ -165,6 +165,19 @@ check("Android: no backups, no plain http, no extra permissions beyond internet,
       and sorted(re.findall(r'uses-permission android:name="([^"]+)"', manifest)) == ["android.permission.INTERNET", "android.permission.POST_NOTIFICATIONS", "android.permission.REQUEST_INSTALL_PACKAGES"])
 check("Android: the only package the app asks about is Roblox", re.findall(r'<package android:name="([^"]+)"', manifest) == ["com.roblox.client"])
 login = (ROOT / "android/app/src/main/java/app/robloxmanager/ui/LoginScreen.kt").read_text(encoding="utf-8")
+import re as _re
+privacy = (ROOT / "PRIVACY.md").read_text(encoding="utf-8")
+terms = (ROOT / "TERMS.md").read_text(encoding="utf-8")
+code = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for pat in ("linux/*.py", "android/app/src/main/java/**/*.kt") for p in ROOT.glob(pat))
+hosts = {h.lower() for h in _re.findall(r"https?://([A-Za-z0-9.-]+\.[A-Za-z]{2,})", code)}
+LINKS_ONLY = {"www.gnu.org", "play.google.com", "flathub.org", "docs.github.com"}          # (only shown as text or opened when the user clicks; not data the app sends)
+missing = sorted(h for h in hosts - LINKS_ONLY if not h.endswith("roblox.com") and h not in privacy)
+check("the privacy policy names every outside address the apps use (besides roblox.com)", not missing, str(missing))
+check("the privacy policy covers roblox.com, the opt-in services and the public signed lists", all(x in privacy for x in ("roblox.com", "ipwho.is", "data.roseal.live", "bans.json", "roles.json", "policy.json", "notifications.json")))
+check("the terms and the privacy policy are linked from the README and from both apps",
+      "TERMS.md" in (ROOT / "README.md").read_text(encoding="utf-8") and "PRIVACY.md" in (ROOT / "README.md").read_text(encoding="utf-8")
+      and all(x in (ROOT / f).read_text(encoding="utf-8") for f in ("linux/tab_settings.py", "android/app/src/main/java/app/robloxmanager/ui/HomeSettings.kt") for x in ("TERMS.md", "PRIVACY.md")))
+check("the terms mention the ban list, bans and the licence", all(x in terms for x in ("Bans", "GNU General Public License", "unofficial")))
 installer = (ROOT / "android/app/src/main/java/app/robloxmanager/Installer.kt").read_text(encoding="utf-8")
 check("Android: an update is installed through a PackageInstaller session (not by opening the file), and only after the install permission is granted",
       "PackageInstaller" in installer and "package-archive" not in installer and installer.index("canRequestPackageInstalls") < installer.index("createSession"))

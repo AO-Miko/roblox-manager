@@ -7,6 +7,8 @@ update themselves from this repository, on a **Stable** or an early-access **Bet
 Downloads are on the [Releases page](https://github.com/AO-Miko/roblox-manager/releases/latest) (the files are named with the version, for example
 `Roblox-Manager-Setup-1.9.0.0.0.exe`; see [Versions](#versions)).
 
+By using it you agree to the [Terms of use](TERMS.md); how your data is handled is in the [Privacy policy](PRIVACY.md).
+
 ## What is in it
 
 | Page | What it does |
