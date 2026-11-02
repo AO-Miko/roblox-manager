@@ -1,4 +1,4 @@
-"""Test of the navigation: side bar, page header, search (Ctrl+K), shortcuts, compact side bar. Run: QT_QPA_PLATFORM=offscreen python3 tests/test_nav.py"""
+"""Test of the navigation: top bar, page header, search (Ctrl+K), shortcuts, compact top bar. Run: QT_QPA_PLATFORM=offscreen python3 tests/test_nav.py"""
 import os
 import sys
 import tempfile
@@ -43,9 +43,9 @@ w.show()
 spin(0.3)
 
 titles = [nav.base_title(w.tabs.tabText(i))[0] for i in range(w.tabs.count())]
-check("the side bar has one entry per page, in the same order", [i.title for i in w.sidebar.items] == titles, [i.title for i in w.sidebar.items])
-check("the tab bar itself is hidden (the side bar replaces it)", not w.tabs.tabBar().isVisible())
-check("the first page is marked in the side bar and shown in the header", w.sidebar.items[0].isChecked() and w.header.title.text() == "Home" and w.header.sub.text())
+check("the top bar has one entry per page, in the same order", [i.title for i in w.sidebar.items] == titles, [i.title for i in w.sidebar.items])
+check("the tab bar itself is hidden (the top bar replaces it)", not w.tabs.tabBar().isVisible())
+check("the first page is marked in the top bar and shown in the header", w.sidebar.items[0].isChecked() and w.header.title.text() == "Home" and w.header.sub.text())
 w.sidebar.items[3].click(); spin(0.1)
 check("clicking an entry opens the page", w.tabs.currentIndex() == 3 and w.sidebar.items[3].isChecked() and not w.sidebar.items[0].isChecked() and w.header.title.text() == "VIP servers")
 check("the window title names the page", w.windowTitle() == "VIP servers - Roblox Manager", w.windowTitle())
@@ -98,51 +98,17 @@ check("choosing a loaded group opens Groups with it selected", w.current_page() 
       w.tabs.currentIndex())
 w.palette_box.close()
 
-# narrow window: icons only
+# narrow window: one Pages menu
 w.resize(820, 700); spin(0.2)
-check("a narrow window shrinks the side bar to icons", w.sidebar.width() == nav.Sidebar.COMPACT and all(i.compact for i in w.sidebar.items) and not w.sidebar.brand.isVisible())
-check("...and every icon still says its name as a tooltip", all(i.toolTip().startswith(i.title) for i in w.sidebar.items))
-w.resize(1180, 760); spin(0.2)
-check("a wide window brings the full side bar back", w.sidebar.width() == nav.Sidebar.FULL and not any(i.compact for i in w.sidebar.items) and w.sidebar.brand.isVisible())
+check("a narrow window turns the row of pages into one Pages button", not w.sidebar.row.isVisible() and w.sidebar.toggle.isVisible() and all(i.compact for i in w.sidebar.items))
+w.resize(1280, 760); spin(0.2)
+check("a wide window brings the row of pages back", w.sidebar.row.isVisible() and not w.sidebar.toggle.isVisible() and not any(i.compact for i in w.sidebar.items) and w.sidebar.brand.isVisible())
+check("the open page is the one marked in the row, and every page says its name as a tooltip", sum(i.isChecked() for i in w.sidebar.items) == 1 and all(i.toolTip().startswith(i.title) for i in w.sidebar.items))
 
-# every page has an icon and a description
-check("every page has an icon, a group and a help line", all(not nav.icon_path(t).isEmpty() and nav.PAGES[t][1] for t in titles), titles)
-
-
-# ---- the menu can be collapsed, and every group can be folded
-import json
-sb = w.sidebar
-w.tabs.setCurrentIndex(0); spin(0.1)
-check("the menu has a collapse button at the top", sb.toggle.isVisible() and "Collapse" in sb.toggle.toolTip())
-sb.toggle.click(); spin(0.1)
-check("pressing it collapses the menu to icons (also in a wide window) and the button says Expand", sb.compact and sb.width() == nav.Sidebar.COMPACT and "Expand" in sb.toggle.toolTip() and sb.toggle.isVisible() and not sb.brand.isVisible())
-w.resize(1300, 760); spin(0.1)
-check("...and it stays collapsed when the window is wide", sb.width() == nav.Sidebar.COMPACT)
-sb.toggle.click(); spin(0.1)
-check("pressing again opens the menu", not sb.compact and sb.width() == nav.Sidebar.FULL and sb.brand.isVisible())
-heads = {h.text(): h for h in sb.group_labels}
-check("the groups have headers with an arrow: SOCIAL, ROBLOX, TOOLS, STAFF", list(heads) == ["SOCIAL", "ROBLOX", "TOOLS", "STAFF"], list(heads))
-social = [i for i in sb.items if i.group_label is heads["SOCIAL"]]
-check("all pages of a group are shown", all(i.isVisible() for i in social) and len(social) == 2)
-heads["SOCIAL"].click(); spin(0.1)
-check("pressing a group header hides its pages (and the header says so)", not any(i.isVisible() for i in social) and heads["SOCIAL"].collapsed and "Show" in heads["SOCIAL"].toolTip() and heads["ROBLOX"].isVisible())
-check("...the other groups are untouched", all(i.isVisible() for i in sb.items if i.group_label is heads["ROBLOX"]))
-w.tabs.setCurrentIndex(1); spin(0.1)
-check("a folded group still shows the page you are on", social[0].isVisible() and not social[1].isVisible(), [i.isVisible() for i in social])
-w.tabs.setCurrentIndex(0); spin(0.1)
-check("...and hides it again when you leave", not social[0].isVisible())
-w.resize(820, 700); spin(0.1)
-check("in the icon-only menu nothing is hidden by a fold (there are no headers to open it again)", all(i.isVisible() for i in social) and not heads["SOCIAL"].isVisible())
-w.resize(1180, 760); spin(0.1)
-heads["TOOLS"].click(); spin(0.1)
-w._state_on = True; w._save_state()
-saved = json.loads(w.STATE_FILE.read_text())
-check("which groups are folded and whether the menu is collapsed are remembered", saved["groups_collapsed"] == ["SOCIAL", "TOOLS"] and saved["menu_collapsed"] is False, saved.get("groups_collapsed"))
-sb.collapsed.clear(); sb._apply()
-sb.restore(saved); spin(0.1)
-check("...and come back after a restart", sb.collapsed == {"SOCIAL", "TOOLS"} and not social[0].isVisible())
-heads["SOCIAL"].click(); heads["TOOLS"].click(); spin(0.1)
-check("pressing the header again shows the pages", all(i.isVisible() for i in social) and not sb.collapsed)
+# every page has a group and a help line (the search uses them)
+check("every page has a group and a help line", all(nav.PAGES[t][1] for t in titles), titles)
+check("the top bar has no group headers", w.sidebar.group_labels == [])
+check("the top bar fits its row at the normal window width", w.width() >= w.sidebar.needed(), (w.width(), w.sidebar.needed()))
 
 # ---- the reload button in the page header
 w.tabs.setCurrentIndex(0); spin(0.1)

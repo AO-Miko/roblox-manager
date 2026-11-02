@@ -69,15 +69,16 @@ class MainWindow(QMainWindow):
     def __init__(self, client=None, auto_login=True):
         super().__init__()
         self.setWindowTitle("Roblox Manager")
-        self.resize(1180, 760)
+        self.resize(1280, 780)
         self.setMinimumSize(560, 420)
         self._dress()
         settings.on_change(lambda k, v: k in (None, "ui.theme", "ui.accent", "ui.text_size") and self._dress())       # a change in Settings > Looks shows at once
         theme.follow_system(QApplication.instance(), rbx.STATE_DIR / "ui-assets")
         self.ctx = Context(client or rbx.Client(), self)
         self.tabs = QTabWidget()
-        self.tabs.tabBar().hide()               # the side bar is the way around now (the tab widget still holds the pages, their titles and the counts)
+        self.tabs.tabBar().hide()               # the top bar is the way around now (the tab widget still holds the pages, their titles and the counts)
         self.tabs.setDocumentMode(True)
+        self.tabs.setContentsMargins(12, 0, 12, 6)          # (a steady gutter beside every page, in line with the page title)
         self.account = AccountTab(self.ctx)
         self.discover = DiscoverTab(self.ctx)
         self.home = HomePage(self.account, self.discover)            # Home: your account, and Discover (games) inside it
@@ -105,7 +106,7 @@ class MainWindow(QMainWindow):
         self.tabs.currentChanged.connect(lambda i: self.tabs.widget(i).ensure_loaded())
         # quick account switch, visible on every tab
         self.acct_combo = QComboBox()
-        self.acct_combo.setMinimumWidth(190)
+        self.acct_combo.setMinimumWidth(150)
         self.acct_combo.setToolTip("The account in use. Pick another to switch to it, or add one.")
         self.acct_combo.activated.connect(self._account_picked)
         import updater
@@ -119,18 +120,13 @@ class MainWindow(QMainWindow):
         self.tabs.currentChanged.connect(lambda i: self.header.set_reloadable(self._reloadable(self.tabs.widget(i).page)))
         self._unread = 0
         self.tabs.currentChanged.connect(lambda i: self._retitle())
-        right = QWidget()
-        rl = QVBoxLayout(right)
-        rl.setContentsMargins(0, 0, 0, 0)
-        rl.setSpacing(0)
-        rl.addWidget(self.header)
-        rl.addWidget(self.tabs, 1)
         shell = QWidget()
-        sl = QHBoxLayout(shell)
+        sl = QVBoxLayout(shell)                 # the bar along the top, the page header, then the page
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(0)
         sl.addWidget(self.sidebar)
-        sl.addWidget(right, 1)
+        sl.addWidget(self.header)
+        sl.addWidget(self.tabs, 1)
         self.stack = QStackedWidget()                     # page 0: the app; page 1: 'update required' (see policy.py), which covers everything
         self.lock_page = UpdateRequiredPage(self.ctx, restart=lambda: self.settings_tab.restart_app())
         self.stack.addWidget(shell)
@@ -147,7 +143,7 @@ class MainWindow(QMainWindow):
         self._fill_accounts()
         self.counts = {}
         self.ctx.counts.connect(self._on_count)
-        self.notices.reload()                          # the red number in the side bar, from the saved list (also without a network)
+        self.notices.reload()                          # the red number in the top bar, from the saved list (also without a network)
         self.ctx.signed_out.connect(lambda: [self.ctx.counts.emit(k, None) for k in ("friends", "requests", "followers", "following", "blocked", "groups", "vip")])
         self._restore_state(auto_login)
         self.update_admin()
@@ -173,7 +169,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
-        self.sidebar.set_auto_compact(self.width() < 1000)            # a narrow window keeps only the icons, so the pages get the room
+        self.sidebar.set_auto_compact(self.width() < self.sidebar.needed())            # a window too narrow for every page name turns them into one Pages menu
 
     # ---- search (Ctrl+K) and reload (F5)
     def current_page(self):

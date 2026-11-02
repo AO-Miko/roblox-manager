@@ -252,7 +252,7 @@ class AccountTab(QWidget):
         steps = QHBoxLayout()
         steps.setSpacing(12)
         for n, (head, text) in enumerate((("Sign in", "With your password and 2-step code, in a browser window, or with a pasted cookie."),
-                                          ("Look around", "People, Groups, VIP servers, Money and Discover are on the left."),
+                                          ("Look around", "People, Groups, VIP servers, Money and Discover are in the bar along the top."),
                                           ("Stay in control", "Bulk actions ask first, and every request is in the Request log.")), 1):
             tile = QFrame()
             tile.setProperty("tile", True)

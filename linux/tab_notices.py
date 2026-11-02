@@ -1,4 +1,4 @@
-"""Notifications page: messages from the developer (see notices.py). Unread ones have a red dot, and the side bar shows how many there are."""
+"""Notifications page: messages from the developer (see notices.py). Unread ones have a red dot, and the top bar shows how many there are."""
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
