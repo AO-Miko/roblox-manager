@@ -15,6 +15,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  checks:
+    name: Code checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Python mistakes that only show when the line runs (undefined names, duplicate definitions, syntax errors)
+        run: |
+          pip install ruff==0.8.6
+          ruff check --select E9,F63,F7,F82,F811 --output-format concise linux tests tools
+      - name: Shell scripts (shellcheck is on the runner)
+        run: shellcheck -S error tools/*.sh
+      - name: Every JSON file in the repository is valid JSON
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          bad = 0
+          for p in sorted(pathlib.Path(".").rglob("*.json")):
+              if any(part in (".git", "node_modules", "build", ".gradle") for part in p.parts):
+                  continue
+              try:
+                  json.loads(p.read_text(encoding="utf-8"))
+              except ValueError as e:
+                  print(f"{p}: {e}"); bad += 1
+          sys.exit(1 if bad else 0)
+          PY
+
   linux:
     name: Tests on Linux
     runs-on: ubuntu-latest
@@ -26,6 +56,8 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/windows/requirements.txt
       - name: System libraries Qt needs
         run: |
           sudo apt-get update
@@ -100,6 +132,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+          cache: gradle
       - name: Unit tests
         working-directory: android
         run: ./gradlew --no-daemon --console=plain :app:testDebugUnitTest
