@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.17.11.4.5",
+    "date": "2026-11-02",
+    "changes": [
+      "A new look on the PC and the phone: cool blue-grey panels (dark and light) with a blue accent, a narrow icon bar on the left with your picture and user name at the top, editor-style tabs and a slim title bar. Pages have far fewer buttons: one Actions menu per page, right-click and double-click on rows, Select menus, and lists that load as you scroll. The game page now lists the game's game passes, products and badges (and which you own or earned). The phone got the same look, your picture and name on Home, and More menus."
+    ]
+  },
+  {
     "version": "1.16.11.4.5",
     "date": "2026-11-02",
     "changes": [
