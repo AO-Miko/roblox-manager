@@ -1196,7 +1196,7 @@ class Client:
                     raise
                 last = e
                 log.info("vip permissions refused as '%s': %s", name, e)
-        raise last
+        raise last or RobloxError(0, "no permission format was tried")
 
     def headshots(self, user_ids, size="48x48"):
         """{user id: image url} for avatar headshots (public)."""

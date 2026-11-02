@@ -1,4 +1,5 @@
 """Tests for linux/updater.py with a throw-away update server. Run: python3 tests/test_updater.py"""
+import pathlib
 import importlib
 import json
 import os
@@ -37,7 +38,7 @@ def keygen(name):
 
 good, evil = keygen("good"), keygen("evil")
 signers = base / "allowed_signers"
-signers.write_text('release@test namespaces="git" ' + " ".join(open(str(good) + ".pub").read().split()[:2]) + "\n")
+signers.write_text('release@test namespaces="git" ' + " ".join(pathlib.Path(str(good) + ".pub").read_text().split()[:2]) + "\n")
 
 server = base / "server.git"
 sh("git", "init", "-q", "--bare", "-b", "release", str(server))

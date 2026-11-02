@@ -273,7 +273,7 @@ x2, y2 = (int(v) for v in worldmap.project(10, -35, 720, 360))
 check("...land and sea have their own colours", land_px != QColor(img.pixel(x2, y2)).name() and QColor(img.pixel(x2, y2)).name() == T["surface"], (land_px, QColor(img.pixel(x2, y2)).name()))
 got = []
 m.picked.connect(lambda ids: got.append(ids))
-from PySide6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtTest import QTest
 QTest.mouseClick(m, Qt.MouseButton.LeftButton, pos=QPoint(*(int(v) for v in worldmap.project(50.1, 8.7, 720, 360))))
 check("pressing a dot gives the servers there", got == [["a", "c"]], got)

@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QPlainTextEdit, QVBoxLayout
 
-import rbx
 from ui_common import button
 
 

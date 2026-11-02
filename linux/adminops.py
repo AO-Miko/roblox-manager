@@ -7,7 +7,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import plat
 import rbx
 
 CONFIG = rbx.CONFIG_DIR / "admin.json"

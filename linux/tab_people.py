@@ -7,7 +7,7 @@ import json
 import time
 from datetime import datetime
 
-from PySide6.QtCore import QItemSelectionModel, Qt, QTimer
+from PySide6.QtCore import QItemSelectionModel, QTimer
 from PySide6.QtWidgets import (
     QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMessageBox, QTableWidget, QTabWidget, QVBoxLayout, QWidget,
 )

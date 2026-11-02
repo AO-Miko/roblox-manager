@@ -16,7 +16,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
 (tmp / "app" / "VERSION").write_text("1.0.0.0.0\n")
 sys.path.insert(0, str(ROOT / "linux"))
 import browser_login  # noqa: F401
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFileDialog, QPushButton

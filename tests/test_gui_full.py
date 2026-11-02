@@ -1,5 +1,7 @@
 """The whole desktop app against a fake Roblox (316 checks): every tab, bulk actions, rate limits, accounts, settings.
 Run: QT_QPA_PLATFORM=offscreen python3 tests/test_gui_full.py   (RM_SRC = the app folder, default linux/)"""
+import io
+import pathlib
 import json, os, re, sys, time
 import tempfile; here = tempfile.mkdtemp(prefix="guitest-")
 os.environ["ROBLOX_MANAGER_CONFIG"] = os.path.join(here, "cfg4"); os.environ["ROBLOX_MANAGER_STATE"] = os.path.join(here, "state4")
@@ -593,7 +595,7 @@ check("a refused request is reported to you, not hidden", "Could not load" in w.
 client.fail[r"PATCH groups.roblox.com/v1/groups/77/(description|status)"] = 403; asked.clear()
 QInputDialog.getText = staticmethod(lambda *a, **k: ("x", True)); w.groups.set_status(); spin(1.0)
 check("a refused action pops up Roblox's answer", any(t == "warning" and "403" in m for t, m in asked), str(asked[:1]))
-rbx_logged = open(os.path.join(os.environ["ROBLOX_MANAGER_STATE"], "manager.log")).read() if os.path.exists(os.path.join(os.environ["ROBLOX_MANAGER_STATE"], "manager.log")) else ""
+rbx_logged = pathlib.Path(os.environ["ROBLOX_MANAGER_STATE"], "manager.log").read_text() if os.path.exists(os.path.join(os.environ["ROBLOX_MANAGER_STATE"], "manager.log")) else ""
 check("the log never contains the cookie", COOKIE[:30] not in rbx_logged)
 w.vip.load_mine()
 check("the VIP link column fills in by itself", wait(lambda: sum(1 for r in range(w.vip.mtable.rowCount()) if w.vip.mtable.item(r, 5) and "privateServerLinkCode=" in w.vip.mtable.item(r, 5).text()) >= 1), str([w.vip.mtable.item(r, 5).text() if w.vip.mtable.item(r, 5) else None for r in range(w.vip.mtable.rowCount())]))
@@ -819,7 +821,7 @@ check("...and a transaction list", wait(lambda: w.money.table.rowCount() > 0), w
 _fd, tmp = tempfile.mkstemp(suffix=".csv"); os.close(_fd); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmp, ""))
 import ui_common as uc
 uc.export_csv(w.money.table, w, name="t")
-rows = list(_csv.reader(open(tmp, encoding="utf-8-sig")))
+rows = list(_csv.reader(io.StringIO(pathlib.Path(tmp).read_text(encoding="utf-8-sig"))))
 check("Export CSV writes the headers and every row", rows[0][:3] == ["Date", "Robux", "Type"] and len(rows) == w.money.table.rowCount() + 1, rows[:2])
 w.money.table.selectRow(0)
 check("copy/export can use just the selected rows", len(uc.table_rows(w.money.table, True)) == 2)
@@ -1039,7 +1041,7 @@ w.vip.mine = [dict(SV("alpha", 8101, 1, True, price=100), _state=""), dict(SV("b
 check("the cells still line up with their headers (Status next to Game, Cost after Expires)", w.vip.mtable.item(0, 2).text() in ("ON", "OFF") and w.vip.mtable.item(0, 7).text() in ("Paid 100 R$", "Free (Roblox Plus)"))
 _fd, tmpv = tempfile.mkstemp(suffix=".csv"); os.close(_fd); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmpv, ""))
 uc.export_csv(w.vip.mtable, w, name="v")
-rowsv = list(_csv.reader(open(tmpv, encoding="utf-8-sig")))
+rowsv = list(_csv.reader(io.StringIO(pathlib.Path(tmpv).read_text(encoding="utf-8-sig"))))
 check("a CSV export follows the order on screen", rowsv[0] == ["Game", "Status", "Expires", "Cost", "Server", "VIP id", "VIP link", "Copies"] and rowsv[1][0] in ("G1", "G2") and rowsv[1][1] in ("ON", "OFF") and rowsv[1][3] in ("Paid 100 R$", "Free (Roblox Plus)"), rowsv[:2])
 w.vip.mtable.sortByColumn(7, Qt.SortOrder.AscendingOrder)
 check("sorting by a column still works after the reorder (Cost)", [w.vip.mtable.item(r, 7).text() for r in range(2)] == sorted(w.vip.mtable.item(r, 7).text() for r in range(2)))
@@ -1149,7 +1151,7 @@ rbx.record_request("tester", "GET", "https://friends.roblox.com/v1/b", None, 200
 wait(lambda: rq.table.rowCount() == 2)
 _fd, tmpr = tempfile.mkstemp(suffix=".csv"); os.close(_fd); QFileDialog.getSaveFileName = staticmethod(lambda *a, **k: (tmpr, ""))
 uc.export_csv(rq.table, rq, name="r")
-rowsr = list(_csv.reader(open(tmpr, encoding="utf-8-sig")))
+rowsr = list(_csv.reader(io.StringIO(pathlib.Path(tmpr).read_text(encoding="utf-8-sig"))))
 check("the list can be exported as CSV", rowsr[0] == ["Time", "Account", "Method", "Request", "Status", "ms", "Notes", "Rate limit (from Roblox)"] and len(rowsr) == 3, rowsr[:2])
 rq.clear()
 

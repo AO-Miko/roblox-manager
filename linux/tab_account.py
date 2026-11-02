@@ -18,7 +18,7 @@ import relation
 import settings
 from signin import SignInDialog
 from ui_common import (
-    PRESENCE, PRESENCE_COLOUR, button, cell, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
+    PRESENCE, PRESENCE_COLOUR, button, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
 )
 from theme import T
 

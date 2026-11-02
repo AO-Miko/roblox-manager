@@ -16,7 +16,6 @@ problem is written to update.log and the installed version is used as it is.
   updater.py --rollback   go back to the previous version
   updater.py --status     print what is installed, as JSON
 """
-import io
 import json
 import os
 import re

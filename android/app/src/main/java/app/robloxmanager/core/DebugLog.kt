@@ -234,5 +234,6 @@ object Debug {
             inner.write(b)
             if (b == '\n'.code) { val s = buf.toString("UTF-8").trim(); if (s.isNotEmpty()) event("output", s, level); buf.reset() } else if (buf.size() < 4000) buf.write(b)
         }
+        override fun write(b: ByteArray, off: Int, len: Int) { for (i in off until off + len) write(b[i].toInt()) }
     }, true)
 }

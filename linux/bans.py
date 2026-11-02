@@ -30,7 +30,6 @@ def _cache_file():
 def _net(*args):
     """Tell the app debug log about a download (when this runs inside the app; the launcher and the tests may not have it)."""
     try:
-        import debuglog
         _net(*args)
     except Exception:           # noqa: BLE001
         pass

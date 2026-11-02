@@ -1,4 +1,5 @@
 """Test of the update channels (stable / beta) in linux/updater.py, with a throw-away git server and a fake GitHub. Run: python3 tests/test_channels.py"""
+import pathlib
 import importlib
 import json
 import os
@@ -31,7 +32,7 @@ def sh(*a, cwd=None):
 key = base / "good"
 sh("ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "good", "-f", str(key))
 signers = base / "allowed_signers"
-signers.write_text('release@test namespaces="git" ' + " ".join(open(str(key) + ".pub").read().split()[:2]) + "\n")
+signers.write_text('release@test namespaces="git" ' + " ".join(pathlib.Path(str(key) + ".pub").read_text().split()[:2]) + "\n")
 server = base / "server.git"
 sh("git", "init", "-q", "--bare", "-b", "release", str(server))
 dev = base / "dev"
