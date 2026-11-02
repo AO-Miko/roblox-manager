@@ -330,7 +330,7 @@ class VipTab(QWidget):
         frow.addWidget(self.b_alllinks)
         frow.addWidget(self.b_findgone)
         tl.addLayout(frow)
-        self.mtable = make_table(["Game", "Server", "Status", "Expires", "VIP id", "VIP link", "Copies", "Cost"], [230, 190, 90, 140, 105, 240, 70, 175],
+        self.mtable = make_table(["Game", "Server", "Status", "Expires", "VIP id", "VIP link", "Copies", "Cost"], [215, 175, 90, 140, 105, 240, 70, 150],
                                 empty="No VIP servers to show.\nSign in on the Home tab, or loosen the filters above.")
         self.mtable.setSelectionMode(self.mtable.SelectionMode.ExtendedSelection)
         self.apply_column_order()
