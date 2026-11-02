@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.11.4.4",
+    "date": "2026-11-02",
+    "changes": [
+      "Sign-in web view: no web view is kept in app state any more (clears the last code-scan content-access alerts); no change in how the app looks or works"
+    ]
+  },
+  {
     "version": "1.16.10.4.4",
     "date": "2026-11-02",
     "changes": [
