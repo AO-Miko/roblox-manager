@@ -165,7 +165,10 @@ check("Android: no backups, no plain http, no extra permissions beyond internet,
       and sorted(re.findall(r'uses-permission android:name="([^"]+)"', manifest)) == ["android.permission.INTERNET", "android.permission.POST_NOTIFICATIONS", "android.permission.REQUEST_INSTALL_PACKAGES"])
 check("Android: the only package the app asks about is Roblox", re.findall(r'<package android:name="([^"]+)"', manifest) == ["com.roblox.client"])
 login = (ROOT / "android/app/src/main/java/app/robloxmanager/ui/LoginScreen.kt").read_text(encoding="utf-8")
-check("Android: the login web view reads no files or other apps' content, and only follows https links to Roblox", "allowFileAccess = false" in login and "allowContentAccess = false" in login
+installer = (ROOT / "android/app/src/main/java/app/robloxmanager/Installer.kt").read_text(encoding="utf-8")
+check("Android: an update is installed through a PackageInstaller session (not by opening the file), and only after the install permission is granted",
+      "PackageInstaller" in installer and "package-archive" not in installer and installer.index("canRequestPackageInstalls") < installer.index("createSession"))
+check("Android: the login web view reads no files or other apps' content, and only follows https links to Roblox", "setAllowFileAccess(false)" in login and "setAllowContentAccess(false)" in login
       and "MIXED_CONTENT_NEVER_ALLOW" in login and "shouldOverrideUrlLoading" in login and 'u.scheme == "https"' in login and "isRoblox" in login)
 check("Android: no JavaScript bridge into the app", "addJavascriptInterface" not in "".join(p.read_text(encoding="utf-8") for p in (ROOT / "android/app/src/main/java").rglob("*.kt")))
 
