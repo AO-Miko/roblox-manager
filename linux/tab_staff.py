@@ -88,7 +88,6 @@ class StaffTab(QWidget):
         left = QVBoxLayout()
         head = QHBoxLayout()
         head.addStretch()
-        head.addWidget(button("Refresh", self.reload, "Fetch the staff list and their profiles again"))
         left.addLayout(head)
         self.list = QListWidget()
         self.list.setMinimumWidth(250)

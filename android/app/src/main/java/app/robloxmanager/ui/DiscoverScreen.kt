@@ -69,6 +69,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.robloxmanager.Services
+import app.robloxmanager.core.GameItem
+import app.robloxmanager.core.developerProducts
+import app.robloxmanager.core.gamePasses
+import app.robloxmanager.core.universeBadges
 import app.robloxmanager.core.GameCard
 import app.robloxmanager.core.GameDetails
 import app.robloxmanager.core.Features
@@ -539,20 +543,26 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                     }
                 }
             }
-            if (fav != null) QuietButton(if (fav == true) "★ Favorited" else "☆ Favorite", enabled = !favBusy) {
-                val want = fav != true
-                favBusy = true
-                scope.launch {
-                    try { sv.api.setFavorite(card.universeId, want); fav = want; note = if (want) "Added to your favorites." else "Removed from your favorites." }
-                    catch (e: CancellationException) { throw e } catch (e: Exception) { note = errorText(e) } finally { favBusy = false }
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuietButton("Open on roblox.com") { openUrl(ctx, Games.pageUrl(place)) }
-                wikiUrl?.let { u -> QuietButton("Game wiki") { openUrl(ctx, u) } }
-                QuietButton("Copy link") {
-                    (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.setPrimaryClip(ClipData.newPlainText("game", Games.pageUrl(place)))
-                    note = "Game link copied."
+            var more by remember { mutableStateOf(false) }
+            Box {
+                QuietButton("More  ▾") { more = true }
+                DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
+                    if (fav != null) DropdownMenuItem(text = { Text(if (fav == true) "★ Remove from favorites" else "☆ Add to favorites") }, enabled = !favBusy, onClick = {
+                        more = false
+                        val want = fav != true
+                        favBusy = true
+                        scope.launch {
+                            try { sv.api.setFavorite(card.universeId, want); fav = want; note = if (want) "Added to your favorites." else "Removed from your favorites." }
+                            catch (e: CancellationException) { throw e } catch (e: Exception) { note = errorText(e) } finally { favBusy = false }
+                        }
+                    })
+                    DropdownMenuItem(text = { Text("Open on roblox.com") }, onClick = { more = false; openUrl(ctx, Games.pageUrl(place)) })
+                    wikiUrl?.let { u -> DropdownMenuItem(text = { Text("Game wiki") }, onClick = { more = false; openUrl(ctx, u) }) }
+                    DropdownMenuItem(text = { Text("Copy link") }, onClick = {
+                        more = false
+                        (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.setPrimaryClip(ClipData.newPlainText("game", Games.pageUrl(place)))
+                        note = "Game link copied."
+                    })
                 }
             }
             if (note.isNotEmpty()) Text(note, color = C.muted, fontSize = 12.sp)
@@ -651,6 +661,54 @@ fun GameScreen(sv: Services, card: GameCard, icons: IconBook, onBack: () -> Unit
                 Text("Description", fontWeight = FontWeight.Bold)
                 Text(about, color = C.muted, fontSize = 13.sp)
             }
+        }
+        GameItems(sv, card.universeId)
+    }
+}
+
+/** The game passes, developer products and badges of a game (public lists, loaded when the page opens). A tap copies the id; a game pass or badge opens on roblox.com from the menu. */
+@Composable
+private fun GameItems(sv: Services, universeId: Long) {
+    val ctx = LocalContext.current
+    val passes = rememberLoader(universeId) { sv.api.gamePasses(universeId) }
+    val products = rememberLoader(universeId) { sv.api.developerProducts(universeId) }
+    val badges = rememberLoader(universeId) { sv.api.universeBadges(universeId) }
+    ItemList("GAME PASSES", passes, "This game has no game passes.", { "https://www.roblox.com/game-pass/$it" }, ctx)
+    ItemList("PRODUCTS", products, "This game has no developer products.", null, ctx)
+    ItemList("BADGES", badges, "This game has no badges.", { "https://www.roblox.com/badges/$it" }, ctx)
+}
+
+@Composable
+private fun ItemList(title: String, loader: Loader<List<GameItem>>, empty: String, pageUrl: ((Long) -> String)?, ctx: Context) {
+    Section(title, collapsible = true) {
+        when (val s = loader.state) {
+            is Load.Ok -> if (s.value.isEmpty()) Text(empty, color = C.muted, fontSize = 13.sp) else Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${s.value.size} in all", color = C.muted, fontSize = 12.sp)
+                s.value.take(300).forEach { it ->
+                    var menu by remember { mutableStateOf(false) }
+                    Box {
+                        Card(onClick = { menu = true }) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(it.name.ifEmpty { "(no name)" }, fontWeight = FontWeight.Medium, maxLines = 2)
+                                    if (it.detail.isNotEmpty()) Text(it.detail, color = C.muted, fontSize = 12.sp, maxLines = 3)
+                                }
+                                Text(it.price?.let { p -> "R$ $p" } ?: if (it.onSale) "" else "off sale", color = C.muted, fontSize = 12.sp)
+                            }
+                        }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text("Copy id") }, onClick = {
+                                menu = false
+                                (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.setPrimaryClip(ClipData.newPlainText("id", it.id.toString()))
+                            })
+                            if (pageUrl != null) DropdownMenuItem(text = { Text("Open on roblox.com") }, onClick = { menu = false; openUrl(ctx, pageUrl(it.id)) })
+                        }
+                    }
+                }
+                if (s.value.size > 300) Text("… and ${s.value.size - 300} more", color = C.muted, fontSize = 12.sp)
+            }
+            is Load.Failed -> Text("Roblox did not give this list: ${s.message}", color = C.muted, fontSize = 13.sp)
+            else -> Text("Loading…", color = C.muted, fontSize = 13.sp)
         }
     }
 }

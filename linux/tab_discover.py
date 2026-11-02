@@ -7,7 +7,7 @@ import uuid
 
 from PySide6.QtCore import QRectF, QTimer, QUrl, Qt, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QPainter, QPixmap
-from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox, QPlainTextEdit, QScrollArea, QStackedWidget, QVBoxLayout,
+from PySide6.QtWidgets import (QComboBox, QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMenu, QMessageBox, QPlainTextEdit, QScrollArea, QStackedWidget, QTabWidget, QVBoxLayout,
                                QWidget)
 
 import games_store
@@ -20,7 +20,7 @@ import settings
 from worldmap import WorldMap, group_places
 from tab_staff import round_icon
 from theme import T
-from ui_common import FlowLayout, button, copy_text, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when
+from ui_common import FlowLayout, auto_more, button, fold_actions, copy_text, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when
 
 ICON_DIR = rbx.STATE_DIR / "gameicons"
 ROW_LIMIT = 16               # games shown per row of the home page
@@ -324,17 +324,13 @@ class GameDetail(QWidget):
         row = FlowLayout()
         self.b_play = button("Play", self.play, "Open the Roblox launcher and join this game", primary=True)
         self.b_vip = button("Join my VIP server", self.join_vip, "Open the Roblox launcher and join one of your own VIP servers of this game")
-        self.b_vip.hide()
         self.b_open = button("Open on roblox.com", self.open_page)
         self.b_wiki = button("Game wiki", self.open_wiki, "Open the game's community wiki (from RoSeal's list of game links)")
-        self.b_wiki.hide()                                    # (shown only for a game that has one)
         self.wiki_url = None
         self.b_copy = button("Copy link", self.copy_link)
         self.b_fav = button("Favorite", self.toggle_favorite, "Add this game to (or remove it from) your Roblox favorites")
-        self.b_fav.hide()
         self.favorited = None
-        for b in (self.b_play, self.b_vip, self.b_fav, self.b_open, self.b_wiki, self.b_copy):
-            row.addWidget(b)
+        row.addWidget(self.b_play)                               # Play stays in view; the rest of the game's actions are one menu (below, once the server list exists)
         info.addSpacing(8)
         info.addLayout(row)
         self.note = hint("")
@@ -393,25 +389,133 @@ class GameDetail(QWidget):
         self.b_stop_locate.hide()
         self.b_map = button("Show map", self.show_map, "Show the located servers on a world map")
         self.b_copy_link = button("Copy join link", self.copy_server_link, "Copy a link that opens Roblox on the selected server (anyone with Roblox can use it while the server is open)")
-        for w_ in (self.sort, self.order, self.b_servers, self.b_join_server, self.b_join_emptiest, self.b_more_servers, self.b_locate, self.b_stop_locate, self.b_map, self.b_copy_link):
+        for w_ in (self.sort, self.order, self.b_servers, self.b_stop_locate):
             srow.addWidget(w_)
         lay.addLayout(srow)
         self.server_table = make_table(["Players", "Max", "Ping (ms)", "FPS", "Server", "Location", "Running for", "Version"], [80, 60, 90, 60, 250, 170, 100, 100], empty="Press Find servers.")
         self.server_table.setMinimumHeight(150)
-        self.server_table.doubleClicked.connect(lambda _=None: self.join_selected())
         lay.addWidget(self.server_table)
+        auto_more(self.server_table, self.b_more_servers)
+        srow.addWidget(fold_actions(self.server_table, [self.b_join_server, self.b_join_emptiest, None, self.b_locate, self.b_map, self.b_copy_link], default=self.b_join_server))
+        row.addWidget(fold_actions(self.server_table, [self.b_vip, self.b_fav, None, self.b_open, self.b_wiki, self.b_copy], text="More", context=False))
+        for b in (self.b_vip, self.b_wiki, self.b_fav):           # (shown only when they apply: a VIP server of this game, a wiki, a signed-in account)
+            b.hide()
         self.server_note = hint("")
         self.server_note.setWordWrap(True)
         lay.addWidget(self.server_note)
         self.servers, self.server_cursor, self.server_gen, self.server_busy = [], "", 0, False
         self.locating.connect(lambda k, n: self.server_note.setText(f"Locating servers: {k}/{n}..."))
 
-        lay.addWidget(QLabel("<b>Description</b>"))
+        self.extra = QTabWidget()
+        self.extra.setProperty("sub", True)
         self.about = QPlainTextEdit()
         self.about.setReadOnly(True)
         self.about.setPlaceholderText("No description.")
         self.about.setMinimumHeight(120)
-        lay.addWidget(self.about, 1)
+        self.extra.addTab(self.about, "Description")
+        self.pass_table = make_table(["Game pass", "Price", "On sale", "You own it", "Creator", "Updated", "Id"], [250, 80, 80, 90, 160, 130, 110], empty="Loading the game passes...")
+        self.product_table = make_table(["Developer product", "Price", "On sale", "Updated", "Product id"], [300, 80, 80, 130, 120], empty="Loading the products...")
+        self.badge_table = make_table(["Badge", "What for", "Awarded", "Today", "Win rate", "You got it", "Created", "Id"], [190, 300, 90, 70, 80, 120, 130, 110], empty="Loading the badges...")
+        self.extra_open = {}
+        for table, title, opener in ((self.pass_table, "Game passes", lambda i: f"https://www.roblox.com/game-pass/{i}"),
+                                     (self.product_table, "Products", None), (self.badge_table, "Badges", lambda i: f"https://www.roblox.com/badges/{i}")):
+            table.setMinimumHeight(150)
+            b_open = button("Open on roblox.com", lambda _=False, t=table, o=opener: self._open_extra(t, o))
+            b_copy = button("Copy id", lambda _=False, t=table: self._copy_extra(t))
+            fold_actions(table, [b_open, b_copy] if opener else [b_copy], default=b_open if opener else None)
+            self.extra.addTab(table, title)
+        lay.addWidget(self.extra, 1)
+        lay.addWidget(hint("Right-click a game pass, product or badge to copy its id or open it on roblox.com; a double click opens it."))
+
+    # ---- game passes, products and badges (public lists, loaded in the background once per game)
+    EXTRA_TABS = (("pass_table", "Game passes"), ("product_table", "Products"), ("badge_table", "Badges"))
+
+    def _reset_extras(self):
+        for i, (name, title) in enumerate(self.EXTRA_TABS, 1):
+            table = getattr(self, name)
+            fill_table(table, [])
+            table.empty_text = f"Loading the {title.lower()}..."
+            self.extra.setTabText(i, title)
+        self.extra.setCurrentIndex(0)
+
+    def _open_extra(self, table, opener):
+        rows = selected_rows(table)
+        key = row_key(table, rows[0]) if rows and opener else None
+        if key:
+            open_url(opener(int(key)))
+
+    def _copy_extra(self, table):
+        rows = selected_rows(table)
+        key = row_key(table, rows[0]) if rows else None
+        if key:
+            copy_text(str(key))
+
+    def _load_extras(self, uid):
+        """One background job per list; each follows the page cursors (at most 20 pages of 100) and shows its rows when it is done."""
+        c = self.ctx.client
+
+        def lister(fetch):
+            def work():
+                items, cursor, pages = [], "", 0
+                while True:
+                    got, cursor = fetch(uid, cursor)
+                    items += got
+                    pages += 1
+                    if not cursor or pages >= 20:
+                        return items
+            return work
+        me = (self.ctx.me or {}).get("id") if self.ctx.logged_in else None
+
+        def badges():
+            items = lister(c.universe_badges)()
+            awards = {}
+            if me and items:
+                try:
+                    awards = c.badge_awards(me, [b["id"] for b in items])
+                except rbx.RobloxError:
+                    awards = {}                  # (the extra column is simply left empty)
+            return items, awards
+        jobs = (("pass_table", "Game passes", lister(c.game_passes), self._pass_rows), ("product_table", "Products", lister(c.developer_products), self._product_rows),
+                ("badge_table", "Badges", badges, lambda res: self._badge_rows(*res)))
+        for i, (name, title, work, to_rows) in enumerate(jobs, 1):
+            self.ctx.async_.run(work, lambda res, i=i, name=name, title=title, to_rows=to_rows: self._extras_loaded(uid, i, name, title, to_rows(res)),
+                                lambda e, name=name, title=title: self._extras_failed(uid, name, title))
+
+    def _extras_loaded(self, uid, index, name, title, rows_keys):
+        if not self.card or self.card["universeId"] != uid:
+            return
+        rows, keys = rows_keys
+        table = getattr(self, name)
+        table.empty_text = f"This game has no {title.lower()}."
+        fill_table(table, rows, keys=keys)
+        self.extra.setTabText(index, f"{title} ({len(rows):,})" if rows else title)
+
+    def _extras_failed(self, uid, name, title):
+        if self.card and self.card["universeId"] == uid:
+            getattr(self, name).empty_text = f"Roblox did not give the {title.lower()}. Select the game again to retry."
+            getattr(self, name).viewport().update()
+
+    @staticmethod
+    def _pass_rows(items):
+        rows = [[p.get("displayName") or p.get("name") or "", p["price"] if p.get("price") is not None else "", "yes" if p.get("isForSale") else "no",
+                 "yes" if p.get("isOwned") else "", (p.get("creator") or {}).get("name") or "", when(p.get("updated")), p["id"]] for p in items]
+        return rows, [p["id"] for p in items]
+
+    @staticmethod
+    def _product_rows(items):
+        rows = [[p.get("DisplayName") or p.get("Name") or "", p["PriceInRobux"] if p.get("PriceInRobux") is not None else "", "yes" if p.get("IsForSale") else "no",
+                 when(p.get("Updated")), p.get("ProductId") or ""] for p in items]
+        return rows, [p.get("ProductId") for p in items]
+
+    @staticmethod
+    def _badge_rows(items, awards=None):
+        awards = awards or {}
+        rows = []
+        for b in items:
+            st = b.get("statistics") or {}
+            rows.append([b.get("displayName") or b.get("name") or "", b.get("displayDescription") or b.get("description") or "", st.get("awardedCount", 0),
+                         st.get("pastDayAwardedCount", 0), f"{st.get('winRatePercentage', 0) or 0:.1f} %", when(awards.get(b["id"])), when(b.get("created")), b["id"]])
+        return rows, [b["id"] for b in items]
 
     # ---- show a game
     def show_game(self, card):
@@ -426,6 +530,7 @@ class GameDetail(QWidget):
         self.values["Genre"].setText(card.get("genre") or "-")
         self.values["Age rating"].setText(card.get("age") or "-")
         self.about.setPlainText("")
+        self._reset_extras()
         self.cover.setPixmap(QPixmap())
         self.cover.setText("")
         self.note.setText("")
@@ -446,6 +551,7 @@ class GameDetail(QWidget):
         self.b_fav.setVisible(self.ctx.logged_in)
         self.b_fav.setText("Favorite")
         uid, c = card["universeId"], self.ctx.client
+        self._load_extras(uid)
         if self.ctx.logged_in:
             self.ctx.async_.run(lambda: c.game_favorite_state(uid), lambda on: self._favorite_state(uid, on), lambda e: self.b_fav.hide())
 

@@ -137,7 +137,6 @@ class AdminTab(QWidget):
         row = QHBoxLayout()
         self.b_unban = button("Unban...", self.unban, "Unban the person selected in the list, or the id or username typed above (the reason box is then an optional note). Shows their profile and asks first.")
         row.addWidget(self.b_unban)
-        row.addWidget(button("Refresh", self.refresh))
         row.addStretch()
         lay.addLayout(row)
         lay.addWidget(QLabel("<b>Roles</b>"))

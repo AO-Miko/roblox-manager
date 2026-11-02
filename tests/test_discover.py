@@ -87,6 +87,17 @@ SERVERS_P1 = [{"id": f"aaaaaaaa-0000-0000-0000-00000000000{i}", "playing": i, "m
 SERVERS_P2 = [{"id": "aaaaaaaa-0000-0000-0000-000000000003", "playing": 3, "maxPlayers": 12, "ping": 53, "fps": 59.5}, {"id": "bbbbbbbb-0000-0000-0000-000000000009", "playing": 9, "maxPlayers": 12, "ping": 90, "fps": 30}]
 
 
+PASSES = [{"id": 11, "name": "VIP", "displayName": "VIP Pass", "price": 100, "isForSale": True, "isOwned": True, "creator": {"name": "Maker"}, "updated": "2026-10-01T00:00:00Z"},
+          {"id": 12, "name": "Old pass", "displayName": "Old pass", "price": None, "isForSale": False, "isOwned": False, "creator": {"name": "Maker"}, "updated": "2026-09-01T00:00:00Z"},
+          {"id": 13, "name": "Boost", "displayName": "Boost", "price": 50, "isForSale": True, "isOwned": False, "creator": {"name": "Maker"}, "updated": "2026-10-02T00:00:00Z"}]
+PRODUCTS = [{"ProductId": 701, "Name": "100 Coins", "DisplayName": "100 Coins", "PriceInRobux": 25, "IsForSale": True, "Updated": "2026-10-01T00:00:00Z"},
+            {"ProductId": 702, "Name": "Old coins", "DisplayName": "Old coins", "PriceInRobux": None, "IsForSale": False, "Updated": "2026-08-01T00:00:00Z"}]
+BADGES = [{"id": 9001, "name": "Welcome", "displayName": "Welcome", "displayDescription": "You joined", "enabled": True, "created": "2026-01-01T00:00:00Z",
+           "statistics": {"awardedCount": 1000, "pastDayAwardedCount": 3, "winRatePercentage": 12.5}},
+          {"id": 9002, "name": "Winner", "displayName": "Winner", "displayDescription": "You won", "enabled": True, "created": "2026-02-01T00:00:00Z",
+           "statistics": {"awardedCount": 20, "pastDayAwardedCount": 0, "winRatePercentage": 0.4}}]
+
+
 class FakeRoblox(rbx.Client):
     def get(self, url, params=None, **kw):
         log.append((url, dict(params or {})))
@@ -128,6 +139,16 @@ class FakeRoblox(rbx.Client):
             return {"data": [{"id": 1, "name": "Alpha Game", "rootPlace": {"id": 11}, "creator": {"name": "Maker"}}, {"id": 8, "name": "Favorite Eight", "rootPlace": {"id": 88}}]}
         if re.search(r"^https?://friends\.roblox\.com/v1/users/\d+/friends$", url):
             return {"data": [{"id": 201, "name": "ann", "displayName": "Ann"}, {"id": 202, "name": "bob", "displayName": "Bob"}, {"id": 203, "name": "cy", "displayName": "Cy"}]}
+        if "game-passes/v1/universes" in url:
+            if (params or {}).get("pageToken") == "p2":
+                return {"gamePasses": PASSES[2:], "nextPageToken": None}
+            return {"gamePasses": PASSES[:2], "nextPageToken": "p2"}
+        if "developerproducts" in url:
+            return {"developerProducts": PRODUCTS, "nextPageCursor": ""}
+        if "awarded-dates" in url:
+            return {"data": [{"badgeId": 9001, "awardedDate": "2026-10-01T10:00:00Z"}]}
+        if "badges.roblox.com/v1/universes" in url:
+            return {"data": BADGES, "nextPageCursor": ""}
         if "/groups/roles" in url:
             return {"data": []}
         if "/vip-servers/" in url:
@@ -720,6 +741,29 @@ r = [w.palette_box.list.item(i).text() for i in range(w.palette_box.list.count()
 check("Ctrl+K finds Discover", any(x.startswith("Discover") for x in r), r[:3])
 QTest.keyClick(w.palette_box.edit, Qt.Key.Key_Return); spin(0.2)
 check("...and opens it inside Home", w.current_page() is w.home and w.home.tabs.currentIndex() == 1)
+
+# ---- the game passes, the developer products and the badges of a game
+det.show_game(alpha.card)
+check("the game page has a Description, a Game passes, a Products and a Badges page", [det.extra.tabText(i).split(" (")[0] for i in range(det.extra.count())] == ["Description", "Game passes", "Products", "Badges"],
+      [det.extra.tabText(i) for i in range(det.extra.count())])
+check("the lists load by themselves, and say how many there are in the page's name",
+      wait(lambda: det.extra.tabText(1) == "Game passes (3)" and det.extra.tabText(2) == "Products (2)" and det.extra.tabText(3) == "Badges (2)"), [det.extra.tabText(i) for i in range(4)])
+check("a list of several pages is followed to its end (3 game passes from 2 pages)", det.pass_table.rowCount() == 3 and any("pageToken" in p for u, p in log if "game-passes" in u))
+names = sorted(det.pass_table.item(r, 0).text() for r in range(det.pass_table.rowCount()))
+check("the game passes show their names", names == ["Boost", "Old pass", "VIP Pass"], names)
+check("a pass that is not for sale has no price and says so", [det.pass_table.item(r, 2).text() for r in range(3) if det.pass_table.item(r, 0).text() == "Old pass"] == ["no"])
+check("the products show their price", sorted(det.product_table.item(r, 1).text() for r in range(2)) == ["", "25"], [det.product_table.item(r, 1).text() for r in range(2)])
+check("a badge shows how many were given and the win rate", any(det.badge_table.item(r, 2).text() == "1000" and det.badge_table.item(r, 4).text() == "12.5 %" for r in range(2)))
+det.pass_table.selectRow(0)
+key = ui_common.row_key(det.pass_table, 0)
+opened_urls.clear()
+det._open_extra(det.pass_table, lambda i: f"https://www.roblox.com/game-pass/{i}")
+check("a game pass opens on roblox.com", opened_urls == [f"https://www.roblox.com/game-pass/{key}"], opened_urls)
+det.badge_table.selectRow(0)
+det._copy_extra(det.badge_table)
+check("copying a badge puts its id on the clipboard", QApplication.clipboard().text() in ("9001", "9002"), QApplication.clipboard().text())
+det.show_game(d.cards[2][0].card)
+check("opening another game empties the lists at once (they do not show the old game)", det.pass_table.rowCount() == 0 or det.extra.tabText(1) == "Game passes", det.extra.tabText(1))
 
 check("no error popup appeared at any point of all this", not warnings, warnings)
 print(f"{sum(res)}/{len(res)} checks passed")

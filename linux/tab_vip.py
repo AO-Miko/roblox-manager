@@ -14,7 +14,7 @@ from PySide6.QtCore import QItemSelectionModel, QTimer, Signal
 
 import rbx
 import settings
-from ui_common import FlowLayout, button, menu_button, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
+from ui_common import FlowLayout, button, fold_actions, menu_button, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
 from theme import T
 
 
@@ -314,7 +314,6 @@ class VipTab(QWidget):
             cb.toggled.connect(lambda _=False: self.show_mine())
             self.hide[state] = cb
             head.addWidget(cb)
-        head.addWidget(button("Refresh", self.load_mine))
         self.b_create = button("Create VIP server...", self.create, primary=True)
         head.addWidget(self.b_create)
         tl.addLayout(head)
@@ -327,15 +326,12 @@ class VipTab(QWidget):
         self.b_findgone = button("Check for unavailable", lambda: self._ask_lookups("check"),
                                  "Ask Roblox about each server not checked yet, to find the ones whose game removed VIP servers (one request each; this also "
                                  "runs by itself in the background after the list loads)")
-        frow.addWidget(self.b_alllinks)
-        frow.addWidget(self.b_findgone)
         tl.addLayout(frow)
         self.mtable = make_table(["Game", "Server", "Status", "Expires", "VIP id", "VIP link", "Copies", "Cost"], [215, 175, 90, 140, 105, 240, 70, 150],
                                 empty="No VIP servers to show.\nSign in on the Home tab, or loosen the filters above.")
         self.mtable.setSelectionMode(self.mtable.SelectionMode.ExtendedSelection)
         self.apply_column_order()
         tl.addWidget(self.mtable, 1)
-        row = FlowLayout()
         self.b_active = button("Switch on/off", self.toggle_active, "A VIP server that is switched off cannot be joined")
         self.b_allow = button("Allow people...", self.allow_people, "Choose who can join: your friends and specific people")
         self.b_copy = button("Copy join link", self.copy_join)
@@ -347,40 +343,32 @@ class VipTab(QWidget):
         self.b_renew = button("Renew...", self.renew, "Renew an expired server (may cost Robux; free servers with Roblox Plus cost 0)")
         self.b_game = button("Open game", self.open_game, "Open the game's page on roblox.com")
         self.b_details = button("Details", self.details, "Everything Roblox knows about this server")
-        for b in (self.b_play, self.b_active, self.b_allow, self.b_copy, self.b_open, self.b_rename, self.b_link, self.b_cancel, self.b_renew, self.b_game, self.b_details):
-            row.addWidget(b)
-        row.addStretch()
-        tl.addLayout(row)
         pick = FlowLayout()
         sel_items = [(text, lambda w=what: self.select_group(w)) for text, what in (("All expired", "expired"), ("All disabled", "disabled"), ("All enabled", "enabled"),
                                                                                   ("One per game", "best"), ("Duplicates", "extras"))] + [None] + \
                     [(text, lambda w=what: self.select_group(w)) for text, what in (("All", "all"), ("None", "none"))]
-        pick.addWidget(menu_button("Select", sel_items, "Pick servers by what they are"))
         cost_items = [(text, lambda w=what: self.select_group(w), tip + " (only the keeper of each game; the same rule as the other selections)")
                       for text, what, tip in (("Plus-free", "plus", "Servers that are free because of Roblox Plus"), ("Game-free", "gamefree", "Servers the game itself offers for free"),
                                               ("All free", "free", "Both kinds of free server"), ("Paid", "paid", "Servers that cost Robux"))]
-        pick.addWidget(menu_button("Select by cost", cost_items, "Pick servers by what they cost"))
-        pick.addSpacing(16)
-        pick.addWidget(QLabel("For the selected:"))
+        pick.addWidget(menu_button("Select", sel_items + [None] + cost_items, "Pick servers by what they are or what they cost"))
         self.bulk = [button("Switch on", lambda: self.bulk_active(True)), button("Switch off", lambda: self.bulk_active(False)),
                      button("Cancel renewal", self.bulk_cancel), button("Renew...", self.bulk_renew)]
-        for b in self.bulk:
-            pick.addWidget(b)
-        pick.addStretch()
-        tl.addLayout(pick)
-        cost = FlowLayout()
-        cost.addWidget(QLabel("Show:"))
+        pick.addSpacing(16)
+        pick.addWidget(QLabel("Show:"))
         self.cost_filter = QComboBox()
         for text, key in (("All costs", ""), ("Free (Plus + game)", "free"), ("Free (Roblox Plus)", "Free (Roblox Plus)"), ("Free (game)", "Free (game)"),
                           ("Paid", "paid"), ("Unknown", "Unknown")):
             self.cost_filter.addItem(text, key)
         self.cost_filter.currentIndexChanged.connect(lambda _=0: self.show_mine())
-        cost.addWidget(self.cost_filter)
-        cost.addStretch()
+        pick.addWidget(self.cost_filter)
+        pick.addStretch()
+        tl.addLayout(pick)
         self.b_freeonly = button("Only free servers on...", self.free_only,
                                  "Switch on the free servers (Roblox Plus and game-free) and switch off the paid ones. Servers whose cost is unknown are left alone.")
-        cost.addWidget(self.b_freeonly)
-        tl.addLayout(cost)
+        actions = fold_actions(self.mtable, [self.b_play, self.b_active, self.b_copy, self.b_open, None, self.b_allow, self.b_rename, self.b_link, None,
+                                             self.b_cancel, self.b_renew, None, self.b_game, self.b_details, None, ("For the selected servers", self.bulk), None,
+                                             self.b_alllinks, self.b_findgone, self.b_freeonly], default=self.b_play)
+        frow.addWidget(actions)
         self.mnote = hint("Sign in on the Home tab to see your VIP servers.")
         tl.addWidget(self.mnote)
         self.ratenote = QLabel("")

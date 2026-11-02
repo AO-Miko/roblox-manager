@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 
 import rbx
 import settings
-from ui_common import BulkBar, FlowLayout, button, menu_button, cell, day_in_range, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
+from ui_common import BulkBar, FlowLayout, ask_dates, auto_more, button, fold_actions, menu_button, cell, day_in_range, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
 
 
 def perm(p, section, key):
@@ -58,36 +58,22 @@ class GroupsTab(QWidget):
         pick.addWidget(menu_button("Select", [("All shown", lambda: self.select_groups_where(lambda g: True)),
                                               ("None", lambda: self.select_groups_where(lambda g: False)), ("Invert", self.invert_group_selection), None,
                                               ("Plain members", lambda: self.select_groups_where(lambda g: g["role"]["rank"] <= 1),
-                                               "Groups where you have no special role (rank 1 or lower)")], "Pick groups by what they are"))
+                                               "Groups where you have no special role (rank 1 or lower)"), None,
+                                              ("Created between two days...", self.select_by_date_dialog,
+                                               "Selects the shown groups created in a range of days (Roblox does not say when you joined, only when the group was made)")],
+                                 "Pick groups by what they are"))
         pick.addStretch()
         ll.addLayout(pick)
-        bydate = FlowLayout()
-        bydate.addWidget(QLabel("Created from"))
-        self.date_from = QDateEdit(QDate(2006, 1, 1))
+        self.date_from = QDateEdit(QDate(2006, 1, 1))                # (the days for 'created between', asked in a small dialog)
         self.date_to = QDateEdit(QDate.currentDate().addYears(-3))
         for de in (self.date_from, self.date_to):
-            de.setCalendarPopup(True)
-            de.setDisplayFormat("yyyy-MM-dd")
             de.setMaximumDate(QDate.currentDate())
-        bydate.addWidget(self.date_from)
-        bydate.addWidget(QLabel("to"))
-        bydate.addWidget(self.date_to)
-        bydate.addWidget(button("Select by date", self.select_by_date,
-                                "Selects the shown groups created in this range (Roblox does not say when you joined, only when the group was made)"))
-        bydate.addStretch()
-        ll.addLayout(bydate)
         self.bulk = BulkBar(ctx)
         ll.addWidget(self.bulk)
-        row = QHBoxLayout()
         self.b_leave = button("Leave selected groups...", self.leave_selected, "Leaves every selected group (asks first). Groups you own are skipped.")
         self.b_leave.setProperty("danger", True)
-        row.addWidget(self.b_leave)
-        ll.addLayout(row)
-        row = FlowLayout()
-        row.addWidget(button("Refresh", self.load_groups))
-        row.addWidget(button("Open another group...", self.open_other, "Look at any group by id or link"))
-        row.addWidget(button("All join requests...", self.all_requests, "Every join request of the groups where you may answer them, in one list"))
-        ll.addLayout(row)
+        self.b_other = button("Open another group...", self.open_other, "Look at any group by id or link")
+        self.b_allreq = button("All join requests...", self.all_requests, "Every join request of the groups where you may answer them, in one list")
         split.addWidget(left)
 
         # ---- right: details
@@ -102,6 +88,7 @@ class GroupsTab(QWidget):
         self._build_roles()
         self._build_audit()
         self._build_bans()
+        pick.addWidget(fold_actions(self.glist, [self.b_desc, self.b_shout, None, self.b_open, self.b_copy, None, self.b_other, self.b_allreq, None, self.b_leave]))
         self.set_enabled(False)
         ctx.signed_in.connect(self.load_groups)
         ctx.signed_out.connect(self.clear)
@@ -125,15 +112,10 @@ class GroupsTab(QWidget):
         self.perms.setWordWrap(True)
         lay.addWidget(QLabel("What you can do here:"))
         lay.addWidget(self.perms)
-        row = QHBoxLayout()
         self.b_desc = button("Edit description...", self.edit_description)
         self.b_shout = button("Set shout...", self.set_status)
         self.b_open = button("Open on roblox.com", lambda: self.gid and open_url(f"https://www.roblox.com/communities/{self.gid}"))
         self.b_copy = button("Copy group id", lambda: self.gid and copy_text(str(self.gid)))
-        for b in (self.b_desc, self.b_shout, self.b_open, self.b_copy):
-            row.addWidget(b)
-        row.addStretch()
-        lay.addLayout(row)
         lay.addStretch()
         self.tabs.addTab(w, "Overview")
 
@@ -150,20 +132,17 @@ class GroupsTab(QWidget):
         top.addWidget(QLabel("Role:"))
         top.addWidget(self.role_pick)
         top.addWidget(self.member_filter, 1)
-        top.addWidget(button("Find a user...", self.find_member, "Look up one username in this group"))
+        self.b_find = button("Find a user...", self.find_member, "Look up one username in this group")
         lay.addLayout(top)
         self.mtable = make_table(["Display name", "Username", "Role", "Rank", "User id"], [180, 160, 150, 60, 100])
         lay.addWidget(self.mtable, 1)
-        row = QHBoxLayout()
         self.b_more_m = button("Load more", lambda: self.load_members(reset=False))
         self.b_rank = button("Change rank...", self.change_rank)
         self.b_kick = button("Remove from group", self.kick)
         self.b_ban = button("Ban", self.ban)
         self.b_profile = button("Open profile", lambda: self._open_profile(self.mtable, 4))
-        for b in (self.b_more_m, self.b_profile, self.b_rank, self.b_kick, self.b_ban):
-            row.addWidget(b)
-        row.addStretch()
-        lay.addLayout(row)
+        auto_more(self.mtable, self.b_more_m)
+        top.addWidget(fold_actions(self.mtable, [self.b_profile, None, self.b_rank, self.b_kick, self.b_ban, None, self.b_find], default=self.b_profile))
         self.mcount = hint("")
         lay.addWidget(self.mcount)
         self.tabs.addTab(w, "Members")
@@ -179,8 +158,12 @@ class GroupsTab(QWidget):
         self.b_accept = button("Accept selected", lambda: self.answer(True))
         self.b_decline = button("Decline selected", lambda: self.answer(False))
         self.b_accept_all = button("Accept all loaded...", lambda: self.answer(True, everyone=True))
-        for b in (self.b_more_r, self.b_accept, self.b_decline, self.b_accept_all):
+        auto_more(self.rtable, self.b_more_r)
+        more = fold_actions(self.rtable, [self.b_accept, self.b_decline, None, self.b_accept_all], text="More")
+        for b in (self.b_accept, self.b_decline):                 # the two answers stay in view
             row.addWidget(b)
+            b.show()
+        row.addWidget(more)
         row.addStretch()
         lay.addLayout(row)
         self.rcount = hint("")
@@ -216,11 +199,8 @@ class GroupsTab(QWidget):
         lay.addLayout(top)
         self.atable = make_table(["Time", "Who", "Action", "Details"], [140, 150, 170, 400])
         lay.addWidget(self.atable, 1)
-        row = QHBoxLayout()
         self.b_more_a = button("Load more", lambda: self.load_audit(reset=False))
-        row.addWidget(self.b_more_a)
-        row.addStretch()
-        lay.addLayout(row)
+        auto_more(self.atable, self.b_more_a)
         self.acount = hint("")
         lay.addWidget(self.acount)
         self.tabs.addTab(w, "Audit log")
@@ -232,7 +212,6 @@ class GroupsTab(QWidget):
         lay.addWidget(self.btable, 1)
         row = QHBoxLayout()
         self.b_unban = button("Unban selected", self.unban)
-        row.addWidget(button("Refresh", self.load_bans))
         row.addWidget(self.b_unban)
         row.addStretch()
         lay.addLayout(row)
@@ -360,6 +339,10 @@ class GroupsTab(QWidget):
             self.created.update(res)
             self._show_groups()
         self.ctx.async_.run(lambda: self.ctx.client.groups_created(ids), got, lambda e: None)
+
+    def select_by_date_dialog(self):
+        if ask_dates(self, "Groups created between two days", "Selects the shown groups created in this range of days.", self.date_from, self.date_to):
+            self.select_by_date()
 
     def select_by_date(self):
         a, b = self.date_from.date().toPython(), self.date_to.date().toPython()

@@ -896,6 +896,38 @@ class Client:
                 out[g["id"]] = g
         return out
 
+    # ---- what a game sells and gives away (public lists: no sign-in needed). Each returns ([items], cursor for the next page or "").
+    def game_passes(self, universe_id, token=""):
+        params = {"passView": "Full", "pageSize": 100}
+        if token:
+            params["pageToken"] = token
+        d = self.get(f"https://apis.roblox.com/game-passes/v1/universes/{int(universe_id)}/game-passes", params, auth=self.has_cookie)       # (signed in: it says which you own)
+        return d.get("gamePasses", []), d.get("nextPageToken") or ""
+
+    def developer_products(self, universe_id, cursor=""):
+        params = {"limit": 100}
+        if cursor:
+            params["cursor"] = cursor
+        d = self.get(f"https://apis.roblox.com/developer-products/v2/universes/{int(universe_id)}/developerproducts", params, auth=False)
+        return d.get("developerProducts", []), d.get("nextPageCursor") or ""
+
+    def universe_badges(self, universe_id, cursor=""):
+        params = {"limit": 100, "sortOrder": "Asc"}
+        if cursor:
+            params["cursor"] = cursor
+        d = self.get(f"https://badges.roblox.com/v1/universes/{int(universe_id)}/badges", params, auth=False)
+        return d.get("data", []), d.get("nextPageCursor") or ""
+
+    def badge_awards(self, user_id, badge_ids):
+        """{badge id: the day this user was given it}, for the ones they have (100 ids per request)."""
+        ids = [int(i) for i in badge_ids]
+        out = {}
+        for i in range(0, len(ids), 100):
+            d = self.get(f"https://badges.roblox.com/v1/users/{int(user_id)}/badges/awarded-dates", {"badgeIds": ",".join(map(str, ids[i:i + 100]))}, auth=False)
+            for a in d.get("data", []):
+                out[a["badgeId"]] = a.get("awardedDate") or ""
+        return out
+
     def place_universe(self, place_id):
         return self.get(f"https://apis.roblox.com/universes/v1/places/{int(place_id)}/universe", auth=False).get("universeId")
 

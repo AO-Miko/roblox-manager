@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QListWi
 
 import alerts
 import notify_status
-from ui_common import PRESENCE, button, hint, make_table
+from ui_common import menu_button, PRESENCE, button, hint, make_table
 
 
 class AlertsTab(QWidget):
@@ -52,10 +52,9 @@ class AlertsTab(QWidget):
         self.filter.setPlaceholderText("Filter friends...")
         self.filter.textChanged.connect(lambda _=None: self.show_friends())
         row.addWidget(self.filter, 1)
-        row.addWidget(button("Watch all shown", lambda: self._watch_shown(True), f"Ticks every friend in the list below (up to {alerts.MAX_WATCHED})"))
-        row.addWidget(button("Watch none", lambda: self._watch_shown(False), "Unticks every friend in the list below"))
-        row.addWidget(button("Refresh", lambda: self.load(True)))
-        row.addWidget(button("Test", self.test, "Shows a test notification"))
+        row.addWidget(menu_button("Watch", [("All shown", lambda: self._watch_shown(True), f"Ticks every friend in the list below (up to {alerts.MAX_WATCHED})"),
+                                            ("None", lambda: self._watch_shown(False), "Unticks every friend in the list below"), None,
+                                            ("Reload the friends", lambda: self.load(True)), ("Show a test notification", self.test)], "Who to watch, and a test"))
         lay.addLayout(row)
         self.table = make_table(["Watch", "Friend", "Username", "Now"], [60, 200, 160, 110], empty="No friends to show.")
         self.table.setSelectionMode(self.table.SelectionMode.NoSelection)

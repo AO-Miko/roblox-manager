@@ -249,7 +249,7 @@ class MainWindow(QMainWindow):
             if self.staff.list.item(i).data(Qt.ItemDataRole.UserRole) == uid:
                 self.staff.list.setCurrentRow(i)
 
-    RELOADERS = ("load", "load_groups", "load_mine")
+    RELOADERS = ("load", "load_groups", "load_mine", "refresh", "reload")
 
     def toggle_theme(self):
         """Ctrl+Shift+L: dark to light and back."""

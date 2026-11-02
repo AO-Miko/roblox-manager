@@ -19,7 +19,7 @@ import relation
 import settings
 from signin import SignInDialog
 from ui_common import (
-    PRESENCE, PRESENCE_COLOUR, button, menu_button, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
+    PRESENCE, PRESENCE_COLOUR, ask_dates, button, fold_actions, menu_button, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
 )
 from theme import T
 
@@ -200,8 +200,7 @@ class AccountTab(QWidget):
         self.btn_pending = button("Pending Robux details...", self.pending_details, "Where your pending Robux comes from, sale by sale")
         self.btn_profile = button("Open my profile", self.open_profile)
         self.btn_out = button("Sign out", self.sign_out, "Signs out the account in use and deletes its saved sign-in (other saved accounts stay)", danger=True)
-        for b in (self.btn_set, self.btn_test, self.btn_pending, self.btn_profile, self.btn_out):
-            row.addWidget(b)
+        row.addWidget(self.btn_set)                 # Sign in stays in view; the rest of the account's actions are one menu (made once the accounts table exists)
         row.addStretch()
         lay.addLayout(row)
         self.safety = hint("")
@@ -219,10 +218,10 @@ class AccountTab(QWidget):
         self.btn_add = button("Add another account...", self.set_cookie, "Sign in to a second (third ...) account without signing out of this one")
         self.btn_remove = button("Remove selected", self.remove_selected, "Forget the selected account's sign-in on this PC")
         self.btn_balances = button("Show balances", self.show_balances, "Ask Roblox for each account's Robux")
-        for b in (self.btn_switch, self.btn_add, self.btn_remove, self.btn_balances):
-            arow.addWidget(b)
+        arow.addWidget(fold_actions(self.atable, [self.btn_switch, self.btn_remove, None, self.btn_add, self.btn_balances], text="Accounts"))
         arow.addStretch()
         lay.addLayout(arow)
+        row.addWidget(fold_actions(self.atable, [self.btn_test, self.btn_pending, self.btn_profile, None, self.btn_out], text="This account", context=False))
         self.balances = {}
         self._pending_cache = {}       # user id -> (time, report): switching back to an account does not repeat the 20+ requests
         self._force_pending = False
@@ -786,46 +785,38 @@ class FriendsTab(QWidget):
         top.addWidget(self.search, 1)
         top.addWidget(self.only_on)
         top.addWidget(self.only_game)
-        top.addWidget(button("Refresh", self.load))
         lay.addLayout(top)
         self.table = make_table(["Friend", "Username", "Status", "Game", "Last online"], [220, 160, 90, 300, 150], empty="No friends to show.")
         self.table.setIconSize(QSize(32, 32))
         self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.table.itemSelectionChanged.connect(self.show_details)
         lay.addWidget(self.table, 1)
-        pick = QHBoxLayout()
-        pick.addWidget(menu_button("Select", [("All shown", lambda: self.select_where(lambda r: True), "Everything the filter above currently shows"),
-                                              ("None", lambda: self.select_where(lambda r: False)), ("Invert", self.invert_selection)], "Pick friends"))
-        pick.addSpacing(12)
-        pick.addWidget(QLabel("Not online for over"))
-        self.inactive = QComboBox()
+        self.inactive = QComboBox()                                  # (the lengths of time of 'not online for over', picked from the Select menu)
         for text, days in INACTIVE:
             self.inactive.addItem(text, days)
-        self.inactive.setCurrentIndex(3)
-        pick.addWidget(self.inactive)
-        pick.addWidget(button("Select them", self.select_inactive, "Selects the shown friends who have not been online for that long"))
-        pick.addStretch()
-        lay.addLayout(pick)
-        bydate = QHBoxLayout()
-        bydate.addWidget(QLabel("Last online from"))
-        self.date_from = QDateEdit(QDate(2010, 1, 1))
+        self.date_from = QDateEdit(QDate(2010, 1, 1))                # (the days of 'last online between', asked in a small dialog)
         self.date_to = QDateEdit(QDate.currentDate().addYears(-1))
         for de in (self.date_from, self.date_to):
-            de.setCalendarPopup(True)
-            de.setDisplayFormat("yyyy-MM-dd")
             de.setMaximumDate(QDate.currentDate())
-        bydate.addWidget(self.date_from)
-        bydate.addWidget(QLabel("to"))
-        bydate.addWidget(self.date_to)
-        bydate.addWidget(button("Select by date", self.select_by_date, "Selects the shown friends whose last online day is in this range (both days included)"))
-        bydate.addStretch()
-        lay.addLayout(bydate)
+
+        def pick_inactive(i):
+            self.inactive.setCurrentIndex(i)
+            self.select_inactive()
+
+        def by_dates():
+            if ask_dates(self, "Friends last online between two days", "Selects the shown friends whose last online day is in this range (both days included).",
+                         self.date_from, self.date_to):
+                self.select_by_date()
         pick = QHBoxLayout()
+        pick.addWidget(menu_button("Select", [("All shown", lambda: self.select_where(lambda r: True), "Everything the filter above currently shows"),
+                                              ("None", lambda: self.select_where(lambda r: False)), ("Invert", self.invert_selection), None,
+                                              *[(f"Not online for over {text}", lambda i=i: pick_inactive(i), "Selects the shown friends who have not been online for that long")
+                                                for i, (text, _days) in enumerate(INACTIVE)], None,
+                                              ("Last online between two days...", by_dates)], "Pick friends"))
         pick.addStretch()
+        lay.addLayout(pick)
         self.btn_remove = button("Remove selected friends...", self.remove_selected, "Unfriends everyone selected (asks first; cannot be undone)")
         self.btn_remove.setProperty("danger", True)
-        pick.addWidget(self.btn_remove)
-        lay.addLayout(pick)
         self.ratenote = QLabel("")
         self.ratenote.setWordWrap(True)
         self.ratenote.setProperty("role", "warn")
@@ -859,7 +850,6 @@ class FriendsTab(QWidget):
         self.profile.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         pl.addWidget(self.profile, 1)
         lay.addWidget(self.panel)
-        row = QHBoxLayout()
         self.btn_profile = button("Open profile", self.open_profile)
         self.btn_mutual = button("Mutual friends...", self.relationship, "Since when you are friends and which friends you share, from Roblox (one request)")
         self.btn_join = button("Open their game", self.open_game, "Opens the game page in your browser")
@@ -867,11 +857,8 @@ class FriendsTab(QWidget):
         self.btn_copy = button("Copy join link", self.copy_link)
         self.btn_vip = button("Find VIP servers in their games", self.scan_vips,
                               "Looks at the games your friends are playing and lists private (VIP) servers, marking the ones friends own")
-        for b in (self.btn_profile, self.btn_mutual, self.btn_join, self.btn_joinfriend, self.btn_copy):
-            row.addWidget(b)
-        row.addStretch()
-        row.addWidget(self.btn_vip)
-        lay.addLayout(row)
+        pick.addWidget(fold_actions(self.table, [self.btn_profile, self.btn_mutual, None, self.btn_join, self.btn_joinfriend, self.btn_copy, None, self.btn_vip,
+                                                 None, self.btn_remove], default=self.btn_profile))
         self.info = hint("Sign in on the Home tab to see your friends.")
         lay.addWidget(self.info)
         ctx.signed_in.connect(self.load)

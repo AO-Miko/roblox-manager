@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QSplitt
 import rbx
 import settings
 from tab_debug import DebugView
-from ui_common import button, export_csv, hint, make_table
+from ui_common import menu_button, button, export_csv, hint, make_table
 from theme import T
 
 KEEP = 5000
@@ -99,10 +99,9 @@ class RequestsTab(QWidget):
         self.follow.setChecked(True)
         for w in (self.only_problems, self.pause, self.follow):
             top.addWidget(w)
-        top.addWidget(button("Clear list", self.clear, "Empties this list (the log file is kept)"))
-        top.addWidget(button("Export CSV...", lambda: export_csv(self.table, self, name="roblox-manager-requests")))
-        top.addWidget(button("Open log folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(rbx.STATE_DIR))),
-                             "Where requests.log is kept"))
+        top.addWidget(menu_button("Log", [("Clear list", self.clear, "Empties this list (the log file is kept)"),
+                                          ("Export CSV...", lambda: export_csv(self.table, self, name="roblox-manager-requests")),
+                                          ("Open the log folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(rbx.STATE_DIR))), "Where requests.log is kept")]))
         lay.addLayout(top)
         self.stats = QLabel("")
         self.stats.setStyleSheet("font-size: 14px;")

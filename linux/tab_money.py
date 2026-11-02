@@ -67,7 +67,6 @@ class MoneyTab(QWidget):
         top.addStretch()
         if show_pending:
             top.addWidget(button("Pending details...", show_pending, "Where your pending Robux comes from, sale by sale"))
-        top.addWidget(button("Refresh", self.load))
         lay.addLayout(top)
         self.devex = hint("DevEx: -")
         self.devex.setWordWrap(True)

@@ -14,7 +14,7 @@ import plat
 import rbx
 import settings
 import theme
-from ui_common import esc, FlowLayout, WrapCheck, button, hint, make_table
+from ui_common import menu_button, esc, FlowLayout, WrapCheck, button, hint, make_table
 
 TERMS_URL = "https://github.com/AO-Miko/roblox-manager/blob/main/TERMS.md"
 PRIVACY_URL = "https://github.com/AO-Miko/roblox-manager/blob/main/PRIVACY.md"
@@ -557,9 +557,9 @@ class SettingsTab(QWidget):
         self.about.setWordWrap(True)
         lay.addWidget(self.about)
         row = FlowLayout()
-        row.addWidget(button("Open the settings folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(rbx.CONFIG_DIR)))))
-        row.addWidget(button("Terms of use", lambda: QDesktopServices.openUrl(QUrl(TERMS_URL)), "Opens the terms of use on GitHub"))
-        row.addWidget(button("Privacy policy", lambda: QDesktopServices.openUrl(QUrl(PRIVACY_URL)), "Opens the privacy policy on GitHub"))
+        row.addWidget(menu_button("Open", [("Terms of use", lambda: QDesktopServices.openUrl(QUrl(TERMS_URL)), "Opens the terms of use on GitHub"),
+                                           ("Privacy policy", lambda: QDesktopServices.openUrl(QUrl(PRIVACY_URL)), "Opens the privacy policy on GitHub"), None,
+                                           ("The settings folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(rbx.CONFIG_DIR))))]))
         row.addStretch()
         lay.addLayout(row)
         self.update_about()

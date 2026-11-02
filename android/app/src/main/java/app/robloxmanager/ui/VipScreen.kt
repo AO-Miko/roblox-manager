@@ -22,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -181,25 +183,34 @@ fun VipScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>) {
                 if (selected.size == shown.size) selected.clear() else { selected.clear(); selected.addAll(shown.mapNotNull { it.id }) }
             }
             PrimaryButton("Switch on (${selected.size})", enabled = selected.isNotEmpty() && !bs.running) { switchBulk(true) }
-            QuietButton("Switch off (${selected.size})", enabled = selected.isNotEmpty() && !bs.running) {
-                dialog = { Confirm("Switch off", "Switch off ${chosen().size} server(s)? Nobody can join them until they are switched on again.", "Switch off", true, { dialog = null; switchBulk(false) }, { dialog = null }) }
-            }
-            QuietButton("Only free on", enabled = servers.isNotEmpty() && !bs.running) {
-                val (on, off) = Vip.freeOnlyPlan(servers.toList(), places)
-                if (on.isEmpty() && off.isEmpty()) message = "Already only free servers are on (servers of unknown cost are left alone)."
-                else dialog = {
-                    Confirm("Only free servers on", "Switch ${on.size} free server(s) on and ${off.size} paid server(s) off? Servers of unknown cost, expired and unavailable ones are not touched.", "Do it", false, {
-                        dialog = null
-                        val steps = off.map { it to false } + on.map { it to true }
-                        bulk.run("Only free on", steps, { it.first.name }, { (s, want) -> sv.api.setVipActive(s.id!!, want); s.active = want }, each = { tick++ })
-                    }, { dialog = null })
+            var more by remember { mutableStateOf(false) }
+            Box {
+                QuietButton("More  ▾") { more = true }
+                DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
+                    DropdownMenuItem(text = { Text("Switch off (${selected.size})") }, enabled = selected.isNotEmpty() && !bs.running, onClick = {
+                        more = false
+                        dialog = { Confirm("Switch off", "Switch off ${chosen().size} server(s)? Nobody can join them until they are switched on again.", "Switch off", true, { dialog = null; switchBulk(false) }, { dialog = null }) }
+                    })
+                    DropdownMenuItem(text = { Text("Stop renewing (${selected.size})") }, enabled = selected.isNotEmpty() && !bs.running, onClick = {
+                        more = false
+                        dialog = { Confirm("Stop renewing", "Stop the subscription of ${chosen().size} server(s) from renewing? They keep working until they expire.", "Stop renewing", true, {
+                            dialog = null
+                            bulk.run("Cancelling renewal", chosen(), { it.name }, { s -> sv.api.cancelVipRenewal(s.id!!) })
+                        }, { dialog = null }) }
+                    })
+                    DropdownMenuItem(text = { Text("Only free servers on") }, enabled = servers.isNotEmpty() && !bs.running, onClick = {
+                        more = false
+                        val (on, off) = Vip.freeOnlyPlan(servers.toList(), places)
+                        if (on.isEmpty() && off.isEmpty()) message = "Already only free servers are on (servers of unknown cost are left alone)."
+                        else dialog = {
+                            Confirm("Only free servers on", "Switch ${on.size} free server(s) on and ${off.size} paid server(s) off? Servers of unknown cost, expired and unavailable ones are not touched.", "Do it", false, {
+                                dialog = null
+                                val steps = off.map { it to false } + on.map { it to true }
+                                bulk.run("Only free on", steps, { it.first.name }, { (s, want) -> sv.api.setVipActive(s.id!!, want); s.active = want }, each = { tick++ })
+                            }, { dialog = null })
+                        }
+                    })
                 }
-            }
-            QuietButton("Stop renewing (${selected.size})", enabled = selected.isNotEmpty() && !bs.running) {
-                dialog = { Confirm("Stop renewing", "Stop the subscription of ${chosen().size} server(s) from renewing? They keep working until they expire.", "Stop renewing", true, {
-                    dialog = null
-                    bulk.run("Cancelling renewal", chosen(), { it.name }, { s -> sv.api.cancelVipRenewal(s.id!!) })
-                }, { dialog = null }) }
             }
         }
         val on = shown.count { it.active == true && it.state(places).isEmpty() }

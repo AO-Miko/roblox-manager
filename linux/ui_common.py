@@ -313,6 +313,11 @@ def _table_menu(table, pos):
     m = QMenu(table)
     item = table.itemAt(pos)
     sel = bool({i.row() for i in table.selectedIndexes()})
+    rows = getattr(table, "row_menu", None)                  # the actions of the page that apply to what is selected (see fold_actions)
+    if rows is not None and sel:
+        rows(m)
+        if m.actions():
+            m.addSeparator()
     if item is not None:
         m.addAction("Copy cell", lambda: copy_text(item.text()))
     if sel:
@@ -397,6 +402,99 @@ def menu_button(text, items, tip=""):
             act.setToolTip(it[2])
     b.setMenu(menu)
     return b
+
+
+def _put_away(table, b):
+    """Takes a button off the page without touching what the page does with it: it stays 'shown' (a page may hide it, which is how it says 'not for you') but
+    sits in a holder that is never on screen."""
+    owner = table.parentWidget() or table
+    holder = getattr(owner, "_put_away_holder", None)
+    if holder is None:
+        holder = QWidget(owner)
+        holder.hide()
+        owner._put_away_holder = holder
+    b.setParent(holder)
+    b.show()
+
+
+def _flat(items):
+    for it in items:
+        if isinstance(it, tuple):
+            yield from _flat(it[1])
+        elif it is not None:
+            yield it
+
+
+def _fill_menu(menu, items, only_enabled=False):
+    """Menu entries for a list of buttons (None is a line, (title, [buttons]) a sub menu). An entry does what pressing its button does."""
+    for it in items:
+        if it is None:
+            if menu.actions() and not menu.actions()[-1].isSeparator():
+                menu.addSeparator()
+        elif isinstance(it, tuple):
+            sub = QMenu(it[0], menu)
+            _fill_menu(sub, it[1], only_enabled)
+            if sub.actions():
+                menu.addMenu(sub)
+        else:
+            if it.isHidden() or (only_enabled and not it.isEnabled()):          # (a page hides a button that is not for this person: it is not in the menu either)
+                continue
+            act = menu.addAction(it.text())
+            act.setEnabled(it.isEnabled())
+            if it.toolTip():
+                act.setToolTip(it.toolTip())
+            act.triggered.connect(lambda _=False, b=it: b.click())
+    while menu.actions() and menu.actions()[-1].isSeparator():
+        menu.removeAction(menu.actions()[-1])
+
+
+def fold_actions(table, items, default=None, text="Actions", context=True):
+    """Fewer buttons on a page: the buttons in `items` are put away (they keep working, nothing else changes) and come back as one Actions menu, as the
+    right-click menu of the table (only what applies to the selection) and, for `default`, as what a double click does. Returns the Actions button."""
+    for b in _flat(items):
+        _put_away(table, b)
+    btn = QPushButton(text + "  \u25be")
+    btn.setToolTip("Everything you can do with the selected row, and the rest of the page's actions")
+    menu = QMenu(btn)
+    menu.aboutToShow.connect(lambda: (menu.clear(), _fill_menu(menu, items)))
+    btn.setMenu(menu)
+    if context:
+        table.row_menu = lambda m: _fill_menu(m, items, only_enabled=True)
+    if default is not None:
+        table.doubleClicked.connect(lambda _=None: default.isEnabled() and default.click())
+    return btn
+
+
+def ask_dates(parent, title, text, date_from, date_to):
+    """Asks for two days in a small dialog. date_from and date_to are the page's QDateEdit boxes: they hold the answer. True when the person pressed OK."""
+    from PySide6.QtWidgets import QDateEdit, QDialog, QDialogButtonBox, QFormLayout
+    d = QDialog(parent)
+    d.setWindowTitle(title)
+    form = QFormLayout(d)
+    form.addRow(hint(text))
+    a, b = QDateEdit(date_from.date()), QDateEdit(date_to.date())
+    for de in (a, b):
+        de.setCalendarPopup(True)
+        de.setDisplayFormat("yyyy-MM-dd")
+        de.setMaximumDate(date_from.maximumDate())
+    form.addRow("From", a)
+    form.addRow("To", b)
+    box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+    box.accepted.connect(d.accept)
+    box.rejected.connect(d.reject)
+    form.addRow(box)
+    if d.exec() != QDialog.DialogCode.Accepted:
+        return False
+    date_from.setDate(a.date())
+    date_to.setDate(b.date())
+    return True
+
+
+def auto_more(table, button):
+    """A 'Load more' button that presses itself when the list is scrolled to its end."""
+    _put_away(table, button)
+    bar = table.verticalScrollBar()
+    bar.valueChanged.connect(lambda v: v >= bar.maximum() > 0 and not button.isHidden() and button.isEnabled() and button.click())
 
 
 def hint(text):

@@ -17,7 +17,7 @@ import relation
 import settings
 from tab_account import FriendsTab
 from tab_alerts import AlertsTab
-from ui_common import BulkBar, button, menu_button, copy_text, fill_table, hint, make_table, open_url, row_key, selected_rows, when
+from ui_common import BulkBar, button, fold_actions, menu_button, copy_text, fill_table, hint, make_table, open_url, row_key, selected_rows, when
 
 
 def person(u, cells=()):
@@ -49,7 +49,6 @@ class UserListTab(QWidget):
         self.filter.setPlaceholderText("Filter by name...")
         self.filter.textChanged.connect(lambda _=None: self.show_rows())
         top.addWidget(self.filter, 1)
-        top.addWidget(button("Refresh", self.load))
         lay.addLayout(top)
         self.table = make_table(["Name", "Username"] + list(columns), [240, 180] + [130] * len(columns), empty=empty)
         self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
@@ -66,18 +65,25 @@ class UserListTab(QWidget):
         lay.addLayout(pick)
         self.bulk = BulkBar(ctx)
         lay.addWidget(self.bulk)
-        row = QHBoxLayout()
         self.buttons = []
         for a in actions:
             b = button(a["label"], lambda a=a: self.run_action(a), a.get("tip", ""), primary=bool(a.get("primary")))
             if a.get("danger"):
                 b.setProperty("danger", True)
             self.buttons.append(b)
+        b_profile = button("Open profile", self.open_profile)
+        b_mutual = button("Mutual friends...", self.relationship, "Since when you are friends and which friends you share, from Roblox (one request)")
+        b_copy = button("Copy user id", self.copy_id)
+        row = QHBoxLayout()
+        keep = [b for b, a in zip(self.buttons, actions) if a.get("primary")]          # the main action stays in view; everything else is in the menu
+        loud = [b for b, a in zip(self.buttons, actions) if a.get("danger")]
+        quiet = [b for b in self.buttons if b not in loud]
+        menu = fold_actions(self.table, [b_profile, b_mutual, b_copy, None, *quiet, None, *loud])
+        for b in keep:
             row.addWidget(b)
+            b.show()
         row.addStretch()
-        row.addWidget(button("Open profile", self.open_profile))
-        row.addWidget(button("Mutual friends...", self.relationship, "Since when you are friends and which friends you share, from Roblox (one request)"))
-        row.addWidget(button("Copy user id", self.copy_id))
+        row.addWidget(menu)
         lay.addLayout(row)
         self.info = hint(signed_out)
         lay.addWidget(self.info)

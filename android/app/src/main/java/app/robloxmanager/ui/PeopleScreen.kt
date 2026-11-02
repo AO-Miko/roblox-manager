@@ -16,6 +16,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -129,16 +131,24 @@ private fun PeopleList(
             QuietButton(if (selected.size == shown.size && shown.isNotEmpty()) "Select none" else "Select all (${shown.size})") {
                 if (selected.size == shown.size) selected.clear() else { selected.clear(); selected.addAll(shown.map { it.id }) }
             }
-            actions.forEach { a ->
-                val btn: @Composable () -> Unit = {
-                    val label = "${a.label} (${selected.size})"
-                    if (a.danger) DangerButton(label, enabled = selected.isNotEmpty() && !bs.running) { run(a, selected, list, bulk, scope) { pending = it } }
-                    else PrimaryButton(label, enabled = selected.isNotEmpty() && !bs.running) { run(a, selected, list, bulk, scope) { pending = it } }
+            val main = actions.firstOrNull { !it.danger }                      // the main action stays in view; the others (and the ones that delete) are in the menu
+            main?.let { a -> PrimaryButton("${a.label} (${selected.size})", enabled = selected.isNotEmpty() && !bs.running) { run(a, selected, list, bulk, scope) { pending = it } } }
+            val rest = actions.filter { it !== main }
+            if (rest.isNotEmpty() || kind == "Requests") {
+                var more by remember { mutableStateOf(false) }
+                Box {
+                    QuietButton("More  ▾") { more = true }
+                    DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
+                        rest.forEach { a ->
+                            DropdownMenuItem(text = { Text("${a.label} (${selected.size})", color = if (a.danger) C.danger else C.text) }, enabled = selected.isNotEmpty() && !bs.running,
+                                onClick = { more = false; run(a, selected, list, bulk, scope) { pending = it } })
+                        }
+                        if (kind == "Requests") DropdownMenuItem(text = { Text("Decline all", color = C.danger) }, enabled = list.isNotEmpty() && !bs.running, onClick = {
+                            more = false
+                            pending = PeopleAction("Decline all", "Declining all", danger = true, confirm = true) { sv.api.declineAllRequests() }
+                        })
+                    }
                 }
-                btn()
-            }
-            if (kind == "Requests") DangerButton("Decline all", enabled = list.isNotEmpty() && !bs.running) {
-                pending = PeopleAction("Decline all", "Declining all", danger = true, confirm = true) { sv.api.declineAllRequests() }
             }
         }
         LoadView(loader) {

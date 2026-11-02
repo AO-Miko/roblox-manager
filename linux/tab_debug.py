@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractButton, QCheckBox, QComboBox, QDialog, Q
 
 import debuglog
 import rbx
-from ui_common import button, hint, make_table
+from ui_common import menu_button, button, hint, make_table
 from theme import Live
 
 LEVEL_COLOUR = Live({"debug": "faint", "info": "muted", "warning": "warn", "error": "danger"})
@@ -59,10 +59,10 @@ class DebugView(QWidget):
         row2 = QHBoxLayout()
         self.count = QLabel("")
         row2.addWidget(self.count, 1)
-        row2.addWidget(button("Copy", self.copy, "Copy the events shown (with their output) as text"))
-        row2.addWidget(button("Save as text...", self.save, "Save the events shown (with their output) to a text file"))
-        row2.addWidget(button("Clear list", self.clear, "Empties this list (debug.log is kept)"))
-        row2.addWidget(button("Open log folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(rbx.STATE_DIR))), "Where debug.log is kept"))
+        row2.addWidget(menu_button("Events", [("Copy", self.copy, "Copy the events shown (with their output) as text"),
+                                              ("Save as text...", self.save, "Save the events shown (with their output) to a text file"),
+                                              ("Clear list", self.clear, "Empties this list (debug.log is kept)"), None,
+                                              ("Open the log folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(rbx.STATE_DIR))), "Where debug.log is kept")]))
         lay.addLayout(row2)
         split = QSplitter(Qt.Orientation.Vertical)
         self.table = make_table(["Time", "Level", "Area", "What happened"], [110, 72, 80, 760], empty="Nothing yet.\nEverything that happens in the app appears here as it happens.")

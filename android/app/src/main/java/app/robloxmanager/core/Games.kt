@@ -3,6 +3,7 @@ package app.robloxmanager.core
 import java.net.URI
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.doubleOrNull
 
 /** One game as the home page and the search describe it (the fields differ a little between them), in one shape. */
 data class GameCard(
@@ -230,6 +231,55 @@ suspend fun RobloxApi.gameServers(placeId: Long, sort: String = "Asc", cursor: S
         ServerInfo(id, s.int("playing") ?: 0, s.int("maxPlayers") ?: 0, s.long("ping")?.toInt(), s.long("fps")?.toInt())
     }
     return servers to (d.obj?.str("nextPageCursor") ?: "")
+}
+
+/** One game pass, developer product or badge of a game. [price] is in Robux (null: not for sale or not a sale); [detail] is a second line of text. */
+class GameItem(val id: Long, val name: String, val detail: String, val price: Long?, val onSale: Boolean)
+
+/** Follows the cursor of a public list to its end (at most 20 pages). */
+private suspend fun listPages(fetch: suspend (String) -> Pair<List<GameItem>, String>): List<GameItem> {
+    val out = ArrayList<GameItem>()
+    var cursor = ""
+    repeat(20) {
+        val (page, next) = fetch(cursor)
+        out += page
+        if (next.isEmpty()) return out
+        cursor = next
+    }
+    return out
+}
+
+suspend fun RobloxApi.gamePasses(universeId: Long): List<GameItem> = listPages { cursor ->
+    val q = hashMapOf("passView" to "Full", "pageSize" to "100")
+    if (cursor.isNotEmpty()) q["pageToken"] = cursor
+    val d = client.get("https://apis.roblox.com/game-passes/v1/universes/$universeId/game-passes", q, auth = false).json.obj
+    val items = d?.arr("gamePasses").orEmpty().mapNotNull { it as? JsonObject }.map { p ->
+        GameItem(p.long("id") ?: 0, p.str("displayName") ?: p.str("name") ?: "", p.obj("creator")?.str("name") ?: "", p.long("price"), p.bool("isForSale") == true)
+    }
+    items to (d?.str("nextPageToken") ?: "")
+}
+
+suspend fun RobloxApi.developerProducts(universeId: Long): List<GameItem> = listPages { cursor ->
+    val q = hashMapOf("limit" to "100")
+    if (cursor.isNotEmpty()) q["cursor"] = cursor
+    val d = client.get("https://apis.roblox.com/developer-products/v2/universes/$universeId/developerproducts", q, auth = false).json.obj
+    val items = d?.arr("developerProducts").orEmpty().mapNotNull { it as? JsonObject }.map { p ->
+        GameItem(p.long("ProductId") ?: 0, p.str("DisplayName") ?: p.str("Name") ?: "", "", p.long("PriceInRobux"), p.bool("IsForSale") == true)
+    }
+    items to (d?.str("nextPageCursor") ?: "")
+}
+
+suspend fun RobloxApi.universeBadges(universeId: Long): List<GameItem> = listPages { cursor ->
+    val q = hashMapOf("limit" to "100", "sortOrder" to "Asc")
+    if (cursor.isNotEmpty()) q["cursor"] = cursor
+    val d = client.get("https://badges.roblox.com/v1/universes/$universeId/badges", q, auth = false).json
+    val items = d.items().map { b ->
+        val st = b.obj("statistics")
+        val won = st?.get("winRatePercentage")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.doubleOrNull } ?: 0.0
+        GameItem(b.long("id") ?: 0, b.str("displayName") ?: b.str("name") ?: "", (b.str("displayDescription") ?: b.str("description") ?: "").take(160) +
+            "\n${st?.long("awardedCount") ?: 0} awarded, ${"%.1f".format(won)} % win rate", null, b.bool("enabled") != false)
+    }
+    items to (d.obj?.str("nextPageCursor") ?: "")
 }
 
 suspend fun RobloxApi.favoriteState(universeId: Long): Boolean = client.get("https://games.roblox.com/v1/games/$universeId/favorites").json.obj?.bool("isFavorited") ?: false
