@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.7.4.4",
+    "date": "2026-11-02",
+    "changes": [
+      "Android: libraries updated (Compose, AndroidX core, serialization); nothing changes in how the app looks or works"
+    ]
+  },
+  {
     "version": "1.16.6.4.4",
     "date": "2026-10-28",
     "changes": [
