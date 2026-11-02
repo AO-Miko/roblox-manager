@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.8.4.4",
+    "date": "2026-11-02",
+    "changes": [
+      "Under the hood: stricter automatic checks (code scan of every language, lint, tests that really fail the build); a shorter filter hint in the group member list so it is never cut off"
+    ]
+  },
+  {
     "version": "1.16.7.4.4",
     "date": "2026-11-02",
     "changes": [

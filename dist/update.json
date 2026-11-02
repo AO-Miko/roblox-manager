@@ -1,7 +1,7 @@
 {
-  "versionName": "1.16.7.4.4",
-  "versionCode": 40,
+  "versionName": "1.16.8.4.4",
+  "versionCode": 41,
   "apk": "roblox-manager.apk",
-  "sha256": "4727ad2235bf7084000b77a10232e3ff6f3b4b5d2c794ee3605a48ee46d6f298",
-  "notes": "Android: libraries updated (Compose, AndroidX core, serialization); nothing changes in how the app looks or works"
+  "sha256": "e12d1308f1ad963c9d83af5cb6d9d0d29836d1788e0dd70d1962763b33a0a184",
+  "notes": "Under the hood: stricter automatic checks (code scan of every language, lint, tests that really fail the build); a shorter filter hint in the group member list so it is never cut off"
 }
