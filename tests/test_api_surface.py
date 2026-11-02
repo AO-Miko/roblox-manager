@@ -15,6 +15,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.0.0.0.0\n")
 LINUX = ROOT / "linux"
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, str(LINUX))
 __import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtWidgets import QApplication

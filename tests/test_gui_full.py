@@ -5,6 +5,7 @@ import pathlib
 import json, os, re, sys, time
 import tempfile; here = tempfile.mkdtemp(prefix="guitest-")
 os.environ["ROBLOX_MANAGER_CONFIG"] = os.path.join(here, "cfg4"); os.environ["ROBLOX_MANAGER_STATE"] = os.path.join(here, "state4")
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, os.environ.get("RM_SRC") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "linux")); sys.argv = ["x"]
 from PySide6.QtWidgets import QApplication, QDialog, QInputDialog, QMessageBox, QTableWidget
 from PySide6.QtCore import Qt

@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 tmp = Path(tempfile.mkdtemp(prefix="relupd-"))
 os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_STATE": str(tmp / "state"), "ROBLOX_MANAGER_APP_DIR": str(tmp / "app"),
                    "ROBLOX_MANAGER_UPDATE_CACHE": str(tmp / "cache"), "ROBLOX_MANAGER_UPDATE_BACKEND": "release"})
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, str(ROOT / "linux"))
 import updater
 

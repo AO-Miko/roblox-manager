@@ -2,7 +2,7 @@
 import re
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFontMetrics, QKeySequence, QPainter, QPainterPath, QPen, QShortcut
+from PySide6.QtGui import QColor, QFontMetrics, QKeySequence, QPainter, QPainterPath, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (QAbstractButton, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
@@ -210,6 +210,79 @@ class NavItem(QAbstractButton):
         p.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, fm.elidedText(self.title, Qt.TextElideMode.ElideRight, int(text_rect.width())))
 
 
+class UserChip(QAbstractButton):
+    """The account in use, at the top of the side bar: its round picture and its user name. In the narrow bar only the picture is shown."""
+    PICTURE = 30
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.name = ""
+        self.picture = QPixmap()
+        self.compact = False
+        self._hover = False
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setFixedHeight(46)
+        self.set_user("", None)
+
+    def set_user(self, name, data):
+        """name: the user name ('' when nobody is signed in); data: the bytes of the picture (or None)."""
+        self.name = name or ""
+        self.picture = QPixmap()
+        if data:
+            self.picture.loadFromData(data)
+        label = self.name or "Not signed in"
+        self.setToolTip(label + ("\nOpen the account page" if self.name else ""))
+        self.setAccessibleName(label)
+        self.update()
+
+    def enterEvent(self, ev):
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, ev):
+        self._hover = False
+        self.update()
+
+    def minimumSizeHint(self):
+        return QSize(40, 46)
+
+    def paintEvent(self, ev):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(2, 1, -2, -1)
+        if self._hover:
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(T["hover"]))
+            p.drawRoundedRect(r, 3, 3)
+        d = self.PICTURE
+        x = r.x() + (r.width() - d) / 2 if self.compact else r.x() + 10
+        circle = QRectF(x, r.center().y() - d / 2, d, d)
+        path = QPainterPath()
+        path.addEllipse(circle)
+        if not self.picture.isNull():
+            p.save()
+            p.setClipPath(path)
+            p.drawPixmap(circle.toRect(), self.picture.scaled(d, d, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation))
+            p.restore()
+        else:
+            p.fillPath(path, QColor(T["surface3"]))
+            p.setPen(QColor(T["muted"]))
+            f = self.font(); f.setPixelSize(14); f.setWeight(f.Weight.DemiBold)
+            p.setFont(f)
+            p.drawText(circle, Qt.AlignmentFlag.AlignCenter, (self.name[:1].upper() if self.name else "?"))
+        if self.compact:
+            return
+        f = self.font(); f.setPixelSize(13); f.setWeight(f.Weight.DemiBold)
+        p.setFont(f)
+        p.setPen(QColor(T["text"] if self.name else T["muted"]))
+        left = circle.right() + 10
+        text = QRectF(left, r.y(), r.right() - left - 6, r.height())
+        p.drawText(text, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                   QFontMetrics(f).elidedText(self.name or "Not signed in", Qt.TextElideMode.ElideRight, int(text.width())))
+
+
 class IconButton(QAbstractButton):
     """A small round-cornered button with a line icon (collapse the menu, reload)."""
 
@@ -357,6 +430,10 @@ class Sidebar(QFrame):
         top.addWidget(self.toggle)
         lay.addLayout(top)
         lay.addSpacing(6)
+        self.chip = UserChip()
+        self.chip.clicked.connect(lambda: self.picked.emit(0))
+        lay.addWidget(self.chip)
+        lay.addSpacing(4)
         self.account = account_combo
         lay.addWidget(self.account)
         lay.addSpacing(6)
@@ -453,7 +530,7 @@ class Sidebar(QFrame):
         compact = self.manual_compact or self.auto_compact
         self.compact = compact
         self.setFixedWidth(self.COMPACT if compact else self.FULL)
-        for w in [*self.items, self.search]:
+        for w in [*self.items, self.search, self.chip]:
             w.compact = compact
             w.update()
         for w in [self.brand, self.version]:

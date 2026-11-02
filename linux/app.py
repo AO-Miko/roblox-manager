@@ -14,6 +14,7 @@
   app.py --shot FILE  render the window to a PNG and exit (testing)
 """
 import json
+import time
 import logging
 import os
 import sys
@@ -151,6 +152,9 @@ class MainWindow(QMainWindow):
         self.palette_box = nav.Palette(self, self._search_entries)
         self._shortcuts = nav.install_shortcuts(self)
         self.header.show_page(self.tabs.tabText(0))
+        self.sidebar.chip.clicked.connect(lambda: self.home.tabs.setCurrentIndex(0))      # (the chip opens the account page on Home)
+        self.ctx.signed_in.connect(self._chip_update)
+        self.ctx.signed_out.connect(lambda: self.sidebar.chip.set_user("", None))
         self.ctx.signed_in.connect(self.update_admin)
         self.ctx.signed_out.connect(self.update_admin)
         tab_debug.watch(self, QApplication.instance())             # the debug log hears about pages, buttons, dialogs and sign-ins
@@ -181,6 +185,32 @@ class MainWindow(QMainWindow):
             self._notice_timer.timeout.connect(self._check_notices)
             self._notice_timer.start(notices.REFRESH_SECONDS * 1000)
             QTimer.singleShot(2500, self._check_notices)
+
+    def _chip_update(self):
+        """The user chip at the top of the side bar: the user name now, the round picture when it is here (saved copy, or downloaded)."""
+        me = self.ctx.me
+        if not me:
+            return
+        uid, name, client = me["id"], me.get("name") or "", self.ctx.client
+        self.sidebar.chip.set_user(name, None)
+        f = rbx.AVATAR_DIR / f"{int(uid)}-150.png"
+
+        def work():
+            try:
+                if time.time() - f.stat().st_mtime < rbx.AVATAR_MAX_AGE:
+                    return f.read_bytes()
+            except OSError:
+                pass                  # (no usable saved copy: it is fetched again)
+            url = client.headshots([uid], size="150x150").get(int(uid))
+            data = client.fetch_bytes(url) if url else b""
+            if data:
+                try:
+                    rbx.AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+                    f.write_bytes(data)
+                except OSError:
+                    pass                  # (a cache that cannot be written is skipped)
+            return data
+        self.ctx.async_.run(work, lambda data: (self.ctx.me or {}).get("id") == uid and self.sidebar.chip.set_user(name, data), lambda e: None)
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)

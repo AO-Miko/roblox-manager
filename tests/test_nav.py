@@ -1,19 +1,23 @@
 """Test of the navigation: side bar, page header, search (Ctrl+K), shortcuts, compact side bar. Run: QT_QPA_PLATFORM=offscreen python3 tests/test_nav.py"""
+import faulthandler
 import os
 import sys
 import tempfile
 import time
 from pathlib import Path
 
+faulthandler.dump_traceback_later(420, exit=True)          # (a test that hangs fails, with the place it stopped at, instead of waiting for ever)
 ROOT = Path(__file__).resolve().parent.parent
 tmp = Path(tempfile.mkdtemp(prefix="nav-"))
 os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_STATE": str(tmp / "state"), "ROBLOX_MANAGER_VAULT": "off",
                    "ROBLOX_MANAGER_APP_DIR": str(tmp / "app"), "ROBLOX_MANAGER_UPDATE_CACHE": str(tmp / "cache")})
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.6.0\n")
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, str(ROOT / "linux"))
 __import__("browser_login")      # (the web engine must be imported before the application exists)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QBuffer, Qt
+from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
@@ -44,6 +48,7 @@ spin(0.3)
 check("the side bar starts as a narrow icon rail", w.sidebar.compact and w.sidebar.width() == nav.Sidebar.COMPACT)
 w.sidebar.toggle.click(); spin(0.1)          # (the checks below are about the wide bar)
 
+
 titles = [nav.base_title(w.tabs.tabText(i))[0] for i in range(w.tabs.count())]
 check("the side bar has one entry per page, in the same order", [i.title for i in w.sidebar.items] == titles, [i.title for i in w.sidebar.items])
 check("the tab bar itself is hidden (the side bar replaces it)", not w.tabs.tabBar().isVisible())
@@ -58,6 +63,7 @@ check("base_title splits names and counts", nav.base_title("People (3 requests)"
 # shortcuts
 QTest.keyClick(w, Qt.Key.Key_2, Qt.KeyboardModifier.ControlModifier); spin(0.1)
 check("Ctrl+2 opens the second page", w.tabs.currentIndex() == 1, w.tabs.currentIndex())
+w.activateWindow(); w.raise_(); spin(0.2)                # (the shortcut only works in the window that is active)
 QTest.keyClick(w, Qt.Key.Key_K, Qt.KeyboardModifier.ControlModifier); spin(0.2)
 check("Ctrl+K opens the search with the box focused", w.palette_box.isVisible() and w.palette_box.list.count() >= len(titles))
 
@@ -104,7 +110,11 @@ w.palette_box.close()
 w.resize(820, 700); spin(0.2)
 check("a narrow window shrinks the side bar to icons", w.sidebar.width() == nav.Sidebar.COMPACT and all(i.compact for i in w.sidebar.items) and not w.sidebar.brand.isVisible())
 check("...and every icon still says its name as a tooltip", all(i.toolTip().startswith(i.title) for i in w.sidebar.items))
-w.resize(1180, 760); spin(0.2)
+w.resize(1180, 760)
+for _ in range(40):                      # (the window takes its new size when the event loop gets to it)
+    spin(0.05)
+    if w.width() == 1180:
+        break
 check("a wide window brings the full side bar back", w.sidebar.width() == nav.Sidebar.FULL and not any(i.compact for i in w.sidebar.items) and w.sidebar.brand.isVisible())
 
 # every page has an icon and a description
@@ -169,5 +179,30 @@ r = [w.palette_box.list.item(i).text() for i in range(w.palette_box.list.count()
 check("the search finds the page (Ctrl+K > 'look up')", any(x.startswith("Look up a game") for x in r), r[:3])
 QTest.keyClick(w.palette_box.edit, Qt.Key.Key_Return); spin(0.2)
 check("...and opens it", w.current_page() is w.vip and w.vip.tabs.currentIndex() == 1 and w.vip.entry.isVisible())
+
+# ---- the user chip at the top of the side bar
+chip = w.sidebar.chip
+check("with nobody signed in the chip says so", chip.name == "" and "Not signed in" in chip.toolTip())
+w.ctx.client.user = {"id": 5, "name": "tester", "displayName": "Tester"}
+w.ctx.client.headshots = lambda *a, **k: {}
+w._chip_update(); spin(0.3)                    # (not the 'signed in' signal: that makes every page load its list)
+check("signed in, the chip shows the user name", chip.name == "tester" and "tester" in chip.toolTip(), chip.name)
+check("...and sits above the Home entry", chip.geometry().bottom() <= w.sidebar.items[0].geometry().top())
+img = QImage(60, 60, QImage.Format.Format_ARGB32); img.fill(0xff3366ff)
+buf = QBuffer(); buf.open(QBuffer.OpenModeFlag.WriteOnly); img.save(buf, "PNG")
+chip.set_user("tester", bytes(buf.data()))
+check("a picture can be shown (round, in the chip)", not chip.picture.isNull())
+check("in the wide bar the chip has the whole width for the name", not chip.compact and chip.width() > 150, chip.width())
+w.sidebar.set_compact(False); w.sidebar.manual_compact = False; w.sidebar._update_compact(); spin(0.1)
+w.sidebar.toggle.click(); spin(0.1)
+check("in the narrow bar the chip is only the picture (centred, no name)", chip.compact and chip.width() < 70, chip.width())
+w.sidebar.toggle.click(); spin(0.1)
+picked = []
+w.sidebar.picked.connect(picked.append)
+chip.click(); spin(0.1)
+check("pressing the chip opens Home (the account page)", picked[-1:] == [0] and w.home.tabs.currentIndex() == 0, picked)
+w.ctx.signed_out.emit(); spin(0.1)
+check("signing out empties the chip", chip.name == "")
+
 print(f"{sum(res)}/{len(res)} checks passed")
 sys.exit(0 if all(res) else 1)

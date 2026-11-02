@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -113,7 +114,8 @@ fun matchHits(hits: List<Hit>, query: String): List<Hit> {
 }
 
 @Composable
-fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: List<Account>, me: Account?, onSwitch: (Account) -> Unit, onAdd: () -> Unit, onSearch: () -> Unit, unread: Int = 0, onBell: () -> Unit = {}) {
+fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: List<Account>, me: Account?, onSwitch: (Account) -> Unit, onAdd: () -> Unit, onSearch: () -> Unit, unread: Int = 0, onBell: () -> Unit = {},
+           avatar: String? = null, showName: Boolean = false) {
     Row(Modifier.fillMaxWidth().background(C.bg).statusBarsPadding().padding(start = if (onBack != null) 4.dp else 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
@@ -126,9 +128,15 @@ fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: Lis
         }
         var open by remember { mutableStateOf(false) }
         Box {
-            IconButton(onClick = { open = true }) {
-                Box(Modifier.size(32.dp).clip(CircleShape).background(C.accentDim), Alignment.Center) {
+            // the account in use: its round picture, and (on Home) its user name beside it; every other screen shows only the picture
+            Row(Modifier.clip(CircleShape).clickable { open = true }.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (!avatar.isNullOrEmpty()) Avatar(avatar, 32)
+                else Box(Modifier.size(32.dp).clip(CircleShape).background(C.accentDim), Alignment.Center) {
                     Text((me?.name ?: "?").take(1).uppercase(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+                if (showName && me != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(me.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 120.dp))
                 }
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

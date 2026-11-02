@@ -15,6 +15,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
                    "ROBLOX_MANAGER_APP_DIR": str(tmp / "app"), "ROBLOX_MANAGER_UPDATE_CACHE": str(tmp / "cache")})
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.7.0\n")
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, str(ROOT / "linux"))
 __import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtCore import Qt
@@ -201,7 +202,17 @@ check("a list with roles in every spelling is read", publish_roles({7: "Senior A
 
 # ---------------------------------------------------------------- the pages in the window
 QMessageBox.warning = staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok)
-w = MainWindow(rbx.Client(), auto_login=False)
+class NoRoblox(rbx.Client):
+    """A client that never reaches Roblox: every list it is asked for is empty (the pages that load when someone signs in get that, and nothing else)."""
+
+    def get(self, url, params=None, **kw):
+        return {"data": []}
+
+    def post(self, url, body=None, **kw):
+        return {"data": []}
+
+
+w = MainWindow(NoRoblox(), auto_login=False)
 w.resize(1180, 760)
 w.show()
 spin(0.3)

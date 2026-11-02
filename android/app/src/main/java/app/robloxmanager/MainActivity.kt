@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import app.robloxmanager.ui.rememberLoader
 import app.robloxmanager.ui.AppTheme
 import app.robloxmanager.ui.ADMIN
 import app.robloxmanager.ui.ALL
@@ -148,7 +149,9 @@ private fun Main(sv: Services, addAccount: () -> Unit) {
     BackHandler(enabled = !inMore && dest != HOME.id) { open(HOME.id) }
     key(me?.id) {
         Column(Modifier.fillMaxSize()) {
+            val avatar = rememberLoader(me?.id) { me?.let { a -> sv.api.headshots(listOf(a.id))[a.id] } }
             TopBar(
+                avatar = avatar.value, showName = dest == HOME.id,
                 title = (ALL.firstOrNull { it.id == dest } ?: MORE).title, subtitle = (ALL.firstOrNull { it.id == dest } ?: MORE).hint, onBack = if (inMore) ({ open(MORE.id) }) else null,
                 accounts = accounts, me = me, onAdd = addAccount, onSearch = { searching = true }, unread = unread, onBell = { open(NOTICES.id) },
                 onSwitch = { a -> sv.scope.launch { try { sv.switchTo(a.id) } catch (_: Exception) { } } },

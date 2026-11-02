@@ -85,6 +85,8 @@ jobs:
         run: python tests/test_nav.py
       - name: Looks (themes, accent colours, text size)
         run: python tests/test_theme.py
+      - name: No test uses the real internet
+        run: python tests/test_offline.py
       - name: Terms of use and Privacy policy question
         run: python tests/test_legal.py
       - name: Notifications

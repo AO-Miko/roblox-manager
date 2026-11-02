@@ -52,6 +52,9 @@ jobs:
       - name: Looks (themes, accent colours, text size)
         if: ${{ !cancelled() }}
         run: python tests/test_theme.py
+      - name: No test uses the real internet
+        if: ${{ !cancelled() }}
+        run: python tests/test_offline.py
       - name: Terms of use and Privacy policy question
         if: ${{ !cancelled() }}
         run: python tests/test_legal.py

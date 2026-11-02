@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 tmp = Path(tempfile.mkdtemp(prefix="geo-"))
 os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_STATE": str(tmp / "state"), "ROBLOX_MANAGER_VAULT": "off"})
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, str(ROOT / "linux"))
 __import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtGui import QColor

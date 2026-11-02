@@ -12,6 +12,7 @@ SRC = Path(os.environ.get("RM_SRC") or HERE.parent / "linux")
 tmp = Path(tempfile.mkdtemp(prefix="fit-"))
 os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_STATE": str(tmp / "state"), "ROBLOX_MANAGER_VAULT": "off",
                    "ROBLOX_MANAGER_UPDATE_BACKEND": "off"})
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, str(SRC))
 sys.path.insert(0, str(HERE))
 __import__("browser_login")      # (the web engine must be imported before the application exists)

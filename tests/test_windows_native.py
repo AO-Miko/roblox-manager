@@ -10,6 +10,7 @@ HERE = Path(__file__).resolve().parent
 SRC = Path(os.environ.get("RM_SRC") or HERE.parent / "linux")
 FIX = Path(os.environ.get("RM_FIXTURES") or HERE / "fixtures")
 tmp = Path(tempfile.mkdtemp(prefix="wintest-"))
+import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
 sys.path.insert(0, str(SRC))
 res = []
 
@@ -73,12 +74,17 @@ check("a changed file does not", sshsig.verify(data + b"!", sig, allowed, "roblo
 # ---- the update server over TLS, with this system's certificates
 import updater
 
-try:
-    r = updater.release_latest({"repo": "https://github.com/AO-Miko/roblox-manager.git"})
-    check("GitHub answers over https (the newest release is found)", bool(r["version"]), r["version"])
-except updater.UpdateError as e:
-    # any answer from GitHub (even an HTTP error such as a rate limit on a shared test machine) proves that TLS and the certificates work
-    check("GitHub answers over https (a release without a package, or an HTTP error, is fine here)", "could not reach" not in str(e) or "HTTPError" in str(e), e)
+if sys.platform == "win32":
+    # the one test that goes to the internet, on purpose: it proves that Windows trusts GitHub's certificate. It talks to GitHub only, never to Roblox.
+    _offline.ALLOW.update(("github.com", "api.github.com"))
+    try:
+        r = updater.release_latest({"repo": "https://github.com/AO-Miko/roblox-manager.git"})
+        check("GitHub answers over https (the newest release is found)", bool(r["version"]), r["version"])
+    except updater.UpdateError as e:
+        # any answer from GitHub (even an HTTP error such as a rate limit on a shared test machine) proves that TLS and the certificates work
+        check("GitHub answers over https (a release without a package, or an HTTP error, is fine here)", "could not reach" not in str(e) or "HTTPError" in str(e), e)
+else:
+    check("(the check that Windows trusts GitHub's certificate only runs on Windows)", True)
 
 print(f"\n{sum(res)}/{len(res)} passed")
 sys.exit(0 if all(res) else 1)
