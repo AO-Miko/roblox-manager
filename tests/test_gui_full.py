@@ -1,12 +1,13 @@
 """The whole desktop app against a fake Roblox (316 checks): every tab, bulk actions, rate limits, accounts, settings.
 Run: QT_QPA_PLATFORM=offscreen python3 tests/test_gui_full.py   (RM_SRC = the app folder, default linux/)"""
 import json, os, re, sys, time
-import os, tempfile; here = tempfile.mkdtemp(prefix="guitest-")
+import tempfile; here = tempfile.mkdtemp(prefix="guitest-")
 os.environ["ROBLOX_MANAGER_CONFIG"] = os.path.join(here, "cfg4"); os.environ["ROBLOX_MANAGER_STATE"] = os.path.join(here, "state4")
 sys.path.insert(0, os.environ.get("RM_SRC") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "linux")); sys.argv = ["x"]
-from PySide6.QtWidgets import QApplication, QDialog, QInputDialog, QMessageBox
+from PySide6.QtWidgets import QApplication, QDialog, QInputDialog, QMessageBox, QTableWidget
 from PySide6.QtCore import Qt
 import rbx, ui_common
+from theme import T
 from app import MainWindow
 import shutil, vault as _vault
 for _k in ("active", "acct-1000", "acct-2000", "acct-1", "acct-2"): _vault.delete(_k)        # leftovers from an aborted earlier run
@@ -704,7 +705,7 @@ check("...and swaps the dates if they are the wrong way round", sorted(r["name"]
 w.tabs.setCurrentIndex(2); spin(0.3)
 w.groups.group_rows = [{"group": {"id": 77, "name": "Mine", "memberCount": 10, "owner": {"userId": 1000}}, "role": {"id": 2, "name": "Admin", "rank": 255}}, {"group": {"id": 201, "name": "G1", "memberCount": 10, "owner": {"userId": 999}}, "role": {"id": 2, "name": "Member", "rank": 1}}, {"group": {"id": 202, "name": "G2", "memberCount": 10, "owner": {"userId": 999}}, "role": {"id": 2, "name": "Member", "rank": 1}}, {"group": {"id": 203, "name": "G3", "memberCount": 10, "owner": {"userId": 999}}, "role": {"id": 2, "name": "Admin", "rank": 50}}, {"group": {"id": 204, "name": "G4", "memberCount": 10, "owner": {"userId": 999}}, "role": {"id": 2, "name": "Member", "rank": 1}}, {"group": {"id": 205, "name": "G5", "memberCount": 10, "owner": {"userId": 999}}, "role": {"id": 2, "name": "Member", "rank": 1}}, {"group": {"id": 206, "name": "G6", "memberCount": 10, "owner": {"userId": 999}}, "role": {"id": 2, "name": "Member", "rank": 1}}]
 w.groups._show_groups()
-check("the groups list allows several selected", w.groups.glist.selectionMode() == QTableWidget.SelectionMode.ExtendedSelection if "QTableWidget" in dir() else True)
+check("the groups list allows several selected", w.groups.glist.selectionMode() == QTableWidget.SelectionMode.ExtendedSelection)
 w.groups.select_groups_where(lambda g: g["role"]["rank"] <= 1)
 check("'Plain members' selects only rank-1 groups", sorted(g["group"]["id"] for g in w.groups._group_sels()) == [201, 202, 204, 205, 206], str([g["group"]["id"] for g in w.groups._group_sels()]))
 w.groups.gfilter.setText("g2"); w.groups.select_groups_where(lambda g: True)
@@ -755,7 +756,7 @@ _cut = {}
 textfit.check_window(w, [1180, 900], _cut)
 check("no text is cut off on any tab or sub-tab (window full of data, 1180 and 900 px wide)", not _cut, "\n".join(textfit.lines(_cut)[:12]))
 w.resize(1180, 760)
-check("the tabs are Home, People, Groups, VIP servers, Money, Request log, API Explorer, Staff List, Admin, Settings", [base(w.tabs.tabText(i)) for i in range(w.tabs.count())] == ["Home", "People", "Groups", "VIP servers", "Money", "Request log", "API Explorer", "Staff List", "Admin", "Settings"], [w.tabs.tabText(i) for i in range(w.tabs.count())])
+check("the tabs are Home, People, Groups, VIP servers, Money, Request log, API Explorer, Staff List, Admin, Notifications, Settings", [base(w.tabs.tabText(i)) for i in range(w.tabs.count())] == ["Home", "People", "Groups", "VIP servers", "Money", "Request log", "API Explorer", "Staff List", "Admin", "Notifications", "Settings"], [w.tabs.tabText(i) for i in range(w.tabs.count())])
 check("People has Friends, Requests, Followers, Following, Blocked, Find a user, Alerts", [base(w.people.tabs.tabText(i)) for i in range(w.people.tabs.count())] == ["Friends", "Requests", "Followers", "Following", "Blocked", "Find a user", "Alerts"])
 ask_yes(True)
 w.account.sign_in(); wait(lambda: ctx.logged_in)
@@ -1131,7 +1132,7 @@ check("every request shows up in the Requests tab", wait(lambda: rq.table.rowCou
 row = [rq.table.item(0, c).text() for c in range(7)]
 check("...with account, method, address (and query), status and time taken", row[1:6] == ["tester", "GET", "friends.roblox.com/v1/users/1/friends?limit=100", "200", "120"], row)
 check("...retries and pacing are shown in the notes", "retry-after 5" in rq.table.item(1, 6).text() and "[paced]" in rq.table.item(1, 6).text() and "[retry 1]" in rq.table.item(1, 6).text(), rq.table.item(1, 6).text())
-check("...rate limits are red, errors amber, successes green", rq.table.item(1, 4).foreground().color().name() == "#e5534b" and rq.table.item(3, 4).foreground().color().name() == "#e0a030" and rq.table.item(0, 4).foreground().color().name() == "#3ba55d")
+check("...rate limits are red, errors amber, successes green", rq.table.item(1, 4).foreground().color().name() == T["danger"] and rq.table.item(3, 4).foreground().color().name() == T["warn"] and rq.table.item(0, 4).foreground().color().name() == T["success"])
 rq.only_problems.setChecked(True)
 check("'Only problems' keeps the 429, the stop and the 400", rq.table.rowCount() == 3, rq.table.rowCount())
 rq.only_problems.setChecked(False); rq.filter.setText("unfriend 429")
@@ -1251,3 +1252,4 @@ check("the 'disabled private servers' answer is recognised", tv.unavailable_reas
 check("other errors are not mistaken for it", not tv.unavailable_reason("HTTP 429: slow down"))
 w.close()
 print("\n%d/%d checks passed" % (sum(results), len(results)))
+sys.exit(0 if all(results) else 1)          # a failed check must fail the CI run

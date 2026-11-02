@@ -124,3 +124,4 @@ ctx.asked = []
 tab.upd_channel.setCurrentIndex(0); tab.channel_changed()
 check("going back to Stable does not ask and is saved", not ctx.asked and updater.load_config()["channel"] == "stable" and "released to everybody" in tab.upd_channel_note.text())
 print("\n%d/%d checks passed" % (sum(res), len(res)))
+import sys; sys.exit(0 if all(res) else 1)          # a failed check must fail the CI run

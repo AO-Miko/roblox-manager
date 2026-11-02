@@ -179,3 +179,4 @@ u.boot()
 check("with automatic updates off, boot() leaves everything as it is", (app / "app.py").read_text() == "print('v8')\n")
 print("\n%d/%d checks passed" % (sum(res), len(res)))
 shutil.rmtree(base, ignore_errors=True)
+import sys; sys.exit(0 if all(res) else 1)          # a failed check must fail the CI run
