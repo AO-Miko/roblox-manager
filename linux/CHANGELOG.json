@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.10.4.4",
+    "date": "2026-11-02",
+    "changes": [
+      "Code-scan clean-up: the sign-in web view is locked down in one place, safer file replaces for the signed lists, and clearer error handling; no change in how the app looks"
+    ]
+  },
+  {
     "version": "1.16.9.4.4",
     "date": "2026-11-02",
     "changes": [

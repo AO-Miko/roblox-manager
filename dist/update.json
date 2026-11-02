@@ -1,7 +1,7 @@
 {
-  "versionName": "1.16.9.4.4",
-  "versionCode": 42,
+  "versionName": "1.16.10.4.4",
+  "versionCode": 43,
   "apk": "roblox-manager.apk",
-  "sha256": "8b4615b06fee76d931bf8cea802d83bb02a7815bdb244fe0d813f5b69d133626",
-  "notes": "Each account now accepts the Terms of use and the Privacy policy at its first sign-in (and when they change); updates install through Android's PackageInstaller; security and code-scan fixes; Terms and Privacy pages in Settings"
+  "sha256": "a85b9eab4223a2129f93fdd29c24a8722d8c835eee816f47b05a13e0571416c7",
+  "notes": "Code-scan clean-up: the sign-in web view is locked down in one place, safer file replaces for the signed lists, and clearer error handling; no change in how the app looks"
 }
