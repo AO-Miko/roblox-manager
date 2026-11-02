@@ -1,7 +1,7 @@
 {
-  "versionName": "1.16.6.4.4",
-  "versionCode": 39,
+  "versionName": "1.16.7.4.4",
+  "versionCode": 40,
   "apk": "roblox-manager.apk",
-  "sha256": "c48152cf61c8b3e28439e0dc2917ed0ae00069e06d20fc48cb6eb4171a1c4339",
-  "notes": "Notifications: a check icon in the page header shows the messages you have read again (read ones leave the list, each marked with a check mark), on the PC and on the phone"
+  "sha256": "4727ad2235bf7084000b77a10232e3ff6f3b4b5d2c794ee3605a48ee46d6f298",
+  "notes": "Android: libraries updated (Compose, AndroidX core, serialization); nothing changes in how the app looks or works"
 }
