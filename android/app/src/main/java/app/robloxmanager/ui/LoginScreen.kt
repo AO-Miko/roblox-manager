@@ -181,8 +181,8 @@ private fun BrowserTab(sv: Services) {
             WebView(ctx).apply {
                 settings.javaScriptEnabled = true                      // (Roblox's login page needs it)
                 settings.domStorageEnabled = true
-                settings.allowFileAccess = false                       // nothing from the phone's files,
-                settings.allowContentAccess = false                    // nothing from other apps,
+                settings.setAllowFileAccess(false)                     // nothing from the phone's files,
+                settings.setAllowContentAccess(false)                  // nothing from other apps,
                 settings.setGeolocationEnabled(false)
                 settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW                 // nothing over plain http
                 webViewClient = object : WebViewClient() {

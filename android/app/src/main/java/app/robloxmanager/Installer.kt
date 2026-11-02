@@ -1,10 +1,13 @@
 package app.robloxmanager
 
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.provider.Settings
-import androidx.core.content.FileProvider
+import androidx.core.content.IntentCompat
 import app.robloxmanager.core.AppUpdate
 import app.robloxmanager.core.UpdateError
 import app.robloxmanager.core.UpdateInfo
@@ -53,15 +56,32 @@ object Updates {
         }
     }
 
-    /** Hands the verified APK to Android's installer. The system asks the user to confirm (and, once, to allow installs from this app). */
+    /** Hands the verified APK to Android's installer (a PackageInstaller session). The system asks the user to confirm (and, once, to allow installs from this app). */
     fun install(ctx: Context, apk: File): String {
         if (!ctx.packageManager.canRequestPackageInstalls()) {
             ctx.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             return "Allow installs from this app, then press Install again."
         }
-        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", apk)
-        ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
-        return "Installer opened."
+        return try {
+            val installer = ctx.packageManager.packageInstaller
+            val id = installer.createSession(PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL))
+            installer.openSession(id).use { session ->
+                apk.inputStream().use { input -> session.openWrite("roblox-manager.apk", 0, apk.length()).use { out -> input.copyTo(out); session.fsync(out) } }
+                val answer = PendingIntent.getBroadcast(ctx, id, Intent(ctx, InstallStatus::class.java).setPackage(ctx.packageName), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                session.commit(answer.intentSender)                  // (the system sends its answer to InstallStatus)
+            }
+            "Installer opened."
+        } catch (e: Exception) {
+            "Could not start the installer: ${e.javaClass.simpleName}"
+        }
+    }
+}
+
+/** Receives the installer's answers: when it needs the user's confirmation it hands over the dialog to show. */
+class InstallStatus : BroadcastReceiver() {
+    override fun onReceive(ctx: Context, intent: Intent) {
+        if (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE) != PackageInstaller.STATUS_PENDING_USER_ACTION) return
+        val dialog = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java) ?: return
+        ctx.startActivity(dialog.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
