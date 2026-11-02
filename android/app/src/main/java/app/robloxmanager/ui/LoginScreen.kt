@@ -22,9 +22,9 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -150,11 +150,12 @@ private fun BrowserTab(sv: Services) {
     var msg by remember { mutableStateOf("Sign in on the Roblox page below. It handles every kind of check (CAPTCHA, passkey ...). Only Roblox pages open in this window.") }
     val ctx = LocalContext.current
     val cm = remember { CookieManager.getInstance() }
-    var web by remember { mutableStateOf<WebView?>(null) }
+    var created by remember { mutableStateOf(false) }          // (the page has been created: the sign-in can be watched)
+    var reload by remember { mutableIntStateOf(0) }            // (counts up to load the login page again)
     var done by remember { mutableStateOf(false) }
 
-    LaunchedEffect(web) {
-        while (!done && web != null) {
+    LaunchedEffect(created) {
+        while (!done && created) {
             delay(1000)
             val c = cm.getCookie("https://www.roblox.com")?.split(";")?.map { it.trim() }?.firstOrNull { it.startsWith(".ROBLOSECURITY=") }
             if (c != null) {
@@ -166,12 +167,11 @@ private fun BrowserTab(sv: Services) {
                 } catch (e: Exception) {
                     msg = errorText(e); done = false
                     cm.removeAllCookies(null)
-                    web?.loadUrl("https://www.roblox.com/login")
+                    reload++                                   // (the page below loads the login page again)
                 }
             }
         }
     }
-    DisposableEffect(Unit) { onDispose { web?.destroy() } }
 
     Column(Modifier.fillMaxSize()) {
         Text(msg, color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
@@ -179,10 +179,13 @@ private fun BrowserTab(sv: Services) {
             cm.removeAllCookies(null)
             val view = WebView(ctx)
             lockDown(view)                                     // (every setting is shut before the page is loaded)
+            view.tag = 0
             view.loadUrl("https://www.roblox.com/login")
-            web = view
+            created = true
             view
-        })
+        }, update = { page ->
+            if (page.tag != reload) { page.tag = reload; page.loadUrl("https://www.roblox.com/login") }          // (after a sign-in that failed)
+        }, onRelease = { page -> page.destroy() })
     }
 }
 
