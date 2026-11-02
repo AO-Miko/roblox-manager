@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -44,6 +42,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +58,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -117,7 +117,7 @@ fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: Lis
     Row(Modifier.fillMaxWidth().background(C.bg).statusBarsPadding().padding(start = if (onBack != null) 4.dp else 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
-            Text(title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             if (subtitle.isNotEmpty()) Text(subtitle, color = C.muted, fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
         IconButton(onClick = onSearch) { Icon(Icons.Outlined.Search, "Search") }
@@ -127,8 +127,8 @@ fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: Lis
         var open by remember { mutableStateOf(false) }
         Box {
             IconButton(onClick = { open = true }) {
-                Box(Modifier.size(32.dp).clip(RoundedCornerShape(4.dp)).background(C.fill), Alignment.Center) {
-                    Text((me?.name ?: "?").take(1).uppercase(), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = C.onAccent)
+                Box(Modifier.size(32.dp).clip(CircleShape).background(C.accentDim), Alignment.Center) {
+                    Text((me?.name ?: "?").take(1).uppercase(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -146,20 +146,19 @@ fun TopBar(title: String, subtitle: String, onBack: (() -> Unit)?, accounts: Lis
 
 @Composable
 fun BottomBar(current: String, counts: Map<String, Int>, unread: Int = 0, onPick: (Dest) -> Unit) {
-    Row(Modifier.fillMaxWidth().background(C.surface).navigationBarsPadding()) {
+    NavigationBar(containerColor = C.surface, tonalElevation = 0.dp) {
         BOTTOM.forEach { d ->
             val selected = current == d.id || (d == MORE && IN_MORE.any { it.id == current })
             val n = when (d) { PEOPLE -> counts["Friends"]; GROUPS -> counts["Groups"]; VIP -> counts["VIP"]; else -> null }
             val red = d == MORE && unread > 0
-            Column(Modifier.weight(1f).clickable { onPick(d) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.fillMaxWidth().height(3.dp).background(if (selected) C.accent else Color.Transparent))
-                Spacer(Modifier.height(8.dp))
-                BadgedBox(badge = { if (red) UnreadBadge(unread) else if (n != null && n > 0) Badge(containerColor = C.fill, contentColor = C.onAccent) { Text(if (n > 999) "999+" else n.toString(), fontSize = 10.sp) } }) {
-                    Icon(d.icon, d.title, tint = if (selected) C.text else C.muted)
-                }
-                Text(d.title, fontSize = 11.sp, maxLines = 1, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium, color = if (selected) C.text else C.muted)
-                Spacer(Modifier.height(8.dp))
-            }
+            NavigationBarItem(
+                selected = selected, onClick = { onPick(d) }, alwaysShowLabel = true,
+                icon = {
+                    BadgedBox(badge = { if (red) UnreadBadge(unread) else if (n != null && n > 0) Badge(containerColor = C.fill, contentColor = C.onAccent) { Text(if (n > 999) "999+" else n.toString(), fontSize = 10.sp) } }) { Icon(d.icon, d.title) }
+                },
+                label = { Text(d.title, fontSize = 11.sp, maxLines = 1) },
+                colors = NavigationBarItemDefaults.colors(indicatorColor = C.accentDim, selectedIconColor = C.onDim, selectedTextColor = C.onDim, unselectedIconColor = C.muted, unselectedTextColor = C.muted),
+            )
         }
     }
 }
@@ -176,7 +175,7 @@ fun MoreScreen(admin: Boolean, unread: Int = 0, onOpen: (Dest) -> Unit) {
                     shown.forEach { d ->
                         Card(onClick = { onOpen(d) }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)).background(C.surface3), Alignment.Center) { Icon(d.icon, null, tint = C.accent) }
+                                Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3), Alignment.Center) { Icon(d.icon, null, tint = C.accent) }
                                 Spacer(Modifier.width(14.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(d.title, fontWeight = FontWeight.SemiBold)

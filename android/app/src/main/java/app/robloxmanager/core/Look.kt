@@ -10,29 +10,29 @@ data class LookChoice(val mode: String = Look.DEFAULT_MODE, val accent: String =
     }
 }
 
-/** The colours of the app ("Ink and paper"): a dark and a light theme and five accent colours (the same names and values as the desktop app's theme.py). Pure arithmetic, so it is tested without a phone. */
+/** The colours of the app: a dark and a light theme and five accent colours (the same names and values as the desktop app's theme.py). Pure arithmetic, so it is tested without a phone. */
 object Look {
     const val DEFAULT_MODE = "dark"
-    const val DEFAULT_ACCENT = "ember"
+    const val DEFAULT_ACCENT = "blue"
     const val DEFAULT_SIZE = 100
     val MODES = listOf("dark", "light", "system")
-    val ACCENTS = listOf("ember", "teal", "iris", "gold", "rose")
+    val ACCENTS = listOf("blue", "green", "purple", "orange", "pink")
     val SIZES = listOf(90, 100, 110, 125)
 
     private val DARK = mapOf(
-        "bg" to "#0d0d0f", "surface" to "#151518", "surface2" to "#1d1d21", "surface3" to "#28282d", "border" to "#26262b", "border2" to "#3a3a41",
-        "text" to "#f4f1ea", "muted" to "#aaa69d", "faint" to "#7d7a73", "success" to "#5fd38d", "warn" to "#f2b84b", "danger" to "#ff7a70", "info" to "#7cb8ff",
-        "dangerDim" to "#3a1d1c", "onDim" to "#ffffff", "orange" to "#f08a5d", "violet" to "#b9a3ff",
+        "bg" to "#1c1d21", "surface" to "#25272c", "surface2" to "#2d3036", "surface3" to "#383b43", "border" to "#34373e", "border2" to "#4a4e58",
+        "text" to "#e6e8eb", "muted" to "#aeb2bb", "faint" to "#80848e", "success" to "#4cc38a", "warn" to "#f0b040", "danger" to "#ff7b72", "info" to "#6cb6ff",
+        "dangerDim" to "#42262a", "onDim" to "#ffffff", "orange" to "#f0905e", "violet" to "#b9a3ff",
     )
     private val LIGHT = mapOf(
-        "bg" to "#f5f2ea", "surface" to "#fbfaf6", "surface2" to "#ece8dd", "surface3" to "#ddd8ca", "border" to "#e0dbcd", "border2" to "#c4bead",
-        "text" to "#1a1814", "muted" to "#5a564c", "faint" to "#8c877a", "success" to "#17733f", "warn" to "#8a5100", "danger" to "#b42318", "info" to "#1a5cb8",
-        "dangerDim" to "#fbe3df", "onDim" to "#1a1814", "orange" to "#a03d0a", "violet" to "#6a3dc9",
+        "bg" to "#f2f3f5", "surface" to "#ffffff", "surface2" to "#ebedf0", "surface3" to "#dfe2e6", "border" to "#d6d9de", "border2" to "#bcc1c8",
+        "text" to "#1f2226", "muted" to "#51565e", "faint" to "#868b94", "success" to "#157a45", "warn" to "#8a5100", "danger" to "#c42b2b", "info" to "#1a62c4",
+        "dangerDim" to "#fbe4e4", "onDim" to "#1f2226", "orange" to "#a8480f", "violet" to "#6b3fd1",
     )
     /** accent -> (fill in the dark theme, fill in the light theme). White text on a fill is always at least 4.5 : 1. */
     private val FILLS = mapOf(
-        "ember" to ("#c2410c" to "#b93a08"), "teal" to ("#0f766e" to "#0d6e66"), "iris" to ("#5b4bd8" to "#5040c8"),
-        "gold" to ("#a16207" to "#8f5706"), "rose" to ("#be123c" to "#b01036"),
+        "blue" to ("#4f5fd8" to "#4050c8"), "green" to ("#1a7d44" to "#17743e"), "purple" to ("#7a4fe0" to "#6a3fd0"),
+        "orange" to ("#c2561a" to "#b34a10"), "pink" to ("#c2307a" to "#b02468"),
     )
 
     fun mode(s: String?): String = if (s in MODES) s!! else DEFAULT_MODE

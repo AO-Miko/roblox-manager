@@ -31,37 +31,37 @@ class LookTest {
     }
 
     @Test fun theDarkAndTheLightThemeAreDifferentAndAccentsChangeTheFill() {
-        assertNotEquals(Look.palette(true, "ember")["bg"], Look.palette(false, "ember")["bg"])
-        assertEquals(Look.palette(true, "ember").keys, Look.palette(false, "ember").keys)
+        assertNotEquals(Look.palette(true, "blue")["bg"], Look.palette(false, "blue")["bg"])
+        assertEquals(Look.palette(true, "blue").keys, Look.palette(false, "blue").keys)
         assertEquals(Look.ACCENTS.size, Look.ACCENTS.map { Look.palette(true, it)["fill"] }.toSet().size)
-        assertEquals(Look.palette(true, "ember"), Look.palette(true, "no such accent"))          // an unknown accent is the default one
+        assertEquals(Look.palette(true, "blue"), Look.palette(true, "no such accent"))          // an unknown accent is the default one
     }
 
     @Test fun choicesAreCheckedAndRoundedToWhatTheDesignHas() {
         assertEquals("dark", Look.mode("neon")); assertEquals("dark", Look.mode(null)); assertEquals("light", Look.mode("light"))
-        assertEquals("ember", Look.accent("beige")); assertEquals("rose", Look.accent("rose"))
+        assertEquals("blue", Look.accent("beige")); assertEquals("pink", Look.accent("pink"))
         assertEquals(110, Look.size(112)); assertEquals(125, Look.size(500)); assertEquals(90, Look.size(1)); assertEquals(100, Look.size(null))
         assertTrue(Look.isDark("dark", false)); assertTrue(!Look.isDark("light", true)); assertTrue(Look.isDark("system", true)); assertTrue(!Look.isDark("system", false))
     }
 
     @Test fun theChoiceIsKeptInTheSettings() {
         val p = prefs()
-        assertEquals(LookChoice("dark", "ember", 100), LookChoice.load(p))
-        p.put("ui.theme", "light"); p.put("ui.accent", "teal"); p.put("ui.textSize", 125.0)
-        assertEquals(LookChoice("light", "teal", 125), LookChoice.load(p))
+        assertEquals(LookChoice("dark", "blue", 100), LookChoice.load(p))
+        p.put("ui.theme", "light"); p.put("ui.accent", "green"); p.put("ui.textSize", 125.0)
+        assertEquals(LookChoice("light", "green", 125), LookChoice.load(p))
         p.put("ui.theme", "garbage"); p.put("ui.textSize", 7.0)
-        assertEquals(LookChoice("dark", "teal", 90), LookChoice.load(p))
+        assertEquals(LookChoice("dark", "green", 90), LookChoice.load(p))
     }
 
     @Test fun theLookIsInABackupAndComesBackCleaned() {
         val p = prefs()
-        p.put("ui.theme", "light"); p.put("ui.accent", "iris"); p.put("ui.textSize", 110.0)
+        p.put("ui.theme", "light"); p.put("ui.accent", "purple"); p.put("ui.textSize", 110.0)
         val d = Backup.build(p, "v", "t")
         assertEquals(setOf("ui.theme", "ui.accent", "ui.textSize"), d.obj("settings")!!.keys)
         val q = prefs()
         val (s, _, _) = Backup.restore(q, d)
         assertEquals(3, s)
-        assertEquals(LookChoice("light", "iris", 110), LookChoice.load(q))
+        assertEquals(LookChoice("light", "purple", 110), LookChoice.load(q))
         val hostile = Backup.read("""{"app":"roblox-manager","format":1,"settings":{"ui.theme":"<script>","ui.accent":"red","ui.textSize":"999"}}""")
         val r = prefs()
         assertEquals(0, Backup.restore(r, hostile).first)

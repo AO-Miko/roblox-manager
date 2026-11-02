@@ -209,8 +209,9 @@ admin_idx = w.tabs.indexOf(w.holders[w.admin])
 staff_idx = w.tabs.indexOf(w.holders[w.staff])
 names = [w.tabs.tabText(i) for i in range(w.tabs.count())]
 check("the pages end with Staff List, Admin, Notifications, Settings", names[-4:] == ["Staff List", "Admin", "Notifications", "Settings"], names)
-check("signed out: Admin is hidden (tab and top bar entry), Staff List is there", not w.tabs.isTabVisible(admin_idx) and w.tabs.isTabVisible(staff_idx)
-      and not [i for i in w.sidebar.items if i.title == "Admin"][0].allowed and [i for i in w.sidebar.items if i.title == "Staff List"][0].allowed)
+check("signed out: Admin is hidden (tab and side bar entry), Staff List is there", not w.tabs.isTabVisible(admin_idx) and w.tabs.isTabVisible(staff_idx)
+      and not [i for i in w.sidebar.items if i.title == "Admin"][0].isVisible() and [i for i in w.sidebar.items if i.title == "Staff List"][0].isVisible())
+check("...the STAFF group name stays (Staff List is in it)", [lab for lab in w.sidebar.group_labels if lab.text() == "STAFF"][0].isVisible())
 check("...and the search does not offer Admin", "Admin" not in [e[0] for e in w._search_entries()] and "Staff List" in [e[0] for e in w._search_entries()])
 
 publish_roles({239345228: "owner", 2002: "admin", 3003: "senior-admin", 4004: "trusted-friend", 5005: "co-owner"}, 10)

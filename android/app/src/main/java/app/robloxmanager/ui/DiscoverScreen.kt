@@ -192,8 +192,8 @@ fun RatioBar(up: Long, down: Long, height: Int = 4) {
 @Composable
 private fun GameCardView(g: GameCard, icons: IconBook, onClick: () -> Unit) {
     val pct = Games.likePercent(g.up, g.down)
-    Column(Modifier.width(140.dp).clip(RoundedCornerShape(6.dp)).background(C.surface).clickable(onClick = onClick).padding(8.dp)) {
-        Box(Modifier.size(124.dp).clip(RoundedCornerShape(4.dp)).background(C.surface3)) {
+    Column(Modifier.width(140.dp).clip(RoundedCornerShape(12.dp)).background(C.surface).clickable(onClick = onClick).padding(8.dp)) {
+        Box(Modifier.size(124.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3)) {
             icons.urls[g.universeId]?.let { AsyncImage(model = it, contentDescription = g.name, modifier = Modifier.size(124.dp), contentScale = ContentScale.Crop) }
         }
         Spacer(Modifier.height(6.dp))
@@ -206,8 +206,8 @@ private fun GameCardView(g: GameCard, icons: IconBook, onClick: () -> Unit) {
 
 @Composable
 private fun FriendCardView(f: FriendGame, icons: IconBook, head: String?, onJoin: () -> Unit) {
-    Column(Modifier.width(140.dp).clip(RoundedCornerShape(6.dp)).background(C.surface).padding(8.dp)) {
-        Box(Modifier.size(124.dp).clip(RoundedCornerShape(4.dp)).background(C.surface3)) {
+    Column(Modifier.width(140.dp).clip(RoundedCornerShape(12.dp)).background(C.surface).padding(8.dp)) {
+        Box(Modifier.size(124.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3)) {
             f.universe?.let { u -> icons.urls[u]?.let { AsyncImage(model = it, contentDescription = f.game, modifier = Modifier.size(124.dp), contentScale = ContentScale.Crop) } }
         }
         Spacer(Modifier.height(6.dp))
@@ -228,7 +228,7 @@ private fun FriendCardView(f: FriendGame, icons: IconBook, head: String?, onJoin
 private fun GameRow(g: GameCard, icons: IconBook, onClick: () -> Unit) {
     val pct = Games.likePercent(g.up, g.down)
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(64.dp).clip(RoundedCornerShape(4.dp)).background(C.surface3)) {
+        Box(Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)).background(C.surface3)) {
             icons.urls[g.universeId]?.let { AsyncImage(model = it, contentDescription = g.name, modifier = Modifier.size(64.dp), contentScale = ContentScale.Crop) }
         }
         Spacer(Modifier.width(12.dp))

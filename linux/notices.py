@@ -1,6 +1,6 @@
 """Notifications from the developer to everybody who uses the app. They are a signed file in the update repository
 (dist/notifications.json + dist/notifications.json.sig, made by tools/notify.sh); the app fetches it at every start and every ten minutes, and
-shows a red number in the top bar for the ones you have not read.
+shows a red number in the side bar for the ones you have not read.
 
   * The list is only believed if it carries a valid signature of the release key (the same one the ban list and the updates use), so nobody
     else can put a message into your app.
