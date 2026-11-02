@@ -41,6 +41,8 @@ w = MainWindow(rbx.Client(), auto_login=False)
 w.resize(1180, 760)
 w.show()
 spin(0.3)
+check("the side bar starts as a narrow icon rail", w.sidebar.compact and w.sidebar.width() == nav.Sidebar.COMPACT)
+w.sidebar.toggle.click(); spin(0.1)          # (the checks below are about the wide bar)
 
 titles = [nav.base_title(w.tabs.tabText(i))[0] for i in range(w.tabs.count())]
 check("the side bar has one entry per page, in the same order", [i.title for i in w.sidebar.items] == titles, [i.title for i in w.sidebar.items])

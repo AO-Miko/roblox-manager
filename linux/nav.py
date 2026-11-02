@@ -167,10 +167,14 @@ class NavItem(QAbstractButton):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = QRectF(self.rect()).adjusted(2, 1, -2, -1)
         on = self.isChecked()
-        if on or self._hover:
+        if self._hover and not on:
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(T["surface3"] if on else T["hover"]))
-            p.drawRoundedRect(r, 4, 4)
+            p.setBrush(QColor(T["hover"]))
+            p.drawRoundedRect(r, 3, 3)
+        if on:                                                   # the open page: a line down the left edge, like an editor's activity bar
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(T["accent_fg"]))
+            p.drawRect(QRectF(0, 4, 2.5, self.height() - 8))
         colour = T["text"] if on else (T["text"] if self._hover else T["muted"])
         x = r.x() + (r.width() - 20) / 2 if self.compact else r.x() + 14
         draw_icon(p, self.title, QRectF(x, r.center().y() - 10, 20, 20), colour)
@@ -333,7 +337,7 @@ class Sidebar(QFrame):
     picked = Signal(int)
     search_requested = Signal()
     layout_changed = Signal()            # the person folded a group or collapsed the menu (the window remembers it)
-    FULL, COMPACT = 224, 62
+    FULL, COMPACT = 224, 52
 
     def __init__(self, tabs, account_combo, version=""):
         super().__init__()
@@ -363,7 +367,7 @@ class Sidebar(QFrame):
         self.items = []
         self.group_labels = []           # the GroupHeader buttons
         self.compact = False
-        self.manual_compact = False      # chosen with the button
+        self.manual_compact = True       # chosen with the button; the bar starts as a narrow icon rail
         self.auto_compact = False        # forced by a narrow window
         self.collapsed = set()           # names of the folded groups, upper case
         last, label = None, None
@@ -397,6 +401,8 @@ class Sidebar(QFrame):
         lay.addWidget(self.version)
         tabs.currentChanged.connect(self.sync)
         self.sync()
+        self.search.hide()                 # (the search is in the title bar over the page)
+        self._update_compact()
 
     # ---- what is shown
     def sync(self, *_):
@@ -450,7 +456,7 @@ class Sidebar(QFrame):
         for w in [*self.items, self.search]:
             w.compact = compact
             w.update()
-        for w in [self.brand, self.account, self.version]:
+        for w in [self.brand, self.version]:
             w.setVisible(not compact)
         self.toggle.set_icon("menu_open" if compact else "menu_close", "Expand the menu" if compact else "Collapse the menu")
         self._apply()
@@ -462,7 +468,7 @@ class Sidebar(QFrame):
         return {"menu_collapsed": self.manual_compact, "groups_collapsed": sorted(self.collapsed)}
 
     def restore(self, st):
-        self.manual_compact = bool(st.get("menu_collapsed", False))
+        self.manual_compact = bool(st.get("menu_collapsed", True))
         self.collapsed = {g for g in st.get("groups_collapsed", []) if isinstance(g, str)}
         self._update_compact()
 
@@ -475,7 +481,7 @@ class PageHeader(QWidget):
         super().__init__()
         self.setProperty("header", True)
         row = QHBoxLayout(self)
-        row.setContentsMargins(10, 12, 10, 8)
+        row.setContentsMargins(14, 0, 0, 0)
         row.setSpacing(8)
         col = QVBoxLayout()
         col.setSpacing(0)
@@ -484,6 +490,7 @@ class PageHeader(QWidget):
         self.sub = QLabel()
         self.sub.setProperty("role", "hint")
         self.sub.setWordWrap(True)
+        self.sub.hide()                  # (the help line is in the search and the tool tips; the header is just the page name)
         col.addWidget(self.title)
         col.addWidget(self.sub)
         row.addLayout(col, 1)

@@ -262,7 +262,7 @@ def make_table(headers, widths=None, stretch_last=True, select_rows=True, empty=
     t.empty_text = empty
     t.setShowGrid(False)
     t.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-    t.verticalHeader().setDefaultSectionSize(32)
+    t.verticalHeader().setDefaultSectionSize(28)
     t.horizontalHeader().setMinimumSectionSize(40)
     t.setFrameShape(QTableWidget.Shape.NoFrame)
     t.setHorizontalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)

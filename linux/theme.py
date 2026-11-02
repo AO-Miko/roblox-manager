@@ -8,29 +8,30 @@ from PySide6.QtWidgets import QStyleFactory
 MODES = ("dark", "light", "system")
 
 # Every colour the app uses has a name here, in both themes; nothing else in the app should spell a colour out.
+# The look: cool blue-grey panels (a chat app's greys with a game launcher's blue), an editor's activity bar, tabs and coloured status strip.
 DARK = {
-    "bg": "#1c1d21", "surface": "#25272c", "surface2": "#2d3036", "surface3": "#383b43",
-    "border": "#34373e", "border2": "#4a4e58",
-    "text": "#e6e8eb", "muted": "#aeb2bb", "faint": "#80848e",
+    "bg": "#22262e", "surface": "#292e38", "surface2": "#313744", "surface3": "#3b4252",
+    "border": "#343a47", "border2": "#4a5263",
+    "text": "#e4e8ef", "muted": "#b4bbc8", "faint": "#858d9d",
     "success": "#4cc38a", "warn": "#f0b040", "danger": "#ff7b72", "info": "#6cb6ff",
     "danger_dim": "#42262a", "danger_hover": "#552e33", "danger_border": "#6a363b",
-    "zebra": "#212328", "hover": "#30333a", "sidebar": "#17181b",
+    "zebra": "#262b34", "hover": "#2f3541", "sidebar": "#1a1d23", "status": "#0b62ad",
     "notice_bg": "#33280f", "notice_border": "#6b5120", "on_dim": "#ffffff",
     "orange": "#f0905e", "violet": "#b9a3ff", "badge": "#d6303c",
 }
 LIGHT = {
-    "bg": "#f2f3f5", "surface": "#ffffff", "surface2": "#ebedf0", "surface3": "#dfe2e6",
-    "border": "#d6d9de", "border2": "#bcc1c8",
-    "text": "#1f2226", "muted": "#51565e", "faint": "#868b94",
+    "bg": "#f5f6f8", "surface": "#ffffff", "surface2": "#eceef2", "surface3": "#dfe3ea",
+    "border": "#d5d9e0", "border2": "#b9bfca",
+    "text": "#1e2229", "muted": "#4f5766", "faint": "#838b99",
     "success": "#157a45", "warn": "#8a5100", "danger": "#c42b2b", "info": "#1a62c4",
     "danger_dim": "#fbe4e4", "danger_hover": "#f6cfcf", "danger_border": "#e8b4b4",
-    "zebra": "#f7f8fa", "hover": "#e6e9ed", "sidebar": "#e6e8ec",
-    "notice_bg": "#fff3d6", "notice_border": "#e3c27a", "on_dim": "#1f2226",
+    "zebra": "#f7f8fa", "hover": "#e6e9ee", "sidebar": "#e4e7ec", "status": "#0b64b0",
+    "notice_bg": "#fff3d6", "notice_border": "#e3c27a", "on_dim": "#1e2229",
     "orange": "#a8480f", "violet": "#6b3fd1", "badge": "#cf2a37",
 }
 # name -> (fill in the dark theme, fill in the light theme). White text on a fill is always at least 4.5 : 1.
 ACCENTS = {
-    "blue": ("#4f5fd8", "#4050c8"), "green": ("#1a7d44", "#17743e"), "purple": ("#7a4fe0", "#6a3fd0"),
+    "blue": ("#0e639c", "#0b5cad"), "green": ("#1a7d44", "#17743e"), "purple": ("#7a4fe0", "#6a3fd0"),
     "orange": ("#c2561a", "#b34a10"), "pink": ("#c2307a", "#b02468"),
 }
 DEFAULT_ACCENT = "blue"
@@ -68,7 +69,7 @@ def palette_for(dark, accent):
     p["accent_hover"] = mix(fill, "#000000", 0.10)                           # (darker in both themes: white text keeps its contrast)
     p["accent_press"] = mix(fill, "#000000", 0.20)
     p["accent_dim"] = mix(fill, p["bg"], 0.72 if dark else 0.84)             # a selected row, the open page in the side bar
-    p["accent_fg"] = mix(fill, "#ffffff", 0.38) if dark else mix(fill, "#000000", 0.10)           # the accent as a colour for icons and links on a surface
+    p["accent_fg"] = mix(fill, "#ffffff", 0.5) if dark else mix(fill, "#000000", 0.10)           # the accent as a colour for icons and links on a surface
     p["on_accent"] = "#ffffff"
     p["accent_off"] = mix(fill, p["bg"], 0.55)                               # a primary button that cannot be pressed
     return p
@@ -125,24 +126,22 @@ QSS = Template("""
 QMainWindow, QDialog, QMessageBox { background: $bg; }
 QWidget { color: $text; font-size: ${f0}px; }
 QLabel { background: transparent; }
-QToolTip { background: $surface3; color: $text; border: 1px solid $border2; padding: 4px 7px; border-radius: 4px; }
+QToolTip { background: $surface3; color: $text; border: 1px solid $border2; padding: 3px 7px; }
 
-/* tabs: the page tabs are hidden (the side bar is the way around); the small ones inside a page are plain words, the open one is lifted */
-QTabWidget::pane { border: none; border-top: 1px solid $border; background: $bg; top: -1px; }
+/* tabs: like editor tabs. Page tabs are hidden (the activity bar is the way around); the ones inside a page lie flat, the open one is the colour of the page with a line on top */
+QTabWidget::pane { border: none; border-top: 1px solid $border; background: $bg; top: 0; }
 QTabBar { background: transparent; qproperty-drawBase: 0; }
-QTabBar::tab { background: transparent; color: $muted; padding: 8px 14px; margin-right: 2px; border: none; border-bottom: 2px solid transparent; }
-QTabBar::tab:hover { color: $text; background: $hover; }
-QTabBar::tab:selected { color: $text; border-bottom: 2px solid $accent; }
+QTabBar::tab { background: $sidebar; color: $muted; padding: 8px 16px; margin: 0; border: none; border-right: 1px solid $bg; border-top: 2px solid transparent; }
+QTabBar::tab:hover { color: $text; background: $surface; }
+QTabBar::tab:selected { background: $bg; color: $text; border-top: 2px solid $accent_fg; }
 QTabBar::tab:disabled { color: $faint; }
-QTabWidget[sub="true"] > QTabBar::tab { padding: 6px 12px; margin: 6px 3px 6px 0; border: none; border-radius: 4px; }
-QTabWidget[sub="true"] > QTabBar::tab:hover { background: $hover; }
-QTabWidget[sub="true"] > QTabBar::tab:selected { background: $surface3; color: $text; border: none; }
+QTabWidget[sub="true"] > QTabBar::tab { padding: 7px 16px; margin: 0; }
 
-/* buttons */
-QPushButton { background: $surface3; color: $text; border: 1px solid transparent; border-radius: 4px; padding: 6px 14px; }
+/* buttons: flat; the main action is the blue one */
+QPushButton { background: $surface3; color: $text; border: 1px solid transparent; border-radius: 2px; padding: 5px 12px; }
 QPushButton:hover { background: $border2; }
 QPushButton:pressed { background: $border; }
-QPushButton:focus { border-color: $accent; }
+QPushButton:focus { border: 1px solid $accent_fg; }
 QPushButton:checked { background: $accent; color: $on_accent; }
 QPushButton:disabled { color: $faint; background: $surface2; }
 QPushButton::menu-indicator { image: none; width: 0; }
@@ -157,49 +156,49 @@ QPushButton[swatch="true"] { padding: 0; border-radius: 14px; border: 2px solid 
 QPushButton[swatch="true"]:checked { border: 3px solid $text; }
 
 /* inputs */
-QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDateEdit, QComboBox { background: $bg; color: $text; border: 1px solid $border2; border-radius: 4px; padding: 5px 9px;
+QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDateEdit, QComboBox { background: $sidebar; color: $text; border: 1px solid $border2; border-radius: 2px; padding: 4px 8px;
     selection-background-color: $accent; selection-color: $on_accent; }
 QLineEdit:hover, QSpinBox:hover, QDateEdit:hover, QComboBox:hover { border-color: $faint; }
-QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus, QDateEdit:focus, QComboBox:focus { border: 1px solid $accent; }
+QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus, QDateEdit:focus, QComboBox:focus { border: 1px solid $accent_fg; }
 QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled { color: $faint; background: $surface2; }
 QSpinBox, QDateEdit { padding-right: 24px; }
-QSpinBox::up-button, QDateEdit::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 22px; border: none; border-top-right-radius: 4px; background: transparent; }
-QSpinBox::down-button, QDateEdit::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 22px; border: none; border-bottom-right-radius: 4px; background: transparent; }
+QSpinBox::up-button, QDateEdit::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 22px; border: none; background: transparent; }
+QSpinBox::down-button, QDateEdit::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 22px; border: none; background: transparent; }
 QSpinBox::up-button:hover, QSpinBox::down-button:hover, QDateEdit::up-button:hover, QDateEdit::down-button:hover { background: $surface3; }
 QSpinBox::up-arrow, QDateEdit::up-arrow { image: url($arrow_up); width: 10px; height: 10px; }
 QSpinBox::down-arrow, QDateEdit::down-arrow { image: url($arrow_down); width: 10px; height: 10px; }
 QComboBox { padding-right: 26px; }
 QComboBox::drop-down { subcontrol-origin: padding; subcontrol-position: center right; width: 24px; border: none; }
 QComboBox::down-arrow { image: url($arrow_down); width: 10px; height: 10px; }
-QComboBox QAbstractItemView { background: $surface2; border: 1px solid $border2; selection-background-color: $accent; selection-color: $on_accent; padding: 3px; outline: 0; }
+QComboBox QAbstractItemView { background: $surface; border: 1px solid $border2; selection-background-color: $accent; selection-color: $on_accent; padding: 2px; outline: 0; }
 QCalendarWidget QWidget { background: $surface; }
 QCalendarWidget QAbstractItemView:enabled { selection-background-color: $accent; selection-color: $on_accent; color: $text; }
 
 /* check boxes */
 QCheckBox { spacing: 8px; background: transparent; }
-QCheckBox::indicator { width: 16px; height: 16px; border-radius: 3px; background: $bg; border: 1px solid $border2; }
-QCheckBox::indicator:hover { border-color: $accent; }
+QCheckBox::indicator { width: 15px; height: 15px; border-radius: 2px; background: $sidebar; border: 1px solid $border2; }
+QCheckBox::indicator:hover { border-color: $accent_fg; }
 QCheckBox::indicator:checked { background: $accent; border: 1px solid $accent; image: url($check); }
 QCheckBox::indicator:disabled { background: $surface2; border-color: $border; }
 
-/* lists and tables */
-QTableWidget, QListWidget { background: $surface; alternate-background-color: $zebra; border: 1px solid $border; border-radius: 6px; gridline-color: transparent;
+/* lists and tables: like the file list of an editor: no frame, hover and a selected row */
+QTableWidget, QListWidget { background: $surface; alternate-background-color: $surface; border: none; gridline-color: transparent;
     selection-background-color: $accent; selection-color: $on_accent; }
-QTableWidget::item { padding: 4px 8px; border: none; }
+QTableWidget::item { padding: 3px 8px; border: none; border-bottom: 1px solid $border; }
 QTableWidget::item:selected, QListWidget::item:selected { background: $accent; color: $on_accent; }
 QTableWidget::item:hover { background: $hover; }
-QListWidget::item { padding: 6px 9px; }
+QListWidget::item { padding: 5px 9px; }
 QHeaderView { background: transparent; }
-QHeaderView::section { background: $surface; color: $muted; padding: 7px 8px; border: none; border-bottom: 1px solid $border; border-right: 1px solid $border; }
+QHeaderView::section { background: $surface; color: $muted; padding: 6px 8px; border: none; border-bottom: 1px solid $border2; }
 QHeaderView::section:hover { color: $text; background: $surface2; }
 QTableCornerButton::section { background: $surface; border: none; }
 
-/* scroll bars */
-QScrollBar:vertical { background: transparent; width: 12px; margin: 0; }
-QScrollBar::handle:vertical { background: $border2; border-radius: 4px; min-height: 28px; margin: 2px; }
+/* scroll bars: thin and square */
+QScrollBar:vertical { background: transparent; width: 11px; margin: 0; }
+QScrollBar::handle:vertical { background: $border2; min-height: 30px; margin: 0 1px; }
 QScrollBar::handle:vertical:hover { background: $faint; }
-QScrollBar:horizontal { background: transparent; height: 12px; margin: 0; }
-QScrollBar::handle:horizontal { background: $border2; border-radius: 4px; min-width: 28px; margin: 2px; }
+QScrollBar:horizontal { background: transparent; height: 11px; margin: 0; }
+QScrollBar::handle:horizontal { background: $border2; min-width: 30px; margin: 1px 0; }
 QScrollBar::handle:horizontal:hover { background: $faint; }
 QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
 QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
@@ -207,50 +206,50 @@ QScrollArea { background: transparent; border: none; }
 QScrollArea[holder="true"] > QWidget > QWidget { background: $bg; }
 QScrollArea > QWidget > QWidget { background: transparent; }
 
-/* groups of controls: a titled box */
-QGroupBox { background: $surface; border: 1px solid $border; border-radius: 6px; margin-top: 10px; padding: 18px 12px 10px 12px; }
+/* panels */
+QGroupBox { background: $surface; border: 1px solid $border; border-radius: 3px; margin-top: 10px; padding: 18px 12px 10px 12px; }
 QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 10px; padding: 0 5px; color: $text; background: $surface; }
-QFrame[card="true"] { background: $surface; border: 1px solid $border; border-radius: 6px; }
-QFrame[tile="true"] { background: $surface2; border: 1px solid $border; border-radius: 4px; }
-QFrame[hero="true"] { background: $surface; border: 1px solid $border; border-radius: 6px; }
+QFrame[card="true"], QFrame[hero="true"] { background: $surface; border: 1px solid $border; border-radius: 3px; }
+QFrame[tile="true"] { background: $surface2; border: 1px solid $border; border-radius: 3px; }
 QFrame[card="true"] QLabel, QFrame[tile="true"] QLabel, QFrame[hero="true"] QLabel { border: none; }
 QLabel[role="hint"] { color: $muted; }
-QLabel[role="title"] { font-size: ${f2}px; font-weight: 600; }
-QLabel[role="display"] { font-size: ${f5}px; font-weight: 600; }
-QLabel[role="tile-value"] { font-size: ${f2}px; font-weight: 600; }
+QLabel[role="title"] { font-size: ${f1}px; font-weight: 600; }
+QLabel[role="display"] { font-size: ${f2}px; font-weight: 600; }
+QLabel[role="tile-value"] { font-size: ${f1}px; font-weight: 600; }
 QLabel[role="tile-caption"] { color: $muted; }
 QLabel[role="warn"] { color: $warn; }
 QLabel[role="card-title"] { font-weight: 600; }
 QLabel[role="unread-dot"] { color: $badge; }
 QLabel[role="read-check"] { color: $success; }
-QLabel[role="level"] { padding: 1px 7px; border-radius: 3px; }
+QLabel[role="level"] { padding: 1px 6px; border-radius: 2px; }
 QLabel[level="important"] { color: $on_accent; background: $accent; }
 QLabel[level="warning"] { color: $warn; background: $notice_bg; }
 QFrame[card="true"][unread="true"] { border-color: $badge; }
-QLabel[role="notice"] { background: $notice_bg; border: 1px solid $notice_border; border-radius: 4px; padding: 8px 10px; }
-QLabel[role="step"] { background: $accent; color: $on_accent; border-radius: 10px; min-width: 20px; max-width: 20px; min-height: 20px; max-height: 20px; qproperty-alignment: AlignCenter; }
+QLabel[role="notice"] { background: $notice_bg; border: 1px solid $notice_border; padding: 7px 9px; }
+QLabel[role="step"] { background: $accent; color: $on_accent; border-radius: 9px; min-width: 18px; max-width: 18px; min-height: 18px; max-height: 18px; qproperty-alignment: AlignCenter; }
 
-/* navigation: side bar, page header, search */
-QFrame[sidebar="true"] { background: $sidebar; border: none; }
+/* navigation: the activity bar, the title bar of the page, the palette */
+QFrame[sidebar="true"] { background: $sidebar; border: none; border-right: 1px solid $border; }
 QFrame[sidebar="true"] QLabel { background: transparent; }
-QLabel[role="brand"] { font-size: ${f1}px; font-weight: 600; color: $text; padding: 2px 6px; }
+QLabel[role="brand"] { font-weight: 600; padding: 2px 6px; }
 QLabel[role="group"] { color: $muted; padding: 2px 8px; }
-QWidget[header="true"] { background: $bg; }
-QDialog[palette="true"] { background: $surface; border: 1px solid $border2; border-radius: 6px; }
+QWidget[header="true"] { background: $bg; border-bottom: 1px solid $border; }
+QDialog[palette="true"] { background: $surface; border: 1px solid $border2; }
 QListWidget[palette_list="true"] { border: none; background: transparent; }
-QListWidget[palette_list="true"]::item { padding: 7px 10px; border-radius: 4px; }
+QListWidget[palette_list="true"]::item { padding: 6px 10px; }
 
-/* progress, splitters, menus, status bar */
-QProgressBar { background: $surface2; border: 1px solid $border; border-radius: 4px; text-align: center; min-height: 16px; color: $text; }
-QProgressBar::chunk { background: $accent; border-radius: 3px; }
+/* progress, splitters, menus, the status bar (a coloured strip, white text) */
+QProgressBar { background: $surface2; border: none; text-align: center; min-height: 14px; color: $text; }
+QProgressBar::chunk { background: $accent_fg; }
 QSplitter::handle { background: transparent; }
-QSplitter::handle:vertical { height: 8px; }
-QSplitter::handle:horizontal { width: 8px; }
-QMenu { background: $surface2; border: 1px solid $border2; border-radius: 6px; padding: 4px; }
-QMenu::item { padding: 6px 20px 6px 12px; border-radius: 3px; }
+QSplitter::handle:vertical { height: 6px; }
+QSplitter::handle:horizontal { width: 6px; }
+QMenu { background: $surface; border: 1px solid $border2; padding: 3px 0; }
+QMenu::item { padding: 5px 24px 5px 14px; }
 QMenu::item:selected { background: $accent; color: $on_accent; }
-QMenu::separator { height: 1px; background: $border; margin: 4px 8px; }
-QStatusBar { background: $sidebar; color: $muted; border-top: 1px solid $border; }
+QMenu::separator { height: 1px; background: $border; margin: 4px 0; }
+QStatusBar { background: $status; color: #ffffff; border: none; }
+QStatusBar QLabel { color: #ffffff; }
 QStatusBar::item { border: none; }
 """)
 
@@ -259,9 +258,11 @@ def palette():
     p = QPalette()
     c = lambda k: QColor(T[k])
     for role, key in ((QPalette.ColorRole.Window, "bg"), (QPalette.ColorRole.WindowText, "text"), (QPalette.ColorRole.Base, "surface"),
-                      (QPalette.ColorRole.AlternateBase, "surface2"), (QPalette.ColorRole.Text, "text"), (QPalette.ColorRole.Button, "surface2"),
+                      (QPalette.ColorRole.AlternateBase, "zebra"), (QPalette.ColorRole.Text, "text"), (QPalette.ColorRole.Button, "surface2"),
                       (QPalette.ColorRole.ButtonText, "text"), (QPalette.ColorRole.ToolTipBase, "surface3"), (QPalette.ColorRole.ToolTipText, "text"),
-                      (QPalette.ColorRole.Highlight, "accent"), (QPalette.ColorRole.Link, "accent_fg"), (QPalette.ColorRole.PlaceholderText, "muted")):
+                      (QPalette.ColorRole.Highlight, "accent"), (QPalette.ColorRole.Link, "accent_fg"), (QPalette.ColorRole.PlaceholderText, "muted"),
+                      (QPalette.ColorRole.Light, "surface3"), (QPalette.ColorRole.Midlight, "surface2"), (QPalette.ColorRole.Mid, "border2"),
+                      (QPalette.ColorRole.Dark, "border"), (QPalette.ColorRole.Shadow, "sidebar")):
         p.setColor(role, c(key))
     p.setColor(QPalette.ColorRole.HighlightedText, QColor(T["on_accent"]))
     for role in (QPalette.ColorRole.WindowText, QPalette.ColorRole.Text, QPalette.ColorRole.ButtonText):

@@ -20,18 +20,18 @@ object Look {
     val SIZES = listOf(90, 100, 110, 125)
 
     private val DARK = mapOf(
-        "bg" to "#1c1d21", "surface" to "#25272c", "surface2" to "#2d3036", "surface3" to "#383b43", "border" to "#34373e", "border2" to "#4a4e58",
-        "text" to "#e6e8eb", "muted" to "#aeb2bb", "faint" to "#80848e", "success" to "#4cc38a", "warn" to "#f0b040", "danger" to "#ff7b72", "info" to "#6cb6ff",
+        "bg" to "#22262e", "surface" to "#292e38", "surface2" to "#313744", "surface3" to "#3b4252", "border" to "#343a47", "border2" to "#4a5263",
+        "text" to "#e4e8ef", "muted" to "#b4bbc8", "faint" to "#858d9d", "success" to "#4cc38a", "warn" to "#f0b040", "danger" to "#ff7b72", "info" to "#6cb6ff",
         "dangerDim" to "#42262a", "onDim" to "#ffffff", "orange" to "#f0905e", "violet" to "#b9a3ff",
     )
     private val LIGHT = mapOf(
-        "bg" to "#f2f3f5", "surface" to "#ffffff", "surface2" to "#ebedf0", "surface3" to "#dfe2e6", "border" to "#d6d9de", "border2" to "#bcc1c8",
-        "text" to "#1f2226", "muted" to "#51565e", "faint" to "#868b94", "success" to "#157a45", "warn" to "#8a5100", "danger" to "#c42b2b", "info" to "#1a62c4",
-        "dangerDim" to "#fbe4e4", "onDim" to "#1f2226", "orange" to "#a8480f", "violet" to "#6b3fd1",
+        "bg" to "#f5f6f8", "surface" to "#ffffff", "surface2" to "#eceef2", "surface3" to "#dfe3ea", "border" to "#d5d9e0", "border2" to "#b9bfca",
+        "text" to "#1e2229", "muted" to "#4f5766", "faint" to "#838b99", "success" to "#157a45", "warn" to "#8a5100", "danger" to "#c42b2b", "info" to "#1a62c4",
+        "dangerDim" to "#fbe4e4", "onDim" to "#1e2229", "orange" to "#a8480f", "violet" to "#6b3fd1",
     )
     /** accent -> (fill in the dark theme, fill in the light theme). White text on a fill is always at least 4.5 : 1. */
     private val FILLS = mapOf(
-        "blue" to ("#4f5fd8" to "#4050c8"), "green" to ("#1a7d44" to "#17743e"), "purple" to ("#7a4fe0" to "#6a3fd0"),
+        "blue" to ("#0e639c" to "#0b5cad"), "green" to ("#1a7d44" to "#17743e"), "purple" to ("#7a4fe0" to "#6a3fd0"),
         "orange" to ("#c2561a" to "#b34a10"), "pink" to ("#c2307a" to "#b02468"),
     )
 
@@ -76,7 +76,7 @@ object Look {
         p["fill"] = fill                                                    // buttons, the selected switch: white text on it
         p["fillHover"] = mix(fill, black, 0.10)
         p["accentDim"] = mix(fill, p["bg"]!!, if (dark) 0.72 else 0.84)      // the selected item in a bar or list
-        p["accent"] = if (dark) mix(fill, white, 0.38) else mix(fill, black, 0.10)     // the accent as a colour for icons, links and text on a surface
+        p["accent"] = if (dark) mix(fill, white, 0.5) else mix(fill, black, 0.10)     // the accent as a colour for icons, links and text on a surface
         p["onAccent"] = white
         return p
     }
