@@ -81,7 +81,7 @@ class GroupsTab(QWidget):
         self.tabs.setProperty("sub", True)
         split.addWidget(self.tabs)
         split.setStretchFactor(1, 3)
-        split.setSizes([560, 680])
+        split.setSizes([400, 760])
         self._build_overview()
         self._build_members()
         self._build_requests()
@@ -168,7 +168,7 @@ class GroupsTab(QWidget):
         lay.addLayout(row)
         self.rcount = hint("")
         lay.addWidget(self.rcount)
-        self.tabs.addTab(w, "Join requests")
+        self.tabs.addTab(w, "Requests")
 
     def _build_roles(self):
         w = QWidget()

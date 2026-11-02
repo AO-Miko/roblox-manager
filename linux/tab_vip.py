@@ -327,7 +327,7 @@ class VipTab(QWidget):
                                  "Ask Roblox about each server not checked yet, to find the ones whose game removed VIP servers (one request each; this also "
                                  "runs by itself in the background after the list loads)")
         tl.addLayout(frow)
-        self.mtable = make_table(["Game", "Server", "Status", "Expires", "VIP id", "VIP link", "Copies", "Cost"], [215, 175, 90, 140, 105, 240, 70, 150],
+        self.mtable = make_table(["Game", "Server", "Status", "Expires", "VIP id", "VIP link", "Copies", "Cost"], [230, 190, 90, 140, 105, 240, 70, 175],
                                 empty="No VIP servers to show.\nSign in on the Home tab, or loosen the filters above.")
         self.mtable.setSelectionMode(self.mtable.SelectionMode.ExtendedSelection)
         self.apply_column_order()
@@ -443,6 +443,7 @@ class VipTab(QWidget):
         for visual, name in enumerate(self.COLUMN_ORDER):
             head.moveSection(head.visualIndex(names.index(name)), visual)
         head.setStretchLastSection(False)
+        head.setDefaultSectionSize(130)                     # (what the link column gets when the others fill the width: its title needs more than the usual 100)
         head.setSectionResizeMode(names.index("VIP link"), head.ResizeMode.Stretch)       # the link column takes the spare width
 
     def update_buttons(self):

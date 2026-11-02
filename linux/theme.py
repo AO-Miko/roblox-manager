@@ -131,11 +131,11 @@ QToolTip { background: $surface3; color: $text; border: 1px solid $border2; padd
 /* tabs: like editor tabs. Page tabs are hidden (the activity bar is the way around); the ones inside a page lie flat, the open one is the colour of the page with a line on top */
 QTabWidget::pane { border: none; border-top: 1px solid $border; background: $bg; top: 0; }
 QTabBar { background: transparent; qproperty-drawBase: 0; }
-QTabBar::tab { background: $sidebar; color: $muted; padding: 8px 16px; margin: 0; border: none; border-right: 1px solid $bg; border-top: 2px solid transparent; }
+QTabBar::tab { background: $sidebar; color: $muted; padding: 8px 12px; margin: 0; border: none; border-right: 1px solid $bg; border-top: 2px solid transparent; }
 QTabBar::tab:hover { color: $text; background: $surface; }
 QTabBar::tab:selected { background: $bg; color: $text; border-top: 2px solid $accent_fg; }
 QTabBar::tab:disabled { color: $faint; }
-QTabWidget[sub="true"] > QTabBar::tab { padding: 7px 16px; margin: 0; }
+QTabWidget[sub="true"] > QTabBar::tab { padding: 7px 11px; margin: 0; }
 
 /* buttons: flat; the main action is the blue one */
 QPushButton { background: $surface3; color: $text; border: 1px solid transparent; border-radius: 2px; padding: 5px 12px; }
