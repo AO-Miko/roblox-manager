@@ -177,10 +177,7 @@ private fun BrowserTab(sv: Services) {
         Text(msg, color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
         AndroidView(modifier = Modifier.fillMaxWidth().weight(1f), factory = {
             cm.removeAllCookies(null)
-            lockedWebView(ctx).also { view ->
-                view.loadUrl("https://www.roblox.com/login")
-                web = view
-            }
+            lockedWebView(ctx).also { web = it }
         })
     }
 }
@@ -212,13 +209,12 @@ private fun CookieTab(sv: Services) {
 @SuppressLint("SetJavaScriptEnabled")
 private fun lockedWebView(ctx: Context): WebView {
     val view = WebView(ctx)
-    val rules = view.settings
-    rules.setJavaScriptEnabled(true)                           // (Roblox's login page needs it)
-    rules.setDomStorageEnabled(true)
-    rules.setAllowFileAccess(false)                            // nothing from the phone's files,
-    rules.setAllowContentAccess(false)                         // nothing from other apps,
-    rules.setGeolocationEnabled(false)
-    rules.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW)          // nothing over plain http
+    view.settings.setJavaScriptEnabled(true)                   // (Roblox's login page needs it)
+    view.settings.setDomStorageEnabled(true)
+    view.settings.setAllowFileAccess(false)                    // nothing from the phone's files,
+    view.settings.setAllowContentAccess(false)                 // nothing from other apps,
+    view.settings.setGeolocationEnabled(false)
+    view.settings.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW)          // nothing over plain http
     view.webViewClient = object : WebViewClient() {
         /** The page may only go to Roblox (https). A link anywhere else is not followed here. */
         override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
@@ -226,5 +222,6 @@ private fun lockedWebView(ctx: Context): WebView {
             return !(u.scheme == "https" && app.robloxmanager.core.RobloxClient.isRoblox(u.host ?: ""))
         }
     }
+    view.loadUrl("https://www.roblox.com/login")
     return view
 }

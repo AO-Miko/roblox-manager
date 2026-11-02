@@ -901,10 +901,10 @@ check("'Show balances' fills in Robux for every account", wait(lambda: [w.accoun
 w.account.atable.selectRow(next(r for r in range(2) if w.account.atable.item(r, 1).text() == "@tester")); w.account.remove_selected()
 check("removing an account that is not in use leaves the other one signed in", wait(lambda: [a["name"] for a in accts.list_accounts()] == ["second"]) and ctx.me["name"] == "second" and not accts._cookie_path(1000).exists())
 # add the first one back, then remove the one in use: the other takes over
-StubSignIn.cookie = COOKIE; w.account.set_cookie(); wait(lambda: ctx.me and ctx.me["name"] == "tester")
+StubSignIn.cookie = COOKIE; w.account.set_cookie(); wait(lambda: ctx.me and ctx.me["name"] == "tester" and len(accts.list_accounts()) == 2)          # (signed in AND saved by the window)
 w.account.sign_out()
 check("signing out the account in use switches to the next saved account", wait(lambda: ctx.me and ctx.me["name"] == "second" and [a["name"] for a in accts.list_accounts()] == ["second"]) and rbx.load_cookie() == COOKIE2)
-StubSignIn.cookie = COOKIE; w.account.set_cookie(); wait(lambda: ctx.me and ctx.me["name"] == "tester")
+StubSignIn.cookie = COOKIE; w.account.set_cookie(); wait(lambda: ctx.me and ctx.me["name"] == "tester" and len(accts.list_accounts()) == 2)          # (signed in AND saved by the window)
 w.account.atable.selectRow(next(r for r in range(2) if w.account.atable.item(r, 1).text() == "@second")); w.account.remove_selected(); wait(lambda: len(accts.list_accounts()) == 1 and ctx.me and ctx.me["name"] == "tester")
 check("only the first account is left, and signed in", [a["name"] for a in accts.list_accounts()] == ["tester"] and ctx.me["name"] == "tester")
 ta2.SignInDialog = __import__("signin").SignInDialog
