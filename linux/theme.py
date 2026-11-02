@@ -191,7 +191,7 @@ QTableWidget::item:selected, QListWidget::item:selected { background: $accent; c
 QTableWidget::item:hover { background: $hover; }
 QListWidget::item { padding: 8px 10px; }
 QHeaderView { background: transparent; }
-QHeaderView::section { background: $surface; color: $muted; padding: 10px 10px; border: none; border-bottom: 2px solid $border2; font-weight: 700; }
+QHeaderView::section { background: $surface; color: $muted; padding: 10px 8px; border: none; border-bottom: 2px solid $border2; font-weight: 700; }
 QHeaderView::section:hover { color: $text; }
 QTableCornerButton::section { background: $surface; border: none; }
 

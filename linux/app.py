@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.tabs.tabBar().hide()               # the top bar is the way around now (the tab widget still holds the pages, their titles and the counts)
         self.tabs.setDocumentMode(True)
-        self.tabs.setContentsMargins(12, 0, 12, 6)          # (a steady gutter beside every page, in line with the page title)
+        self.tabs.setContentsMargins(8, 0, 8, 6)          # (a steady gutter beside every page, in line with the page title)
         self.account = AccountTab(self.ctx)
         self.discover = DiscoverTab(self.ctx)
         self.home = HomePage(self.account, self.discover)            # Home: your account, and Discover (games) inside it

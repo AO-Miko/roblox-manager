@@ -382,7 +382,6 @@ class TopBar(QFrame):
         self.sync()
 
     def _menu(self):
-        from PySide6.QtWidgets import QMenu
         menu = QMenu(self)
         for i, it in enumerate(self.items):
             if it.allowed:
