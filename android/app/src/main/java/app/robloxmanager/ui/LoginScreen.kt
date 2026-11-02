@@ -177,7 +177,11 @@ private fun BrowserTab(sv: Services) {
         Text(msg, color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
         AndroidView(modifier = Modifier.fillMaxWidth().weight(1f), factory = {
             cm.removeAllCookies(null)
-            lockedWebView(ctx).also { web = it }
+            val view = WebView(ctx)
+            lockDown(view)                                     // (every setting is shut before the page is loaded)
+            view.loadUrl("https://www.roblox.com/login")
+            web = view
+            view
         })
     }
 }
@@ -203,12 +207,12 @@ private fun CookieTab(sv: Services) {
 }
 
 /**
- * The web view of the sign-in page. Roblox's login page needs JavaScript; everything else is shut: no files of the phone, no content of other
- * apps, no location, no plain http, and the page can only go to Roblox (https), because this window is where the password is typed.
+ * Shuts the sign-in web view down to what Roblox's login page needs. It needs JavaScript; everything else is off: no files of the phone,
+ * no content of other apps, no location, no plain http, and the page can only go to Roblox (https), because this window is where the
+ * password is typed.
  */
 @SuppressLint("SetJavaScriptEnabled")
-private fun lockedWebView(ctx: Context): WebView {
-    val view = WebView(ctx)
+private fun lockDown(view: WebView) {
     view.settings.setJavaScriptEnabled(true)                   // (Roblox's login page needs it)
     view.settings.setDomStorageEnabled(true)
     view.settings.setAllowFileAccess(false)                    // nothing from the phone's files,
@@ -222,6 +226,4 @@ private fun lockedWebView(ctx: Context): WebView {
             return !(u.scheme == "https" && app.robloxmanager.core.RobloxClient.isRoblox(u.host ?: ""))
         }
     }
-    view.loadUrl("https://www.roblox.com/login")
-    return view
 }
