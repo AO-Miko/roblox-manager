@@ -19,7 +19,7 @@ import relation
 import settings
 from signin import SignInDialog
 from ui_common import (
-    PRESENCE, PRESENCE_COLOUR, button, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
+    PRESENCE, PRESENCE_COLOUR, button, menu_button, copy_text, day_in_range, esc, fill_table, hint, make_table, open_url, row_key, selected_rows, when,
 )
 from theme import T
 
@@ -817,10 +817,8 @@ class FriendsTab(QWidget):
         self.table.itemSelectionChanged.connect(self.show_details)
         lay.addWidget(self.table, 1)
         pick = QHBoxLayout()
-        pick.addWidget(QLabel("Select:"))
-        pick.addWidget(button("All shown", lambda: self.select_where(lambda r: True), "Everything the filter above currently shows"))
-        pick.addWidget(button("None", lambda: self.select_where(lambda r: False)))
-        pick.addWidget(button("Invert", self.invert_selection))
+        pick.addWidget(menu_button("Select", [("All shown", lambda: self.select_where(lambda r: True), "Everything the filter above currently shows"),
+                                              ("None", lambda: self.select_where(lambda r: False)), ("Invert", self.invert_selection)], "Pick friends"))
         pick.addSpacing(12)
         pick.addWidget(QLabel("Not online for over"))
         self.inactive = QComboBox()

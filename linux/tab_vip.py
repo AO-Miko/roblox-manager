@@ -14,7 +14,7 @@ from PySide6.QtCore import QItemSelectionModel, QTimer, Signal
 
 import rbx
 import settings
-from ui_common import FlowLayout, button, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
+from ui_common import FlowLayout, button, menu_button, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
 from theme import T
 
 
@@ -304,9 +304,6 @@ class VipTab(QWidget):
         tl = QVBoxLayout(top)
         tl.setContentsMargins(0, 0, 0, 0)
         head = FlowLayout()
-        title = QLabel("My VIP servers")
-        title.setProperty("role", "title")
-        head.addWidget(title)
         head.addStretch()
         self.hide = {}
         for state, tip in (("Expired", "Servers whose subscription has ended"),
@@ -355,9 +352,14 @@ class VipTab(QWidget):
         row.addStretch()
         tl.addLayout(row)
         pick = FlowLayout()
-        pick.addWidget(QLabel("Select:"))
-        for text, what in (("All expired", "expired"), ("All disabled", "disabled"), ("All enabled", "enabled"), ("One per game", "best"), ("Duplicates", "extras"), ("All", "all"), ("None", "none")):
-            pick.addWidget(button(text, lambda w=what: self.select_group(w)))
+        sel_items = [(text, lambda w=what: self.select_group(w)) for text, what in (("All expired", "expired"), ("All disabled", "disabled"), ("All enabled", "enabled"),
+                                                                                  ("One per game", "best"), ("Duplicates", "extras"))] + [None] + \
+                    [(text, lambda w=what: self.select_group(w)) for text, what in (("All", "all"), ("None", "none"))]
+        pick.addWidget(menu_button("Select", sel_items, "Pick servers by what they are"))
+        cost_items = [(text, lambda w=what: self.select_group(w), tip + " (only the keeper of each game; the same rule as the other selections)")
+                      for text, what, tip in (("Plus-free", "plus", "Servers that are free because of Roblox Plus"), ("Game-free", "gamefree", "Servers the game itself offers for free"),
+                                              ("All free", "free", "Both kinds of free server"), ("Paid", "paid", "Servers that cost Robux"))]
+        pick.addWidget(menu_button("Select by cost", cost_items, "Pick servers by what they cost"))
         pick.addSpacing(16)
         pick.addWidget(QLabel("For the selected:"))
         self.bulk = [button("Switch on", lambda: self.bulk_active(True)), button("Switch off", lambda: self.bulk_active(False)),
@@ -367,11 +369,6 @@ class VipTab(QWidget):
         pick.addStretch()
         tl.addLayout(pick)
         cost = FlowLayout()
-        cost.addWidget(QLabel("By cost:"))
-        for text, what, tip in (("Plus-free", "plus", "Servers that are free because of Roblox Plus"), ("Game-free", "gamefree", "Servers the game itself offers for free"),
-                                ("All free", "free", "Both kinds of free server"), ("Paid", "paid", "Servers that cost Robux")):
-            cost.addWidget(button(text, lambda w=what: self.select_group(w), tip + " (only the keeper of each game; the same rule as the other selections)"))
-        cost.addSpacing(16)
         cost.addWidget(QLabel("Show:"))
         self.cost_filter = QComboBox()
         for text, key in (("All costs", ""), ("Free (Plus + game)", "free"), ("Free (Roblox Plus)", "Free (Roblox Plus)"), ("Free (game)", "Free (game)"),

@@ -17,7 +17,7 @@ import relation
 import settings
 from tab_account import FriendsTab
 from tab_alerts import AlertsTab
-from ui_common import BulkBar, button, copy_text, fill_table, hint, make_table, open_url, row_key, selected_rows, when
+from ui_common import BulkBar, button, menu_button, copy_text, fill_table, hint, make_table, open_url, row_key, selected_rows, when
 
 
 def person(u, cells=()):
@@ -57,12 +57,11 @@ class UserListTab(QWidget):
         self.table.doubleClicked.connect(lambda _=None: self.open_profile())
         lay.addWidget(self.table, 1)
         pick = QHBoxLayout()
-        pick.addWidget(QLabel("Select:"))
-        pick.addWidget(button("All shown", lambda: self.select_where(lambda r: True)))
-        pick.addWidget(button("None", lambda: self.select_where(lambda r: False)))
-        pick.addWidget(button("Invert", self.invert))
-        for label, tip, pred in selectors:
-            pick.addWidget(button(label, lambda p=pred: self.select_where(lambda r: p(r, self.rows)), tip))
+        items = [("All shown", lambda: self.select_where(lambda r: True)), ("None", lambda: self.select_where(lambda r: False)), ("Invert", self.invert)]
+        if selectors:
+            items.append(None)
+        items += [(label, lambda p=pred: self.select_where(lambda r: p(r, self.rows)), tip) for label, tip, pred in selectors]
+        pick.addWidget(menu_button("Select", items, "Pick rows by what they are"))
         pick.addStretch()
         lay.addLayout(pick)
         self.bulk = BulkBar(ctx)

@@ -380,6 +380,25 @@ def button(text, callback=None, tip="", primary=False, danger=False):
     return b
 
 
+def menu_button(text, items, tip=""):
+    """One button that opens a menu: a way to keep a dozen related actions behind one word. items: (label, callback, tip) or None for a line."""
+    b = QPushButton(text + "  \u25be")
+    if tip:
+        b.setToolTip(tip)
+    menu = QMenu(b)
+    for it in items:
+        if it is None:
+            menu.addSeparator()
+            continue
+        label, callback = it[0], it[1]
+        act = menu.addAction(label)
+        act.triggered.connect(lambda _=False, cb=callback: cb())
+        if len(it) > 2 and it[2]:
+            act.setToolTip(it[2])
+    b.setMenu(menu)
+    return b
+
+
 def hint(text):
     l = QLabel(text)
     l.setWordWrap(True)

@@ -129,7 +129,7 @@ class NoticesTab(QWidget):
         items = notices.current(channel()) if items is None else items
         n = len(notices.unread(channel()))
         r = len(items) - n
-        self.summary.setText(f"{n} unread" if items else "Notifications")
+        self.summary.setText(f"{n} unread" if items else "All caught up")
         self.b_all.setEnabled(n > 0)
         self.b_read.setEnabled(r > 0 or self.show_read)
         tip = ("Hide" if self.show_read else "Show") + f" the messages I have read ({r})"

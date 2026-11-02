@@ -316,7 +316,7 @@ class SearchButton(QAbstractButton):
         if self.compact:
             return
         f = self.font(); f.setPixelSize(13); p.setFont(f); p.setPen(QColor(T["muted"]))
-        p.drawText(QRectF(r.x() + 38, r.y(), r.width() - 100, r.height()), Qt.AlignmentFlag.AlignVCenter, "Search")
+        p.drawText(QRectF(r.x() + 34, r.y(), r.width() - 34 - 54, r.height()), Qt.AlignmentFlag.AlignVCenter, "Search")
         kf = self.font(); kf.setPixelSize(10); kf.setWeight(kf.Weight.DemiBold); p.setFont(kf)
         kr = QRectF(r.right() - 52, r.center().y() - 9, 44, 18)
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["bg"])); p.drawRoundedRect(kr, 2, 2)

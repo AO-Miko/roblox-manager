@@ -145,6 +145,7 @@ QPushButton:hover { background: $surface3; }
 QPushButton:pressed { background: $border2; }
 QPushButton:focus { border: 2px solid $accent_fg; padding: 6px 12px; }
 QPushButton:checked { background: $text; color: $bg; }
+QPushButton::menu-indicator { image: none; width: 0; }
 QPushButton:disabled { color: $faint; background: $surface; }
 QPushButton[primary="true"] { background: $accent; color: $on_accent; font-weight: 700; }
 QPushButton[primary="true"]:hover { background: $accent_hover; }
