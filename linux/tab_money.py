@@ -2,7 +2,7 @@
 import re
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from tab_account import pending_rows
 from ui_common import button, export_csv, fill_table, hint, make_table
@@ -61,9 +61,14 @@ class MoneyTab(QWidget):
         self.balance.setProperty("role", "title")
         self.pending = QLabel("Pending: -")
         self.pending.setProperty("role", "title")
-        top.addWidget(self.balance)
-        top.addSpacing(24)
-        top.addWidget(self.pending)
+        for label in (self.balance, self.pending):                 # each number sits in a tile of its own
+            tile = QFrame()
+            tile.setProperty("tile", True)
+            tl = QHBoxLayout(tile)
+            tl.setContentsMargins(18, 12, 18, 12)
+            tl.addWidget(label)
+            top.addWidget(tile)
+            top.addSpacing(10)
         top.addStretch()
         if show_pending:
             top.addWidget(button("Pending details...", show_pending, "Where your pending Robux comes from, sale by sale"))

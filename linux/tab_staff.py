@@ -87,9 +87,6 @@ class StaffTab(QWidget):
 
         left = QVBoxLayout()
         head = QHBoxLayout()
-        title = QLabel("Staff")
-        title.setProperty("role", "title")
-        head.addWidget(title)
         head.addStretch()
         head.addWidget(button("Refresh", self.reload, "Fetch the staff list and their profiles again"))
         left.addLayout(head)

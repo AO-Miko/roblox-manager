@@ -68,32 +68,32 @@ for dark in (True, False):
 check("every colour is readable (at least 4.5 : 1) in both themes and with every accent colour", not low, low[:6])
 check("the dark and the light theme name the same colours", set(theme.DARK) == set(theme.LIGHT), set(theme.DARK) ^ set(theme.LIGHT))
 check("there are five accent colours, each with a dark and a light fill", len(theme.ACCENTS) == 5 and all(len(v) == 2 for v in theme.ACCENTS.values()))
-check("the dark and the light theme look different", theme.palette_for(True, "blue")["bg"] != theme.palette_for(False, "blue")["bg"])
+check("the dark and the light theme look different", theme.palette_for(True, "ember")["bg"] != theme.palette_for(False, "ember")["bg"])
 check("contrast of black on white is 21", abs(theme.contrast("#000000", "#ffffff") - 21) < 0.01)
 
 # ---------------------------------------------------------------- choosing
-theme.choose("light", "green", 110)
-check("T follows the choice (light, green, large): background and accent", theme.T["bg"] == theme.LIGHT["bg"] and theme.T["accent"] == theme.ACCENTS["green"][1], theme.T["accent"])
+theme.choose("light", "teal", 110)
+check("T follows the choice (light, green, large): background and accent", theme.T["bg"] == theme.LIGHT["bg"] and theme.T["accent"] == theme.ACCENTS["teal"][1], theme.T["accent"])
 check("...and the state says so", theme.STATE["mode"] == "light" and not theme.STATE["dark"] and theme.STATE["size"] == 110)
 check("font_px scales with the text size", theme.font_px() == round(13 * 1.10) and theme.font_px(5) == round(18 * 1.10), (theme.font_px(), theme.font_px(5)))
 theme.choose("nonsense", "nonsense", 7)
-check("unknown choices fall back to dark, blue and normal size", theme.STATE["mode"] == "dark" and theme.STATE["accent"] == "blue" and theme.STATE["size"] == 100)
-theme.choose("system", "blue", 100)
+check("unknown choices fall back to dark, blue and normal size", theme.STATE["mode"] == "dark" and theme.STATE["accent"] == "ember" and theme.STATE["size"] == 100)
+theme.choose("system", "ember", 100)
 check("'system' follows the desktop (dark or light, never an error)", theme.STATE["mode"] == "system" and theme.STATE["dark"] == theme.system_is_dark())
 same = theme.T
-theme.choose("light", "blue", 100)
+theme.choose("light", "ember", 100)
 check("T stays the same dict when the theme is switched (so 'from theme import T' keeps working)", theme.T is same and theme.T["bg"] == theme.LIGHT["bg"])
 live = theme.Live({"a": "success", "b": "danger"})
-theme.choose("dark", "blue", 100)
+theme.choose("dark", "ember", 100)
 dark_success = live["a"]
-theme.choose("light", "blue", 100)
+theme.choose("light", "ember", 100)
 check("a Live table of colours gives the colour of the theme in use", dark_success == theme.DARK["success"] and live["a"] == theme.LIGHT["success"] and live.get("zzz", "none") == "none" and "a" in live)
 
 # ---------------------------------------------------------------- the stylesheet
 assets = theme.ensure_assets(tmp / "assets")
 for mode in ("dark", "light"):
     for size in theme.SIZES:
-        theme.choose(mode, "purple", size)
+        theme.choose(mode, "iris", size)
         try:
             css = theme.stylesheet(theme.ensure_assets(tmp / "assets"))
             ok = "$" not in css and theme.T["accent"] in css
@@ -104,9 +104,9 @@ check("the drawn check mark and arrows exist for both themes", all(Path(v).exist
 
 # ---------------------------------------------------------------- the choices in the settings
 check("the settings know the theme, the accent colour and the text size", all(k in settings.DEFAULTS for k in ("ui.theme", "ui.accent", "ui.text_size")))
-check("their defaults are the old look: dark, blue, 100 %", (settings.get("ui.theme"), settings.get("ui.accent"), settings.get("ui.text_size")) == ("dark", "blue", 100))
+check("their defaults are the new look: dark, ember, 100 %", (settings.get("ui.theme"), settings.get("ui.accent"), settings.get("ui.text_size")) == ("dark", "ember", 100))
 check("a theme that does not exist is refused", settings.set("ui.theme", "neon") == "dark")
-check("an accent colour that does not exist is refused", settings.set("ui.accent", "beige") == "blue")
+check("an accent colour that does not exist is refused", settings.set("ui.accent", "beige") == "ember")
 check("a text size is rounded to one the design has", settings.set("ui.text_size", 112) == 110 and settings.set("ui.text_size", 500) == 125 and settings.set("ui.text_size", 1) == 90)
 settings.set("ui.text_size", 100)
 check("a text that is not a number gives the default", settings.set("ui.text_size", "big") == 100)
@@ -118,24 +118,24 @@ spin(0.2)
 check("the window starts dark", theme.STATE["dark"] and app.styleSheet().count(theme.DARK["bg"]) > 0)
 tab = w.settings_tab
 check("Settings > Looks has a button for each theme, five accent colours and a text size", len(tab.theme_buttons) == 3 and len(tab.accent_buttons) == 5 and tab.size_combo.count() == 4)
-check("...showing the saved choices", tab.theme_buttons["dark"].isChecked() and tab.accent_buttons["blue"].isChecked() and tab.size_combo.currentData() == 100)
+check("...showing the saved choices", tab.theme_buttons["dark"].isChecked() and tab.accent_buttons["ember"].isChecked() and tab.size_combo.currentData() == 100)
 tab.theme_buttons["light"].click()
 spin(0.2)
 check("pressing Light dresses the open window at once", not theme.STATE["dark"] and theme.LIGHT["bg"] in app.styleSheet() and settings.get("ui.theme") == "light")
 check("...the palette of the application changed too", app.palette().window().color().name() == theme.LIGHT["bg"], app.palette().window().color().name())
-tab.accent_buttons["pink"].click()
+tab.accent_buttons["rose"].click()
 spin(0.2)
-check("pressing a colour changes the accent at once", theme.T["accent"] == theme.ACCENTS["pink"][1] and theme.T["accent"] in app.styleSheet() and settings.get("ui.accent") == "pink")
-check("...and its swatch is the one marked", tab.accent_buttons["pink"].isChecked() and not tab.accent_buttons["blue"].isChecked())
+check("pressing a colour changes the accent at once", theme.T["accent"] == theme.ACCENTS["rose"][1] and theme.T["accent"] in app.styleSheet() and settings.get("ui.accent") == "rose")
+check("...and its swatch is the one marked", tab.accent_buttons["rose"].isChecked() and not tab.accent_buttons["ember"].isChecked())
 tab.size_combo.setCurrentIndex(tab.size_combo.findData(125))
 tab.size_combo.activated.emit(tab.size_combo.currentIndex())
 spin(0.2)
 check("choosing a text size changes the text at once", theme.STATE["size"] == 125 and f"font-size: {theme.font_px()}px" in app.styleSheet(), theme.font_px())
 saved = json.loads((tmp / "cfg" / "settings.json").read_text())
-check("the choices are saved in settings.json", saved.get("ui.theme") == "light" and saved.get("ui.accent") == "pink" and saved.get("ui.text_size") == 125, saved)
+check("the choices are saved in settings.json", saved.get("ui.theme") == "light" and saved.get("ui.accent") == "rose" and saved.get("ui.text_size") == 125, saved)
 settings.reset()
 spin(0.2)
-check("Reset all settings brings the old look back", theme.STATE["dark"] and theme.STATE["accent"] == "blue" and theme.STATE["size"] == 100 and tab.theme_buttons["dark"].isChecked())
+check("Reset all settings brings the old look back", theme.STATE["dark"] and theme.STATE["accent"] == "ember" and theme.STATE["size"] == 100 and tab.theme_buttons["dark"].isChecked())
 
 # ---------------------------------------------------------------- the welcome card of the Home page
 acc = w.account

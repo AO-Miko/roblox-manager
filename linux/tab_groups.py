@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 
 import rbx
 import settings
-from ui_common import BulkBar, FlowLayout, button, cell, day_in_range, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
+from ui_common import BulkBar, FlowLayout, button, menu_button, cell, day_in_range, copy_text, fill_table, hint, make_table, open_url, parse_id, row_key, selected_rows, when
 
 
 def perm(p, section, key):
@@ -55,12 +55,10 @@ class GroupsTab(QWidget):
         ll.addWidget(self.gfilter)
         ll.addWidget(self.glist, 1)
         pick = FlowLayout()
-        pick.addWidget(QLabel("Select:"))
-        pick.addWidget(button("All shown", lambda: self.select_groups_where(lambda g: True)))
-        pick.addWidget(button("None", lambda: self.select_groups_where(lambda g: False)))
-        pick.addWidget(button("Invert", self.invert_group_selection))
-        pick.addWidget(button("Plain members", lambda: self.select_groups_where(lambda g: g["role"]["rank"] <= 1),
-                              "Groups where you have no special role (rank 1 or lower)"))
+        pick.addWidget(menu_button("Select", [("All shown", lambda: self.select_groups_where(lambda g: True)),
+                                              ("None", lambda: self.select_groups_where(lambda g: False)), ("Invert", self.invert_group_selection), None,
+                                              ("Plain members", lambda: self.select_groups_where(lambda g: g["role"]["rank"] <= 1),
+                                               "Groups where you have no special role (rank 1 or lower)")], "Pick groups by what they are"))
         pick.addStretch()
         ll.addLayout(pick)
         bydate = FlowLayout()

@@ -3,7 +3,7 @@ import re
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFontMetrics, QKeySequence, QPainter, QPainterPath, QPen, QShortcut
-from PySide6.QtWidgets import (QAbstractButton, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+from PySide6.QtWidgets import (QAbstractButton, QDialog, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMenu, QPushButton,
                                QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
 from theme import T
@@ -129,7 +129,7 @@ class PageHolder(QScrollArea):
 
 
 class NavItem(QAbstractButton):
-    """One page in the side bar: line icon, title, and a count badge on the right."""
+    """One page in the top bar: its name, a count after it, and a thick line under it when it is the open page."""
 
     def __init__(self, title, parent=None):
         super().__init__(parent)
@@ -139,20 +139,33 @@ class NavItem(QAbstractButton):
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.setAccessibleName(title)
         self._hover = False
 
+    def _fonts(self):
+        f = self.font(); f.setPixelSize(13); f.setWeight(f.Weight.Bold if self.isChecked() else f.Weight.DemiBold)
+        bf = self.font(); bf.setPixelSize(10); bf.setWeight(bf.Weight.Bold)
+        return f, bf
+
     def set_title(self, text):
         self.title, self.badge = base_title(text)
-        self.setToolTip(f"{self.title}" + (f" ({self.badge})" if self.badge else "") + ("" if not self.compact else ""))
+        self.setToolTip(self.title + (f" ({self.badge})" if self.badge else ""))
+        self.updateGeometry()
         self.update()
 
+    def _badge_w(self, bf):
+        return max(18, QFontMetrics(bf).horizontalAdvance(self.badge) + 10) if self.badge else 0
+
     def sizeHint(self):
-        return QSize(190, 38)
+        f, bf = self._fonts()
+        w = QFontMetrics(f).horizontalAdvance(self.title) + 14
+        if self.badge:
+            w += self._badge_w(bf) + 6
+        return QSize(w, 44)
 
     def minimumSizeHint(self):
-        return QSize(44, 38)
+        return self.sizeHint()
 
     def enterEvent(self, ev):
         self._hover = True
@@ -165,48 +178,27 @@ class NavItem(QAbstractButton):
     def paintEvent(self, ev):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        r = QRectF(self.rect()).adjusted(2, 1, -2, -1)
         on = self.isChecked()
-        if on or self._hover:
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(T["accent_dim"] if on else T["surface2"]))
-            p.drawRoundedRect(r, 8, 8)
+        f, bf = self._fonts()
+        r = QRectF(self.rect())
         if on:
-            p.setBrush(QColor(T["accent"]))
-            p.drawRoundedRect(QRectF(r.x(), r.center().y() - 9, 3, 18), 1.5, 1.5)
-        colour = T["text"] if on else (T["text"] if self._hover else T["muted"])
-        x = r.x() + (r.width() - 20) / 2 if self.compact else r.x() + 14
-        draw_icon(p, self.title, QRectF(x, r.center().y() - 10, 20, 20), T["accent_hover"] if on else colour)
-        red = self.title == "Notifications"                 # unread notifications: a red badge with the number, like a phone's
-        if self.compact:
-            if self.badge and red:
-                p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["badge"]))
-                p.drawEllipse(QPointF(r.right() - 10, r.y() + 10), 8, 8)
-                bf = self.font(); bf.setPixelSize(10); bf.setWeight(bf.Weight.Bold)
-                p.setFont(bf); p.setPen(QColor(T["on_accent"]))
-                p.drawText(QRectF(r.right() - 18, r.y() + 2, 16, 16), Qt.AlignmentFlag.AlignCenter, self.badge if len(self.badge) < 3 else "9+")
-            elif self.badge:
-                p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["accent"]))
-                p.drawEllipse(QPointF(r.right() - 9, r.y() + 9), 4, 4)
-            return
-        f = self.font(); f.setPixelSize(13); f.setWeight(f.Weight.DemiBold if on else f.Weight.Medium)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(T["accent_fg"]))
+            p.drawRect(QRectF(r.x() + 8, r.bottom() - 3, r.width() - 16, 3))
         p.setFont(f)
-        fm = QFontMetrics(f)
-        badge_w = 0
-        if self.badge:
-            bf = self.font(); bf.setPixelSize(11); bf.setWeight(bf.Weight.DemiBold)
-            bfm = QFontMetrics(bf)
-            badge_w = max(22, bfm.horizontalAdvance(self.badge) + 14)
-            br = QRectF(r.right() - badge_w - 8, r.center().y() - 9, badge_w, 18)
-            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["badge"] if red else T["accent"] if on else T["surface3"]))
-            p.drawRoundedRect(br, 9, 9)
-            p.setFont(bf); p.setPen(QColor(T["on_accent"] if (red or on) else T["text"]))
-            p.drawText(br, Qt.AlignmentFlag.AlignCenter, self.badge)
-            p.setFont(f)
-            badge_w += 8
         p.setPen(QColor(T["text"] if (on or self._hover) else T["muted"]))
-        text_rect = QRectF(r.x() + 42, r.y(), r.width() - 42 - badge_w - 6, r.height())
-        p.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, fm.elidedText(self.title, Qt.TextElideMode.ElideRight, int(text_rect.width())))
+        bw = self._badge_w(bf)
+        text_w = r.width() - 14 - (bw + 6 if self.badge else 0)
+        p.drawText(QRectF(r.x() + 7, r.y(), text_w + 2, r.height() - 2), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, self.title)
+        if self.badge:
+            red = self.title == "Notifications"                 # unread notifications: a red badge with the number
+            br = QRectF(r.right() - 7 - bw, r.center().y() - 9, bw, 16)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(T["badge"] if red else T["surface3"]))
+            p.drawRoundedRect(br, 3, 3)
+            p.setFont(bf)
+            p.setPen(QColor(T["on_accent"] if red else T["text"]))
+            p.drawText(br, Qt.AlignmentFlag.AlignCenter, self.badge)
 
 
 class IconButton(QAbstractButton):
@@ -301,7 +293,8 @@ class SearchButton(QAbstractButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setToolTip("Search pages, settings, friends, groups and servers (Ctrl+K)")
         self.setAccessibleName("Search")
-        self.setFixedHeight(36)
+        self.setFixedHeight(32)
+        self.setFixedWidth(132)
         self._hover = False
 
     def enterEvent(self, ev):
@@ -311,95 +304,90 @@ class SearchButton(QAbstractButton):
         self._hover = False; self.update()
 
     def minimumSizeHint(self):
-        return QSize(44, 36)
+        return QSize(40, 32)
 
     def paintEvent(self, ev):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = QRectF(self.rect()).adjusted(2, 1, -2, -1)
-        p.setPen(QPen(QColor(T["border2"] if self._hover else T["border"]), 1)); p.setBrush(QColor(T["surface"]))
-        p.drawRoundedRect(r, 9, 9)
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["surface3"] if self._hover else T["surface2"]))
+        p.drawRoundedRect(r, 3, 3)
         draw_icon(p, "search", QRectF(r.x() + (r.width() - 18) / 2 if self.compact else r.x() + 11, r.center().y() - 9, 18, 18), T["muted"], 1.9)
         if self.compact:
             return
         f = self.font(); f.setPixelSize(13); p.setFont(f); p.setPen(QColor(T["muted"]))
-        p.drawText(QRectF(r.x() + 38, r.y(), r.width() - 100, r.height()), Qt.AlignmentFlag.AlignVCenter, "Search")
+        p.drawText(QRectF(r.x() + 34, r.y(), r.width() - 34 - 54, r.height()), Qt.AlignmentFlag.AlignVCenter, "Search")
         kf = self.font(); kf.setPixelSize(10); kf.setWeight(kf.Weight.DemiBold); p.setFont(kf)
         kr = QRectF(r.right() - 52, r.center().y() - 9, 44, 18)
-        p.setPen(QPen(QColor(T["border2"]), 1)); p.setBrush(QColor(T["surface2"])); p.drawRoundedRect(kr, 5, 5)
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(T["bg"])); p.drawRoundedRect(kr, 2, 2)
         p.setPen(QColor(T["muted"])); p.drawText(kr, Qt.AlignmentFlag.AlignCenter, "Ctrl+K")
 
 
-class Sidebar(QFrame):
-    """The side bar: the account in use, a search box, the pages in groups, and the version at the bottom.
-    It can be made narrow (icons only) with the button at the top or by a narrow window, and every group can be folded with its arrow."""
+class TopBar(QFrame):
+    """The bar along the top: the name of the app, the pages as words in one row (the open one underlined, counts after them), search, and the
+    account in use. In a narrow window the row of pages becomes one Pages button with a menu."""
     picked = Signal(int)
     search_requested = Signal()
-    layout_changed = Signal()            # the person folded a group or collapsed the menu (the window remembers it)
-    FULL, COMPACT = 224, 62
+    layout_changed = Signal()            # (kept so the window can remember bar settings; the bar has none to remember now)
+    FULL, COMPACT = 1000, 0
 
     def __init__(self, tabs, account_combo, version=""):
         super().__init__()
         self.tabs = tabs
         self.setProperty("sidebar", True)
-        self.setFixedWidth(self.FULL)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 10, 10, 10)
-        lay.setSpacing(2)
-        top = QHBoxLayout()
-        top.setContentsMargins(0, 0, 0, 0)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(12, 0, 12, 0)
+        lay.setSpacing(0)
         self.brand = QLabel("Roblox Manager")
         self.brand.setProperty("role", "brand")
-        self.toggle = IconButton("menu_close", "Collapse the menu")
-        self.toggle.clicked.connect(self.toggle_menu)
-        top.addWidget(self.brand, 1)
-        top.addWidget(self.toggle)
-        lay.addLayout(top)
-        lay.addSpacing(6)
-        self.account = account_combo
-        lay.addWidget(self.account)
-        lay.addSpacing(6)
+        lay.addWidget(self.brand)
+        self.toggle = QPushButton("Pages")
+        self.toggle.setFocusPolicy(Qt.FocusPolicy.NoFocus)                   # (narrow window) opens a menu of every page
+        self.toggle.setToolTip("Every page")
+        self.toggle.clicked.connect(self._menu)
+        self.toggle.hide()
+        lay.addWidget(self.toggle)
+        self.items = []
+        self.group_labels = []            # (no group names in the bar)
+        self.compact = False
+        self.manual_compact = False
+        self.auto_compact = False
+        self.collapsed = set()
+        self.row = QWidget()
+        rl = QHBoxLayout(self.row)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(0)
+        for i in range(tabs.count()):
+            title = base_title(tabs.tabText(i))[0]
+            it = NavItem(title)
+            it.group_label = None
+            it.allowed = True            # False: the page is not for this account (Admin)
+            it.set_title(tabs.tabText(i))
+            it.clicked.connect(lambda _=False, n=i: self.picked.emit(n))
+            rl.addWidget(it)
+            self.items.append(it)
+        lay.addWidget(self.row)
+        lay.addStretch(1)
         self.search = SearchButton()
         self.search.clicked.connect(self.search_requested)
         lay.addWidget(self.search)
         lay.addSpacing(8)
-        self.items = []
-        self.group_labels = []           # the GroupHeader buttons
-        self.compact = False
-        self.manual_compact = False      # chosen with the button
-        self.auto_compact = False        # forced by a narrow window
-        self.collapsed = set()           # names of the folded groups, upper case
-        last, label = None, None
-        for i in range(tabs.count()):
-            title = base_title(tabs.tabText(i))[0]
-            group = PAGES.get(title, ("", ""))[0]
-            if i == tabs.count() - 1 and title == "Settings":
-                lay.addStretch(1)
-                group = ""
-            if group != last:
-                label = None
-                if not group and last:
-                    lay.addSpacing(10)
-                if group:
-                    label = GroupHeader(group.upper())
-                    label.clicked.connect(lambda _=False, lab=label: self.toggle_group(lab.text()))
-                    lay.addSpacing(6)
-                    lay.addWidget(label)
-                    self.group_labels.append(label)
-                last = group
-            it = NavItem(title)
-            it.group_label = label
-            it.allowed = True            # False: the page is not for this account (Admin)
-            it.set_title(tabs.tabText(i))
-            it.clicked.connect(lambda _=False, n=i: self.picked.emit(n))
-            lay.addWidget(it)
-            self.items.append(it)
-        self.version = QLabel(version)
-        self.version.setProperty("role", "hint")
-        self.version.setContentsMargins(8, 6, 0, 0)
-        lay.addWidget(self.version)
+        self.account = account_combo
+        lay.addWidget(self.account)
+        self.version = QLabel(version)               # (shown in the About box and the window title; kept here for the tests and the tooltip)
+        self.version.hide()
+        self.brand.setToolTip(version)
         tabs.currentChanged.connect(self.sync)
+        self.setFixedHeight(46)
         self.sync()
+
+    def _menu(self):
+        menu = QMenu(self)
+        for i, it in enumerate(self.items):
+            if it.allowed:
+                act = menu.addAction(it.title + (f"  ({it.badge})" if it.badge else ""))
+                act.triggered.connect(lambda _=False, n=i: self.picked.emit(n))
+        menu.exec(self.toggle.mapToGlobal(self.toggle.rect().bottomLeft()))
 
     # ---- what is shown
     def sync(self, *_):
@@ -410,64 +398,53 @@ class Sidebar(QFrame):
         self._apply()
 
     def _apply(self):
-        """Show what should be shown: a page that is not for this account is hidden; the pages of a folded group are hidden (except the one in view)."""
         for it in self.items:
-            folded = it.group_label is not None and it.group_label.text() in self.collapsed and not self.compact and not it.isChecked()
-            it.setVisible(it.allowed and not folded)
-        for lab in self.group_labels:
-            lab.setVisible(not self.compact and any(it.group_label is lab and it.allowed for it in self.items))
-            lab.set_collapsed(lab.text() in self.collapsed)
+            it.setVisible(it.allowed)
 
     def set_page_visible(self, title, visible):
-        """Show or hide the entry of a page (the Admin page only exists for admins); a group name goes when all its pages are hidden."""
+        """Show or hide the entry of a page (the Admin page only exists for admins)."""
         for it in self.items:
             if it.title == title:
                 it.allowed = visible
         self._apply()
 
-    # ---- fold a group
     def toggle_group(self, name):
-        self.collapsed ^= {name}
-        self._apply()
-        self.layout_changed.emit()
+        pass                  # (there are no groups in the top bar)
 
-    # ---- narrow / wide
     def toggle_menu(self):
-        self.manual_compact = not self.manual_compact
-        self._update_compact()
-        self.layout_changed.emit()
+        self._menu()
 
     def set_auto_compact(self, narrow):
         self.auto_compact = narrow
         self._update_compact()
 
     def set_compact(self, compact):
-        """(kept for callers that set it directly) icons only or the full menu."""
         self.auto_compact = compact
         self._update_compact()
 
-    def _update_compact(self):
-        compact = self.manual_compact or self.auto_compact
-        self.compact = compact
-        self.setFixedWidth(self.COMPACT if compact else self.FULL)
-        for w in [*self.items, self.search]:
-            w.compact = compact
-            w.update()
-        for w in [self.brand, self.account, self.version]:
-            w.setVisible(not compact)
-        self.toggle.set_icon("menu_open" if compact else "menu_close", "Expand the menu" if compact else "Collapse the menu")
-        self._apply()
-        for it in self.items:
-            it.setToolTip(it.title + (f" ({it.badge})" if it.badge else ""))
+    def needed(self):
+        """The width of window at which everything fits in one row."""
+        return self.brand.sizeHint().width() + self.row.sizeHint().width() + 132 + 8 + max(self.account.sizeHint().width(), self.account.minimumWidth()) + 40
 
-    # ---- remembered between runs
+    def _update_compact(self):
+        self.compact = self.auto_compact
+        self.search.setFixedWidth(40 if self.compact else 132)
+        self.row.setVisible(not self.compact)
+        self.toggle.setVisible(self.compact)
+        self.brand.setVisible(not self.compact or self.width() > 700)
+        self.search.compact = self.compact
+        self.search.update()
+        for it in self.items:
+            it.compact = self.compact
+
     def state(self):
-        return {"menu_collapsed": self.manual_compact, "groups_collapsed": sorted(self.collapsed)}
+        return {}
 
     def restore(self, st):
-        self.manual_compact = bool(st.get("menu_collapsed", False))
-        self.collapsed = {g for g in st.get("groups_collapsed", []) if isinstance(g, str)}
         self._update_compact()
+
+
+Sidebar = TopBar                 # (the old name)
 
 
 class PageHeader(QWidget):
@@ -478,7 +455,7 @@ class PageHeader(QWidget):
         super().__init__()
         self.setProperty("header", True)
         row = QHBoxLayout(self)
-        row.setContentsMargins(10, 12, 10, 8)
+        row.setContentsMargins(22, 18, 22, 6)
         row.setSpacing(8)
         col = QVBoxLayout()
         col.setSpacing(0)

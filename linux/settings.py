@@ -21,7 +21,7 @@ DEFAULTS = {
     "geo.allowed": (False, None, None),      # the person allows asking ipwho.is where a server's public address is (the address is sent there)
     "ui.rate_notes": (True, None, None),     # the orange 'waiting for Roblox's limit' notes
     "ui.theme": ("dark", ("dark", "light", "system"), None),                       # colours: dark, light, or whatever the desktop uses
-    "ui.accent": ("blue", ("blue", "green", "purple", "orange", "pink"), None),    # the accent colour
+    "ui.accent": ("ember", ("ember", "teal", "iris", "gold", "rose"), None),    # the accent colour
     "ui.text_size": (100, 90, 125),          # text size in percent (90, 100, 110 or 125; anything in between is rounded to the nearest)
 }
 

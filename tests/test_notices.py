@@ -228,7 +228,7 @@ idx = w.tabs.indexOf(w.holders[page])
 check("the page is in the side bar, just before Settings", w.tabs.tabText(w.tabs.count() - 2).startswith("Notifications") and idx == w.tabs.count() - 2)
 check("two unread (the one for beta is not for this app): the tab says so", w.tabs.tabText(idx) == "Notifications (2)", w.tabs.tabText(idx))
 item = next(i for i in w.sidebar.items if i.title == "Notifications")
-check("the side bar shows the red number", item.badge == "2" and item.isVisible())
+check("the side bar shows the red number", item.badge == "2" and item.allowed)
 check("the window title carries the number", w.windowTitle().startswith("(2) "), w.windowTitle())
 check("the red is a red that white text can be read on", theme.contrast(theme.T["on_accent"], theme.T["badge"]) >= 4.5, theme.contrast(theme.T["on_accent"], theme.T["badge"]))
 for mode in ("dark", "light"):

@@ -66,7 +66,7 @@ object C {
         val onDim = c("onDim"); val success = c("success"); val warn = c("warn"); val danger = c("danger"); val dangerDim = c("dangerDim"); val info = c("info")
         val orange = c("orange"); val violet = c("violet")
     }
-    private var pal by mutableStateOf(Pal("dark/blue", Look.palette(true, "blue")))
+    private var pal by mutableStateOf(Pal("dark/ember", Look.palette(true, "ember")))
     var dark by mutableStateOf(true)
         private set
 
@@ -128,7 +128,8 @@ private fun scheme(): ColorScheme {
         }
     }
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, density.fontScale * look.size / 100f)) {
-        MaterialTheme(colorScheme = scheme()) {
+        MaterialTheme(colorScheme = scheme(), shapes = androidx.compose.material3.Shapes(
+            extraSmall = RoundedCornerShape(3.dp), small = RoundedCornerShape(4.dp), medium = RoundedCornerShape(6.dp), large = RoundedCornerShape(6.dp), extraLarge = RoundedCornerShape(4.dp))) {
             androidx.compose.material3.Surface(color = C.bg, contentColor = C.text, content = content)
         }
     }
@@ -213,10 +214,10 @@ fun Section(title: String, collapsible: Boolean = false, content: @Composable ()
     val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 0f else -90f, label = "arrow")
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).let { if (collapsible) it.clickable { open = !open; prefs.put("fold.$title", !open) } else it }.padding(vertical = 4.dp),
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(3.dp)).let { if (collapsible) it.clickable { open = !open; prefs.put("fold.$title", !open) } else it }.padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title, Modifier.weight(1f), color = C.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(title.uppercase(), Modifier.weight(1f), color = C.muted, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
             if (collapsible) androidx.compose.material3.Icon(
                 androidx.compose.material.icons.Icons.Outlined.ExpandMore, if (open) "Hide $title" else "Show $title", Modifier.size(20.dp).rotate(turn), tint = C.muted,
             )
@@ -229,8 +230,8 @@ fun Section(title: String, collapsible: Boolean = false, content: @Composable ()
 
 @Composable
 fun Card(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
-    val m = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.surface)
-    Box(if (onClick != null) m.clickable(onClick = onClick) else m) { Box(Modifier.padding(12.dp)) { content() } }
+    val m = modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(C.surface)
+    Box(if (onClick != null) m.clickable(onClick = onClick) else m) { Box(Modifier.padding(14.dp)) { content() } }
 }
 
 @Composable
@@ -270,15 +271,15 @@ fun Confirm(title: String, text: String, ok: String = "Yes", danger: Boolean = f
 
 @Composable
 fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) =
-    Button(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(10.dp)) { Text(text) }
+    Button(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(4.dp)) { Text(text, fontWeight = FontWeight.Bold) }
 
 @Composable
 fun DangerButton(text: String, enabled: Boolean = true, onClick: () -> Unit) =
-    Button(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = C.dangerDim, contentColor = C.danger)) { Text(text) }
+    OutlinedButton(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(4.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = C.danger), border = androidx.compose.foundation.BorderStroke(1.dp, C.danger)) { Text(text, fontWeight = FontWeight.Bold) }
 
 @Composable
 fun QuietButton(text: String, enabled: Boolean = true, onClick: () -> Unit) =
-    OutlinedButton(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(10.dp)) { Text(text) }
+    Button(onClick = { Debug.event("click", "pressed '$text'"); onClick() }, enabled = enabled, shape = RoundedCornerShape(4.dp), colors = ButtonDefaults.buttonColors(containerColor = C.surface3, contentColor = C.text)) { Text(text, fontWeight = FontWeight.SemiBold) }
 
 /** Progress of a batch with a Stop button; shows what failed afterwards. */
 @Composable

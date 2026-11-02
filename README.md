@@ -22,7 +22,7 @@ By using it you agree to the [Terms of use](TERMS.md); how your data is handled 
 | **API Explorer** (PC) | send any Roblox web API request and read the answer |
 | **Staff List** | who is on the staff, from the owner down, with their Roblox profiles (see [docs/ADMIN.md](docs/ADMIN.md)) |
 | **Admin** (PC; overview on the phone) | ban and unban Roblox user ids; only for accounts with the admin role or higher |
-| **Notifications** | messages from the developer to everybody who uses the app. A red number in the side bar (and on the phone's bell) says how many you have not read; a new one also pops up. They come from a signed file in this repository, so only the maintainer can send one |
+| **Notifications** | messages from the developer to everybody who uses the app. A red number in the top bar (and on the phone's bell) says how many you have not read; a new one also pops up. They come from a signed file in this repository, so only the maintainer can send one |
 | **Settings** | **Looks** (dark, light or the same as your desktop or phone; five accent colours; four text sizes; on a PC Ctrl+Shift+L switches dark and light), preferences, **backup and restore**, updates (with the Beta channel choice) and the update log: what changed in each version |
 
 ## About this project
@@ -116,7 +116,7 @@ To verify a download, compare it with `SHA256SUMS.txt` from the same release (`s
 
 ## Finding your way around
 
-- **PC:** the pages are in a side bar with counts next to the names (a pending-requests count on People, the number of groups and servers). The button at the top of the side bar
+- **PC:** the pages are one row of words in a bar along the top, with counts next to the names (a pending-requests count on People, the number of groups and servers); the open page is underlined, and in a narrow window the row becomes one Pages menu. Press Ctrl+K to search for a page, a setting or anything loaded.
   collapses it to icons, and every group (Social, Roblox, Tools, Staff) has an arrow that folds it; both are remembered. A narrow window collapses it by itself and a page that
   does not fit scrolls instead of forcing the window wide.
 - **Ctrl+K** opens a search that jumps to any page, setting or account, and to any friend, group, VIP server or staff member that is loaded. **Ctrl+1 ... Ctrl+9** open the

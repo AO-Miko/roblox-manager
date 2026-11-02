@@ -34,7 +34,7 @@ fun ServerMap(groups: List<Pair<Place, List<String>>>, chosen: List<String>?, on
     fun radius(ids: List<String>) = (5 + min(sqrt(ids.size.toDouble()) * 1.5, 9.0)).toFloat() * density
 
     Canvas(
-        Modifier.fillMaxWidth().aspectRatio(2f).clip(RoundedCornerShape(12.dp)).background(C.surface).pointerInput(groups) {
+        Modifier.fillMaxWidth().aspectRatio(2f).clip(RoundedCornerShape(6.dp)).background(C.surface).pointerInput(groups) {
             detectTapGestures { pos ->
                 val w = size.width.toFloat(); val h = size.height.toFloat()
                 val hit = groups.minByOrNull { (p, _) -> val (x, y) = WorldMap.project(p.lat, p.lon, w, h); hypot(pos.x - x, pos.y - y) }
