@@ -1,7 +1,7 @@
 {
-  "versionName": "1.16.11.4.4",
-  "versionCode": 44,
+  "versionName": "1.16.11.4.5",
+  "versionCode": 45,
   "apk": "roblox-manager.apk",
-  "sha256": "2bd8d343a3cd49e91b694e62c6ed1441e0ae74acb5d6154f7616a1149cca7373",
-  "notes": "Sign-in web view: no web view is kept in app state any more (clears the last code-scan content-access alerts); no change in how the app looks or works"
+  "sha256": "73a270a4b3338a8767ef3865053066dd98dac393db6198d6be07c398f89071f7",
+  "notes": "A complete redesign, on the PC and on the phone: new colours (dark and warm light, accent colours ember, teal, iris, gold and rose), flat blocks and small corners instead of outlined cards, and on the PC a bar along the top instead of the side bar. Choosing rows in lists is now one Select menu, and Money shows its numbers in tiles. Your saved accent colour is reset to ember."
 }

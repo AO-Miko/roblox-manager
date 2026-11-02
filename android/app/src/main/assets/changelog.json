@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.11.4.5",
+    "date": "2026-11-02",
+    "changes": [
+      "A complete redesign, on the PC and on the phone: new colours (dark and warm light, accent colours ember, teal, iris, gold and rose), flat blocks and small corners instead of outlined cards, and on the PC a bar along the top instead of the side bar. Choosing rows in lists is now one Select menu, and Money shows its numbers in tiles. Your saved accent colour is reset to ember."
+    ]
+  },
+  {
     "version": "1.16.11.4.4",
     "date": "2026-11-02",
     "changes": [
