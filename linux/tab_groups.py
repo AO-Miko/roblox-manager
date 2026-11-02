@@ -146,7 +146,7 @@ class GroupsTab(QWidget):
         self.role_pick = QComboBox()
         self.role_pick.activated.connect(lambda _: self.load_members(reset=True))
         self.member_filter = QLineEdit()
-        self.member_filter.setPlaceholderText("Filter members...")
+        self.member_filter.setPlaceholderText("Filter...")
         self.member_filter.setMinimumWidth(150)
         self.member_filter.textChanged.connect(lambda _=None: (self.show_members(), self._search_timer.start()))
         top.addWidget(QLabel("Role:"))
