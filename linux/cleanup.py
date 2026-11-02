@@ -47,7 +47,7 @@ def size(paths):
         try:
             total += p.stat().st_size
         except OSError:
-            pass
+            pass                  # (a file that vanished or cannot be read is not counted)
     return total
 
 
@@ -56,6 +56,7 @@ def human(n):
         if n < 1024 or unit == "GB":
             return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
         n /= 1024
+    return f"{n:.1f} GB"          # (not reached: the last unit always returns)
 
 
 def summary():
@@ -86,7 +87,7 @@ def clear(category):
         try:
             rbx.AVATAR_DIR.rmdir()
         except OSError:
-            pass
+            pass                  # (already gone or in use: nothing to do)
     return n, freed, problems
 
 

@@ -18,7 +18,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.6.0\n")
 sys.path.insert(0, str(ROOT / "linux"))
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 

@@ -77,7 +77,7 @@ def links_for(universe_id, fetch=None, now=None):
     try:
         kept = json.loads(FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        pass
+        pass                  # (no saved copy, or a damaged one: the defaults are used)
     table = None
     if isinstance(kept, dict) and now - kept.get("t", 0) < TTL:
         table = clean(kept.get("links"))
@@ -102,5 +102,5 @@ def links_for(universe_id, fetch=None, now=None):
                 json.dump({"t": now, "links": data}, f)
             tmp.replace(FILE)
         except OSError:
-            pass
+            pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
     return table.get(int(universe_id), [])

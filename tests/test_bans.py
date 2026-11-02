@@ -96,7 +96,7 @@ check("...and is replaced by the next good download", bans.banned(555) == "new")
 # ---- the app
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 app = QApplication([])
 import accounts
 import app as appmod

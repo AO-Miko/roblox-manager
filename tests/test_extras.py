@@ -15,7 +15,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.0.0.0.0\n")
 sys.path.insert(0, str(ROOT / "linux"))
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QInputDialog, QMessageBox
 
@@ -26,7 +26,7 @@ import games_store
 import notify_status
 import rbx
 import settings
-import tab_group_requests
+__import__("tab_group_requests")          # (it must load)
 from app import MainWindow
 
 res = []

@@ -107,7 +107,7 @@ check("...the old version is kept as .previous", (app.with_name("roblox-manager.
 check("...checking again says up to date", u.check()["status"] == "up-to-date")
 r = u.rollback()
 check("rolling back puts the previous version back", r["status"] == "rolled-back" and (app / "app.py").read_text() == "print('v1')\n", r)
-r = u.rollback()
+u.rollback()
 check("...and rolling back again returns to the newer one", (app / "app.py").read_text() == "print('v2')\n")
 u.MARKER.write_text(json.dumps({"commit": v2, "version": "1.1.0"}))
 

@@ -321,7 +321,7 @@ def follow_system(app, folder, on_change=None):
         hints = QGuiApplication.styleHints()
         hints.colorSchemeChanged.connect(lambda *_: STATE["mode"] == "system" and (apply(app, folder), on_change and on_change()))
     except AttributeError:
-        pass
+        pass                  # (an older Qt has no colour-scheme signal: the theme is simply not followed live)
 
 
 choose()

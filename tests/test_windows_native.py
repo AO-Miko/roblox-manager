@@ -50,7 +50,6 @@ if plat.IS_WIN:
     check("...that does not contain the secret in any readable form", b"WARNING" not in raw and b"DO-NOT-SHARE" not in raw and secret.encode() not in raw and len(raw) > 100)
     check("...and reads back exactly", vault.get("account:1") == secret)
     check("another key has its own entry", vault.get("account:2") == "" and vault.put("account:2", "other") and vault.get("account:2") == "other" and vault.get("account:1") == secret)
-    raw2 = files[0].read_bytes()
     vault.put("account:1", secret)
     check("storing again replaces it", vault.get("account:1") == secret and len(list((tmp / "cfg" / "vault").glob("*.bin"))) == 2)
     files[0].write_bytes(raw[:-5] + b"xxxxx")

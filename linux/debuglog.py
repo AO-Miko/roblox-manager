@@ -17,13 +17,13 @@ from collections import deque
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-import rbx
+import plat
 
 LEVELS = ["debug", "info", "warning", "error"]
 KEEP = 8000                    # events kept in memory
 DETAIL_MAX = 6000              # characters of one event's output that are kept
 PREVIEW_MAX = 2400             # characters of an answer from Roblox that are kept
-FILE = rbx.STATE_DIR / "debug.log"
+FILE = plat.state_dir() / "debug.log"
 
 ENABLED = True                 # settings: write debug.log (the list in the app is always kept)
 EVENTS = deque(maxlen=KEEP)
@@ -163,7 +163,7 @@ class _PrivateFile(RotatingFileHandler):
         try:
             os.chmod(self.baseFilename, 0o600)
         except OSError:
-            pass
+            pass                  # (permissions cannot be tightened here, for example on a file system without them)
         return stream
 
 
@@ -175,11 +175,12 @@ def _open_file():
         _file.propagate = False
         if not _file.handlers:
             try:
+                FILE.parent.mkdir(parents=True, exist_ok=True)
                 h = _PrivateFile(FILE, maxBytes=2_000_000, backupCount=2, encoding="utf-8")
                 h.setFormatter(logging.Formatter("%(message)s"))
                 _file.addHandler(h)
             except OSError:
-                pass
+                pass                  # (the debug log cannot be written: it is kept in memory only)
     return _file
 
 
@@ -335,15 +336,14 @@ class _Tee:
         return getattr(self.inner, name)
 
 
-_installed = False
+_state = {"installed": False}          # (one dictionary instead of a module variable that is rebound)
 
 
 def install():
     """Start catching: the logging records, uncaught errors (any thread), what the program prints, and Qt's own messages. Safe to call twice."""
-    global _installed
-    if _installed:
+    if _state["installed"]:
         return
-    _installed = True
+    _state["installed"] = True
     root = logging.getLogger()
     if root.level > logging.INFO or root.level == logging.NOTSET:
         root.setLevel(logging.INFO)

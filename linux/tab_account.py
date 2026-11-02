@@ -337,7 +337,7 @@ class AccountTab(QWidget):
                 if time.time() - f.stat().st_mtime < rbx.AVATAR_MAX_AGE:
                     return f.read_bytes()
             except OSError:
-                pass
+                pass                  # (no usable saved copy: it is fetched again)
             url = client.headshots([uid], size="150x150").get(int(uid))
             data = client.fetch_bytes(url) if url else b""
             if data:
@@ -345,7 +345,7 @@ class AccountTab(QWidget):
                     rbx.AVATAR_DIR.mkdir(parents=True, exist_ok=True)
                     f.write_bytes(data)
                 except OSError:
-                    pass
+                    pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
             return data
         self.ctx.async_.run(work, self.set_avatar, lambda e: None)
 
@@ -563,7 +563,7 @@ class AccountTab(QWidget):
             accounts.remember(user, self.ctx.client._cookie)        # every account that signs in is kept, ready to switch to
             self.balances.pop(user["id"], None)
         except ValueError:
-            pass
+            pass                  # (the account could not be saved: it is still signed in for this session)
         self.ctx.accounts_changed.emit()
         self._load_avatar(user["id"])
         self.who.setText(f"{user.get('displayName') or user['name']}  (@{user['name']})")
@@ -1228,7 +1228,7 @@ class FriendsTab(QWidget):
             with open(rbx.STATE_DIR / "removed-friends.txt", "a", encoding="utf-8") as f:
                 f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')}\t{r['id']}\t@{r['username']}\t{r['name']}\n")
         except OSError:
-            pass
+            pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
     def _finish_remove(self, n, removed, failed):
         self.running = False

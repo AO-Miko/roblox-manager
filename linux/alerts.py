@@ -56,7 +56,7 @@ def save(data):
             json.dump(clean(data), f, indent=1)
         tmp.replace(FILE)
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 def snapshot(presences):

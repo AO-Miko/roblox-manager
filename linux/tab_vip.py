@@ -54,7 +54,7 @@ def server_state(item, names):
             if d < datetime.now(timezone.utc):
                 return "Expired"
         except ValueError:
-            pass
+            pass                  # (a date that cannot be read is left as it is)
     return ""
 
 
@@ -74,7 +74,7 @@ def cost_kind(item):
         if d.year >= datetime.now().year + 50:
             return "Free (game)"
     except ValueError:
-        pass
+        pass                  # (a date that cannot be read is left as it is)
     return "Unknown"
 
 
@@ -651,7 +651,8 @@ class VipTab(QWidget):
     def _link(self, s, done):
         c, vid = self.ctx, s["_vid"]
         if self.links.get(vid, "") not in ("", "-"):
-            return done(self.links[vid])
+            done(self.links[vid])
+            return
 
         def got(link):
             if link:
@@ -820,7 +821,7 @@ class VipTab(QWidget):
             data[uid] = {k: x for k, x in mine.items() if now - x[1] < self.CHECK_TTL}
             f.write_text(json.dumps(data))
         except OSError:
-            pass
+            pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
     def _set_link_cell(self, vid, link):
         for r in range(self.mtable.rowCount()):

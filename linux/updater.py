@@ -59,7 +59,7 @@ def load_config():
     try:
         cfg.update({k: v for k, v in json.loads(CONFIG_FILE.read_text()).items() if k in DEFAULTS})
     except (OSError, ValueError):
-        pass
+        pass                  # (no saved copy, or a damaged one: the defaults are used)
     if cfg.get("channel") not in CHANNELS:
         cfg["channel"] = "stable"
     return cfg
@@ -102,7 +102,7 @@ def log(message):
         if LOG_FILE.stat().st_size > 200_000:                    # keep it small
             LOG_FILE.write_text("".join(LOG_FILE.read_text().splitlines(True)[-300:]))
     except OSError:
-        pass
+        pass                  # (a file that vanished or cannot be read is not counted)
 
 
 # ------------------------------------------------------------------ git

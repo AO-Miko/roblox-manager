@@ -81,7 +81,7 @@ def _write_cache(cache):
             json.dump(keep, f)
         tmp.replace(CACHE_FILE)
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 def _fetch(url):
@@ -141,7 +141,7 @@ def roseal_groups(fetch=None, now=None):
     try:
         kept = json.loads(ROSEAL_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        pass
+        pass                  # (no saved copy, or a damaged one: the defaults are used)
     if isinstance(kept, dict) and now - kept.get("t", 0) < ROSEAL_TTL:
         groups = clean_groups(kept.get("groups"))
         if groups:
@@ -169,7 +169,7 @@ def roseal_groups(fetch=None, now=None):
             json.dump({"t": now, "groups": data}, f)
         tmp.replace(ROSEAL_FILE)
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
     return groups
 
 

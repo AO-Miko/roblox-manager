@@ -29,7 +29,7 @@ CONFIG_DIR.chmod(0o700)   # holds the cookie: only you may even list this folder
 try:
     STATE_DIR.chmod(0o700)    # logs and saved names: not for other users of this computer either
 except OSError:
-    pass
+    pass                  # (permissions cannot be tightened here, for example on a file system without them)
 
 log = logging.getLogger("roblox-manager")
 if not log.handlers:
@@ -136,7 +136,7 @@ def load_cookie():
         if COOKIE_FILE.stat().st_mode & 0o077:
             os.chmod(COOKIE_FILE, 0o600)  # somebody loosened it: tighten it again
     except OSError:
-        pass
+        pass                  # (permissions cannot be tightened here, for example on a file system without them)
     return normalise_cookie(vault.read("active", COOKIE_FILE))
 
 
@@ -193,7 +193,7 @@ class NameCache:
                 self.dirty, self.last_save = False, now
             tmp.replace(self.path)
         except OSError:
-            pass
+            pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 names = NameCache()
@@ -320,7 +320,7 @@ class RateTable:
                     st["left"], st["reset_at"] = 0, now + min(wait, 60) + 0.5      # Roblox's latest word beats our own estimate
                     text = (text + "; " if text else "") + f"limited: wait {min(wait, 60):.0f} s"
         except ValueError:
-            pass
+            pass                  # (not a number: the limit is unknown and the default is used)
         return text
 
     def snapshot(self):
@@ -485,6 +485,7 @@ class Client:
                 self._slow_backoff(wait)
                 record_request(self._who(), method.upper(), url, params, None, None, 0, False, f"cool-down: waiting {wait} s after repeated 429")
                 self._sleep(wait)
+        raise RuntimeError("request: no round was run")          # (not reached: the last round returns or raises)
 
     def _request_once(self, method, url, params=None, json_body=None, auth=True, retries=3, raw=False):
         method = method.upper()
@@ -768,14 +769,14 @@ class Client:
             if isinstance(d, dict) and isinstance(d.get("eligibleRobux"), int):
                 out["eligible_robux"], out["updated"] = d["eligibleRobux"], (str(d.get("updatedUtc"))[:25] if d.get("updatedUtc") else None)
         except RobloxError:
-            pass
+            pass                  # (Roblox refused or could not be reached: this extra is simply left out)
         try:
             d = self.get("https://economy.roblox.com/v1/developer-exchange/info")
             if isinstance(d, dict):
                 out["min_cash_out"] = d.get("minRobuxToCashOut") if isinstance(d.get("minRobuxToCashOut"), int) else None
                 out["can_cash_out"], out["suspended"], out["at_risk"] = (None if d.get(k) is None else bool(d.get(k)) for k in ("canProceedToCashout", "isDevExSuspended", "isAtRiskOfSuspension"))
         except RobloxError:
-            pass
+            pass                  # (Roblox refused or could not be reached: this extra is simply left out)
         return out
 
     def friend_request_count(self):
@@ -853,7 +854,7 @@ class Client:
                     out.append(d)
                     seen.add(d["id"])
             except RobloxError:
-                pass
+                pass                  # (Roblox refused or could not be reached: this extra is simply left out)
         exact = self.user_by_name(text) if text and not text.isdigit() else None
         if exact:
             out.append(exact)
@@ -864,7 +865,7 @@ class Client:
                     out.append(u)
                     seen.add(u["id"])
         except RobloxError:
-            pass
+            pass                  # (Roblox refused or could not be reached: this extra is simply left out)
         return out
 
     def unfriend(self, user_id):
@@ -1338,7 +1339,7 @@ def cached_avatar(uid):
         if time.time() - f.stat().st_mtime < AVATAR_MAX_AGE:
             return f.read_bytes()
     except OSError:
-        pass
+        pass                  # (no usable saved copy: it is fetched again)
     return b""
 
 
@@ -1349,7 +1350,7 @@ def save_avatar(uid, data):
         AVATAR_DIR.mkdir(parents=True, exist_ok=True)
         (AVATAR_DIR / f"{int(uid)}.png").write_bytes(data)
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 _CODE = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -1541,7 +1542,7 @@ def _save_bad_types(uid, bad):
         data[str(uid)] = sorted(bad)
         f.write_text(json.dumps(data))
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 def _pending_methods():

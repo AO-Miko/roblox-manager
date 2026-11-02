@@ -296,7 +296,7 @@ class ExplorerTab(QWidget):
                         (CATALOG / f"{s}.json").write_text(json.dumps(data))
                         done.append(s)
                 except rbx.RobloxError:
-                    pass
+                    pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
             return done
 
         def finished(done):

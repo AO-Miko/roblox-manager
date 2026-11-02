@@ -107,7 +107,6 @@ fun AlertsSwitch(sv: Services, onNote: (String) -> Unit) {
 fun AlertsScreen(sv: Services) {
     val me = sv.current.collectAsState().value ?: return
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     val loader = rememberLoader(me.id) { sv.api.friends() }
     val avatars = remember { AvatarBook(sv) }
     val watched = remember(me.id) { mutableStateMapOf<Long, String>().also { it.putAll(sv.alerts.watched(me.id)) } }

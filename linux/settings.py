@@ -69,7 +69,7 @@ def set(key, value):          # noqa: A001 - reads naturally as settings.set(...
         import debuglog
         debuglog.event("settings", f"{key} = {value}")
     except ImportError:
-        pass
+        pass                  # (optional: not available here, and the app works without it)
     for fn in list(_listeners):
         fn(key, value)
     return value
@@ -94,7 +94,7 @@ def save():
         with os.fdopen(fd, "w") as f:
             json.dump(_values, f, indent=1)
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 def apply():
@@ -105,7 +105,7 @@ def apply():
         import debuglog
         debuglog.ENABLED = _values["log.debug"]
     except ImportError:
-        pass
+        pass                  # (optional: not available here, and the app works without it)
     rbx.AVATAR_MAX_AGE = _values["cache.avatar_days"] * 24 * 3600
     rbx.NameCache.TTL = _values["cache.names_days"] * 24 * 3600
 

@@ -56,7 +56,6 @@ fun NoticesScreen(sv: Services) {
     var version by remember { mutableStateOf(0) }            // counts up when something was marked read, so the list is drawn again
     LaunchedEffect(Unit) { sv.refreshNotices(); version++ }
     val list = remember(unread, version) { sv.visibleNotices() }
-    val ctx = LocalContext.current
     var open by remember { mutableStateOf<String?>(null) }
     var showRead by remember { mutableStateOf(false) }               // the check icon: also show the messages that were read
     var justRead by remember { mutableStateOf(setOf<String>()) }     // read a moment ago: stays in the list until the page is left, so the card you opened does not vanish

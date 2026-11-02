@@ -273,7 +273,7 @@ class UserListTab(QWidget):
             with open(rbx.STATE_DIR / f"{name}.txt", "a", encoding="utf-8") as f:
                 f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')}\t{r['id']}\t@{r['username']}\t{r['name']}\n")
         except OSError:
-            pass
+            pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
     def _finished(self, a, n, done, failed):
         self.bulk.finish()
@@ -373,7 +373,7 @@ def _blocked_local_save(rows):
     try:
         (rbx.STATE_DIR / BLOCKED_FILE).write_text(json.dumps(rows))
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 def remember_blocked(u, blocked=True):

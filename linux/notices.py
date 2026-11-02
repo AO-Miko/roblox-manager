@@ -143,7 +143,7 @@ def _save(s):
         tmp.write_text(json.dumps({"read": s["read"][-200:], "seen": (s["seen"] or [])[-200:] if s["seen"] is not None else None}), encoding="utf-8")
         tmp.replace(f)
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
 
 def read_ids():

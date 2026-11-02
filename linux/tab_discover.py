@@ -466,7 +466,7 @@ class GameDetail(QWidget):
                 url = c.game_cover(uid)
                 data = c.fetch_bytes(url) if url else b""
             except rbx.RobloxError:
-                pass
+                pass                  # (Roblox refused or could not be reached: this extra is simply left out)
             return d, v, fav, data
 
         def ready(res):
@@ -786,7 +786,8 @@ class GameDetail(QWidget):
         if not self._servers:
             return
         if len(self._servers) == 1:
-            return self._join(self._servers[0])
+            self._join(self._servers[0])
+            return
         menu = QMenu(self)
         for s in self._servers:
             menu.addAction(s.get("name") or f"Server {s.get('_vid')}", lambda s=s: self._join(s))
@@ -1031,7 +1032,7 @@ class DiscoverTab(QWidget):
                 try:
                     out[uid] = c.fetch_bytes(url)
                 except rbx.RobloxError:
-                    pass
+                    pass                  # (Roblox refused or could not be reached: this extra is simply left out)
             return out
 
         def done(got):
@@ -1071,7 +1072,7 @@ class DiscoverTab(QWidget):
                     out[uid] = f.read_bytes()
                     continue
             except OSError:
-                pass
+                pass                  # (no usable saved copy: it is fetched again)
             missing.append(uid)
         if missing:
             for uid, url in c.game_icons(missing).items():
@@ -1085,7 +1086,7 @@ class DiscoverTab(QWidget):
                         ICON_DIR.mkdir(parents=True, exist_ok=True)
                         (ICON_DIR / f"{int(uid)}.png").write_bytes(data)
                     except OSError:
-                        pass
+                        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
         return out
 
     def _icons_ready(self, got):
@@ -1188,7 +1189,7 @@ class DiscoverTab(QWidget):
         try:
             label.setPixmap(round_icon(data, 40))
         except RuntimeError:
-            pass
+            pass                  # (the label is already gone, for example the page was closed)
 
     def _groups_found(self, text, groups):
         if self.mode != "search" or self.search.text().strip() != text:

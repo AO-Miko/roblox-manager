@@ -14,7 +14,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
                    "ROBLOX_MANAGER_UPDATE_BACKEND": "off"})
 sys.path.insert(0, str(SRC))
 sys.path.insert(0, str(HERE))
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtWidgets import QApplication
 
 app = QApplication(sys.argv)

@@ -155,7 +155,7 @@ def main():
         runpy.run_path(str(HERE / "app.py"), run_name="__main__")
     except SystemExit:
         raise
-    except BaseException:                              # noqa: BLE001
+    except Exception:                                  # noqa: BLE001 (SystemExit and Ctrl+C go their own way)
         crash_report(traceback.format_exc())
         sys.exit(1)
 

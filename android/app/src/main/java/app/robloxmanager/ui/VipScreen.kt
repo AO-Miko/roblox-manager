@@ -96,7 +96,6 @@ private class Checks(val sv: Services, val uid: Long) {
 fun VipScreen(sv: Services, bulk: Bulk, counts: MutableMap<String, Int>) {
     val me = sv.current.collectAsState().value ?: return
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     val checks = remember(me.id) { Checks(sv, me.id) }
     var tick by remember { mutableIntStateOf(0) }
     val places = remember(me.id) { HashMap<Long, String>() }

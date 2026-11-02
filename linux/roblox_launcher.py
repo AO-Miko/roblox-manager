@@ -47,7 +47,7 @@ def _windows_installed():
             if m and os.path.isfile(m.group(1)):
                 return True, m.group(1)
     except ImportError:
-        pass
+        pass                  # (optional: not available here, and the app works without it)
     return False, ""
 
 

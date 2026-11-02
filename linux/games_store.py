@@ -35,7 +35,7 @@ def add(card):
             json.dump(items[:LIMIT], f)
         tmp.replace(FILE)
     except OSError:
-        pass
+        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
     return items[:LIMIT]
 
 
@@ -43,4 +43,4 @@ def clear():
     try:
         FILE.unlink()
     except OSError:
-        pass
+        pass                  # (already gone or in use: nothing to do)

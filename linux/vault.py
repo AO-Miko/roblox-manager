@@ -21,10 +21,10 @@ _DPAPI_ENTROPY = b"roblox-manager"
 def _dpapi(data, protect):
     """Windows DPAPI: bytes in, bytes out (None if it does not work). Only the current Windows user can undo what it does."""
     import ctypes
-    from ctypes import wintypes
+    import ctypes.wintypes
 
     class Blob(ctypes.Structure):
-        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+        _fields_ = [("cbData", ctypes.wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
 
     def blob(b):
         buf = ctypes.create_string_buffer(b, len(b))
@@ -137,11 +137,11 @@ def wipe(path):
             f.flush()
             os.fsync(f.fileno())
     except OSError:
-        pass
+        pass                  # (the file could not be overwritten first: it is deleted next anyway)
     try:
         os.unlink(path)
     except OSError:
-        pass
+        pass                  # (already gone or in use: nothing to do)
 
 
 def _write_file(path, value):

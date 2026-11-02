@@ -457,7 +457,7 @@ class GroupsTab(QWidget):
             with open(rbx.STATE_DIR / "left-groups.txt", "a", encoding="utf-8") as f:
                 f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')}\t{g['group']['id']}\t{g['group']['name']}\t{g['role']['name']}\n")
         except OSError:
-            pass
+            pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
     def _left(self, n, left, failed):
         self.bulk.finish()

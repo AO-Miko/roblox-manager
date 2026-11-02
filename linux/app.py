@@ -371,7 +371,7 @@ class MainWindow(QMainWindow):
             if st.get("vip_columns") and st.get("vip_columns_version") == self.COLUMNS_VERSION:         # (an older layout is not restored: the columns got new widths)
                 self.vip.mtable.horizontalHeader().restoreState(QByteArray.fromBase64(st["vip_columns"].encode()))
         except (OSError, ValueError, TypeError):
-            pass
+            pass                  # (no saved copy, or a damaged one: the defaults are used)
 
     def _save_state(self):
         if not getattr(self, "_state_on", False) or not settings.get("ui.remember_window"):
@@ -383,7 +383,7 @@ class MainWindow(QMainWindow):
         try:
             self.STATE_FILE.write_text(json.dumps(st))
         except OSError:
-            pass
+            pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
 
     def closeEvent(self, ev):
         self._save_state()

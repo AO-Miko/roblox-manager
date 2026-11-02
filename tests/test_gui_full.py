@@ -30,8 +30,6 @@ def tx(amount, kind=None, name="", place="", agent=None, cur="Robux", ttype="Sal
     if place: d["place"] = {"name": place}
     return {"id": 1, "created": "2026-10-10T10:00:00Z", "isPending": True, "transactionType": ttype, "currency": {"type": cur, "amount": amount},
             "agent": agent or {"id": 5, "type": "User", "name": "buyer"}, "details": d or None}
-for _t in ():
-    pass
 PENDING_PAGES = {None: ([tx(300, "GamePass", "VIP pass", "Adopt Me!"), tx(100, "Asset", "Cool hat"), tx(50, "Asset", "Cool hat"), tx(60, "DeveloperProduct", "100 coins", "Adopt Me!")], "P2"),
                  "P2": ([tx(50, None, "", "", {"id": 77, "type": "Group", "name": "Cool Club"}, ttype="GroupPayout"), tx(25, "Subscription", "Monthly", "Zoo Tycoon"),
                          tx(999, "GamePass", "tickets thing", "", None, "Tickets"), tx(5)], None)}
@@ -176,7 +174,8 @@ def wait(cond, t=8):
         spin(0.03)
         try:
             if cond(): return True
-        except Exception: pass
+        except Exception:
+            pass                  # (the condition may not hold yet while the window is still filling: try again)
     return False
 def check(n, ok, e=""): ok = bool(ok); results.append(ok); print(("PASS " if ok else "FAIL ") + n + (("  " + str(e)[:300]) if e else ""))
 def calls(method=None, part=None): return [c for c in client.calls if (method is None or c[0] == method) and (part is None or part in c[1])]
@@ -254,7 +253,7 @@ w.friends.only_game.setChecked(False)
 w.friends.search.setText("car"); check("the name filter works on looked-up names", w.friends.table.rowCount() == 1 and w.friends.table.item(0, 1).text() == "@carol"); w.friends.search.setText("")
 w.friends.table.selectRow(next(r for r in range(3) if w.friends.table.item(r, 1).text() == "@alice"))
 check("a friend in a game has a join link", "gameInstanceId=job-abc" in (w.friends.join_link_for(w.friends._selected()) or ""))
-opened = []; ui_common.open_url = lambda u: opened.append(u); import tab_account; tab_account.open_url = ui_common.open_url
+opened = []; ui_common.open_url = lambda u: opened.append(u); tab_account.open_url = ui_common.open_url
 w.friends.join_friend(); check("Join opens that link", opened and "gameInstanceId=job-abc" in opened[-1])
 # sorting must never separate a friend from their row
 w.friends.table.sortByColumn(1, Qt.SortOrder.DescendingOrder); w.friends.table.selectRow(0)
@@ -443,7 +442,9 @@ check("...no more pages: the button stays off", not w.groups.b_more_m.isEnabled(
 asked_pages.clear(); w.groups.members_cursor = "p2"; w.groups.load_members(reset=False); spin(0.05)
 client.group_members = real_members
 w.groups.load_members(reset=True)
-check("an answer that comes after the list was reset does not mix into the new list", wait(lambda: len(w.groups.members) == 2 and w.groups.mtable.rowCount() == 2) and (spin(0.6) or True) and len(w.groups.members) == 2 and
+settled = wait(lambda: len(w.groups.members) == 2 and w.groups.mtable.rowCount() == 2)
+spin(0.6)
+check("an answer that comes after the list was reset does not mix into the new list", settled and len(w.groups.members) == 2 and
       sorted(m["username"] for m in w.groups.members) == ["dave", "erin"], [m["username"] for m in w.groups.members])
 
 # the search finds members that are not loaded

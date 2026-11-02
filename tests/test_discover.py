@@ -15,7 +15,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.0.0.0.0\n")
 sys.path.insert(0, str(ROOT / "linux"))
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QImage
 from PySide6.QtTest import QTest
@@ -489,7 +489,7 @@ det.order.setCurrentIndex(0)
 # ---------------------------------------------------------------- where the servers are, and how long they have been running
 import geo
 import settings
-import worldmap
+__import__("worldmap")          # (it must load)
 infos = []
 QMessageBox.information = staticmethod(lambda *a, **k: infos.append(str(a[2]) if len(a) > 2 else ""))          # ('sign in first' would wait for a click)
 rbx.Client.JOIN_WAIT = 0.001

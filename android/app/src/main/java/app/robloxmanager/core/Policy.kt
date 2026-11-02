@@ -116,7 +116,7 @@ class PolicyStore(
             file.parentFile?.mkdirs()
             val tmp = File(file.path + ".tmp")
             tmp.writeText(AppJson.encodeToString(JsonElement.serializer(), obj("data" to Base64.getEncoder().encodeToString(data), "sig" to sig)))
-            tmp.renameTo(file)
+            java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)          // (a failure ends in the catch below)
         } catch (_: Throwable) {
             return null
         }

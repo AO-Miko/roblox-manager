@@ -24,7 +24,7 @@ for x in ("1.2", "1.2.3.4.5.6", "a.b.c", "", "1..2", "1.2.x"):
         version.parse(x)
         bad += 1
     except ValueError:
-        pass
+        pass                  # (expected: the call must fail here)
 check("...3 to 5 numbers only", bad == 0)
 
 cur = "1.8.2.3.4"

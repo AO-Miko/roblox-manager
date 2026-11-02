@@ -16,7 +16,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.7.0\n")
 sys.path.insert(0, str(ROOT / "linux"))
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -127,7 +127,7 @@ ok, text = unban(SENIOR, SENIOR)
 check("nobody unbans themselves", not ok, text)
 ok, text = unban(ADMIN_A, SENIOR)
 check("an admin cannot lift a ban placed by a co-owner", not ok and SENIOR in entries(), text)
-ok, text = unban(SENIOR, SENIOR)
+unban(SENIOR, SENIOR)          # (nobody unbans themselves: nothing to look at, the next line checks the result)
 ok, text = unban(COOWNER, SENIOR)
 check("the co-owner can lift their own ban", ok and SENIOR not in entries(), text)
 ok, text = ban(OWNER, COOWNER)

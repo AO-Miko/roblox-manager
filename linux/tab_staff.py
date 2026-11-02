@@ -45,7 +45,7 @@ def fetch_profile(client, uid):
         if time.time() - f.stat().st_mtime < rbx.AVATAR_MAX_AGE:
             avatar = f.read_bytes()
     except OSError:
-        pass
+        pass                  # (no usable saved copy: it is fetched again)
     if not avatar:
         try:
             url = client.headshots([uid], size="150x150").get(int(uid))
@@ -57,7 +57,7 @@ def fetch_profile(client, uid):
                 rbx.AVATAR_DIR.mkdir(parents=True, exist_ok=True)
                 f.write_bytes(avatar)
             except OSError:
-                pass
+                pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
     return {"info": info, "counts": counts, "avatar": avatar}
 
 
@@ -208,7 +208,7 @@ class StaffTab(QWidget):
                     pics[uid] = f.read_bytes()
                     continue
             except OSError:
-                pass
+                pass                  # (no usable saved copy: it is fetched again)
             if urls.get(uid):
                 try:
                     data = c.fetch_bytes(urls[uid])
@@ -220,7 +220,7 @@ class StaffTab(QWidget):
                         rbx.AVATAR_DIR.mkdir(parents=True, exist_ok=True)
                         f.write_bytes(data)
                     except OSError:
-                        pass
+                        pass                  # (a cache, log or setting that cannot be written is skipped: nothing depends on it)
         return info, pics
 
     def _fetched(self, result):

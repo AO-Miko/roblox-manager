@@ -140,7 +140,7 @@ class PasswordLogin:
                 try:
                     user = (r.json() or {}).get("user") or {}
                 except ValueError:
-                    pass
+                    pass                  # (the answer has no readable body: nothing to read)
                 self.forget()
                 return Done(cookie, user)
             raise NeedBrowser("Roblox asked for an extra check that this app does not handle (older two-step flow).")

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 tmp = Path(tempfile.mkdtemp(prefix="geo-"))
 os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_STATE": str(tmp / "state"), "ROBLOX_MANAGER_VAULT": "off"})
 sys.path.insert(0, str(ROOT / "linux"))
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 
@@ -163,7 +163,7 @@ n = len(asked)
 try:
     geo.lookup("10.0.0.1", fake, now=5)
 except geo.GeoError:
-    pass
+    pass                  # (expected: the call must fail here)
 check("a private address is never sent to the service", len(asked) == n)
 long = geo.clean(dict(GOOD, city="x" * 500))
 check("text of the answer is limited in length", len(long["city"]) == 60)

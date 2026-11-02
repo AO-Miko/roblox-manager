@@ -125,7 +125,8 @@ class SignInDialog(QDialog):
     def _login_result(self, res):
         self._busy(False)
         if isinstance(res, auth.Done):
-            return self._finish(res.cookie)
+            self._finish(res.cookie)
+            return
         self.step = res                                   # a code is needed
         self.pw.clear()
         self.method.blockSignals(True)

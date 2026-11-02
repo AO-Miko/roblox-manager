@@ -15,7 +15,7 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.0.0.0.0\n")
 sys.path.insert(0, str(ROOT / "linux"))
-import browser_login  # noqa: F401
+__import__("browser_login")      # (the web engine must be imported before the application exists)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtTest import QTest
@@ -148,7 +148,7 @@ debuglog.clear()
 try:
     c.get("https://users.roblox.com/v1/users/1", auth=False)
 except rbx.RobloxError:
-    pass
+    pass                  # (expected: the call must fail here)
 evs = [x for x in debuglog.EVENTS if x["area"] == "http"]
 check("an error answer is a warning with Roblox's own message in the output", evs and evs[0]["level"] == "warning" and "User not found" in evs[0]["detail"], evs[0] if evs else "")
 
@@ -162,7 +162,7 @@ debuglog.clear()
 try:
     c.get("https://users.roblox.com/v1/users/1", auth=False, retries=0)
 except rbx.RobloxError:
-    pass
+    pass                  # (expected: the call must fail here)
 evs = [x for x in debuglog.EVENTS if x["area"] == "http"]
 check("a network failure is an error event (no answer)", evs and evs[0]["level"] == "error" and "no answer" in evs[0]["message"], evs[0] if evs else "")
 

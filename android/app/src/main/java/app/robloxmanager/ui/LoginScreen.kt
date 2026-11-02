@@ -1,6 +1,7 @@
 package app.robloxmanager.ui
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -144,10 +145,8 @@ private fun PasswordTab(sv: Services, toBrowser: () -> Unit) {
     }
 }
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun BrowserTab(sv: Services) {
-    val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("Sign in on the Roblox page below. It handles every kind of check (CAPTCHA, passkey ...). Only Roblox pages open in this window.") }
     val ctx = LocalContext.current
     val cm = remember { CookieManager.getInstance() }
@@ -178,22 +177,9 @@ private fun BrowserTab(sv: Services) {
         Text(msg, color = C.muted, fontSize = 12.sp, modifier = Modifier.padding(12.dp))
         AndroidView(modifier = Modifier.fillMaxWidth().weight(1f), factory = {
             cm.removeAllCookies(null)
-            WebView(ctx).apply {
-                settings.javaScriptEnabled = true                      // (Roblox's login page needs it)
-                settings.domStorageEnabled = true
-                settings.setAllowFileAccess(false)                     // nothing from the phone's files,
-                settings.setAllowContentAccess(false)                  // nothing from other apps,
-                settings.setGeolocationEnabled(false)
-                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW                 // nothing over plain http
-                webViewClient = object : WebViewClient() {
-                    /** The page may only go to Roblox (https). A link anywhere else is not followed here: this window is where the password is typed. */
-                    override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
-                        val u = request.url
-                        return !(u.scheme == "https" && app.robloxmanager.core.RobloxClient.isRoblox(u.host ?: ""))
-                    }
-                }
-                loadUrl("https://www.roblox.com/login")
-                web = this
+            lockedWebView(ctx).also { view ->
+                view.loadUrl("https://www.roblox.com/login")
+                web = view
             }
         })
     }
@@ -217,4 +203,28 @@ private fun CookieTab(sv: Services) {
         }
         if (msg.isNotEmpty()) Text(msg, color = C.danger)
     }
+}
+
+/**
+ * The web view of the sign-in page. Roblox's login page needs JavaScript; everything else is shut: no files of the phone, no content of other
+ * apps, no location, no plain http, and the page can only go to Roblox (https), because this window is where the password is typed.
+ */
+@SuppressLint("SetJavaScriptEnabled")
+private fun lockedWebView(ctx: Context): WebView {
+    val view = WebView(ctx)
+    val rules = view.settings
+    rules.setJavaScriptEnabled(true)                           // (Roblox's login page needs it)
+    rules.setDomStorageEnabled(true)
+    rules.setAllowFileAccess(false)                            // nothing from the phone's files,
+    rules.setAllowContentAccess(false)                         // nothing from other apps,
+    rules.setGeolocationEnabled(false)
+    rules.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW)          // nothing over plain http
+    view.webViewClient = object : WebViewClient() {
+        /** The page may only go to Roblox (https). A link anywhere else is not followed here. */
+        override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
+            val u = request.url
+            return !(u.scheme == "https" && app.robloxmanager.core.RobloxClient.isRoblox(u.host ?: ""))
+        }
+    }
+    return view
 }

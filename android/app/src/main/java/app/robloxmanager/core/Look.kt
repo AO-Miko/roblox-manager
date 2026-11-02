@@ -45,8 +45,15 @@ object Look {
 
     /** The colour t of the way from a to b. */
     fun mix(a: Int, b: Int, t: Double): Int {
-        fun ch(shift: Int) = (((a shr shift) and 0xFF) * (1 - t) + ((b shr shift) and 0xFF) * t).roundToInt().coerceIn(0, 255)
-        return (0xFF shl 24) or (ch(16) shl 16) or (ch(8) shl 8) or ch(0)
+        fun ch(shift: Int): Int {
+            val from = ((a shr shift) and 0xFF).toDouble()
+            val to = ((b shr shift) and 0xFF).toDouble()
+            return ((from * (1.0 - t)) + (to * t)).roundToInt().coerceIn(0, 255)
+        }
+        val alpha = 0xFF shl 24
+        val red = ch(16) shl 16
+        val green = ch(8) shl 8
+        return alpha or red or green or ch(0)
     }
 
     fun luminance(c: Int): Double {
