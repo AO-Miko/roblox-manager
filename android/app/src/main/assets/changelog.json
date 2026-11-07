@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.17.11.5.5",
+    "date": "2026-11-07",
+    "changes": [
+      "Behind the scenes: removed unused code imports and updated the build checks (CodeQL and dependency review). Nothing changes in how the app looks or works."
+    ]
+  },
+  {
     "version": "1.17.11.4.5",
     "date": "2026-11-02",
     "changes": [

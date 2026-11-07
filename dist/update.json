@@ -1,7 +1,7 @@
 {
-  "versionName": "1.17.11.4.5",
-  "versionCode": 46,
+  "versionName": "1.17.11.5.5",
+  "versionCode": 47,
   "apk": "roblox-manager.apk",
-  "sha256": "1fac062fbc476989fd99876826989542fac82bb81c04e8f19599953cf2798fb5",
-  "notes": "A new look on the PC and the phone: cool blue-grey panels (dark and light) with a blue accent, a narrow icon bar on the left with your picture and user name at the top, editor-style tabs and a slim title bar. Pages have far fewer buttons: one Actions menu per page, right-click and double-click on rows, Select menus, and lists that load as you scroll. The game page now lists the game's game passes, products and badges (and which you own or earned). The phone got the same look, your picture and name on Home, and More menus."
+  "sha256": "5eb0ecf4d35bc99e5faf93b517c32f80ac6fb3cf9ca3e5377d99310c8ffba348",
+  "notes": "Behind the scenes: removed unused code imports and updated the build checks (CodeQL and dependency review). Nothing changes in how the app looks or works."
 }
