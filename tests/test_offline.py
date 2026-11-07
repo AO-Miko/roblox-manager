@@ -1,5 +1,6 @@
 """The guard that keeps every test off the real internet (tests/_offline.py). Run: python3 tests/test_offline.py"""
-import _offline  # noqa: F401  (this test is about it)
+import _offline  # (this test is about it)
+_offline.check()
 import socket
 import sys
 

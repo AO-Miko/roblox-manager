@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 here = tempfile.mkdtemp(prefix="legaltest-")
 os.environ["ROBLOX_MANAGER_CONFIG"] = os.path.join(here, "cfg")
 os.environ["ROBLOX_MANAGER_STATE"] = os.path.join(here, "state")
-import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
+import _offline  # (no test talks to the real internet: see tests/_offline.py)
+_offline.check()
 sys.path.insert(0, str(ROOT / "linux"))
 
 from PySide6.QtWidgets import QApplication, QDialog

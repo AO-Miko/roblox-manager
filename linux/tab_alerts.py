@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QListWi
 
 import alerts
 import notify_status
-from ui_common import menu_button, PRESENCE, button, hint, make_table
+from ui_common import menu_button, PRESENCE, hint, make_table
 
 
 class AlertsTab(QWidget):

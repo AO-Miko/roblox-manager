@@ -15,7 +15,8 @@ os.environ.update({"ROBLOX_MANAGER_CONFIG": str(tmp / "cfg"), "ROBLOX_MANAGER_ST
                    "ROBLOX_MANAGER_APP_DIR": str(tmp / "app"), "ROBLOX_MANAGER_UPDATE_CACHE": str(tmp / "cache")})
 (tmp / "app").mkdir()
 (tmp / "app" / "VERSION").write_text("1.0.0.0.0\n")
-import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
+import _offline  # (no test talks to the real internet: see tests/_offline.py)
+_offline.check()
 sys.path.insert(0, str(ROOT / "linux"))
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 res = []

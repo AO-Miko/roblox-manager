@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractButton, QCheckBox, QComboBox, QDialog, Q
 
 import debuglog
 import rbx
-from ui_common import menu_button, button, hint, make_table
+from ui_common import menu_button, hint, make_table
 from theme import Live
 
 LEVEL_COLOUR = Live({"debug": "faint", "info": "muted", "warning": "warn", "error": "danger"})

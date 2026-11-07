@@ -10,7 +10,8 @@ HERE = Path(__file__).resolve().parent
 SRC = Path(os.environ.get("RM_SRC") or HERE.parent / "linux")
 FIX = Path(os.environ.get("RM_FIXTURES") or HERE / "fixtures")
 tmp = Path(tempfile.mkdtemp(prefix="wintest-"))
-import _offline  # noqa: F401  (no test talks to the real internet: see tests/_offline.py)
+import _offline  # (no test talks to the real internet: see tests/_offline.py)
+_offline.check()
 sys.path.insert(0, str(SRC))
 res = []
 

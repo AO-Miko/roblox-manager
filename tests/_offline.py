@@ -60,6 +60,11 @@ socket.socket.connect_ex = _connect_ex
 socket.getaddrinfo = _getaddrinfo
 
 
+def check():
+    """Every test calls this right after importing the module: it fails at once if the guard is not in place."""
+    assert socket.socket.connect is _connect and socket.getaddrinfo is _getaddrinfo, "the offline guard is not active"
+
+
 def _report():
     if CALLS:
         print("NOTE this test tried to reach the real network (refused):", sorted({h for h, _ in CALLS}))
