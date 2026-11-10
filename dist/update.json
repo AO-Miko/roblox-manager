@@ -1,7 +1,7 @@
 {
-  "versionName": "1.17.11.5.5",
-  "versionCode": 47,
+  "versionName": "1.17.11.6.5",
+  "versionCode": 48,
   "apk": "roblox-manager.apk",
-  "sha256": "5eb0ecf4d35bc99e5faf93b517c32f80ac6fb3cf9ca3e5377d99310c8ffba348",
-  "notes": "Behind the scenes: removed unused code imports and updated the build checks (CodeQL and dependency review). Nothing changes in how the app looks or works."
+  "sha256": "8591480b44977470244beec4c4fca8c2983cc1e13d7fd8e12e9715c4fe8ef269",
+  "notes": "Release builds can now also be made on Windows (through WSL). Nothing changes in the app."
 }

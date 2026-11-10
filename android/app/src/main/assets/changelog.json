@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.17.11.6.5",
+    "date": "2026-11-10",
+    "changes": [
+      "Release builds can now also be made on Windows (through WSL). Nothing changes in the app."
+    ]
+  },
+  {
     "version": "1.17.11.5.5",
     "date": "2026-11-07",
     "changes": [
